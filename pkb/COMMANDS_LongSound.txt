@@ -1,0 +1,38 @@
+# PRAAT COMMANDS: LongSound
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+
+---
+
+  # Convert / Analyze
+  To TextGrid: tier names$, point tiers$
+  # Extract / Combine
+  Extract part: from time, to time, preserve times?
+  Concatenate?
+  # Other
+  Open long sound file: file name$
+  View
+  Play part: from time, to time
+  Save left channel as WAV file: file name$
+  Save left channel as AIFF file: file name$
+  Save left channel as AIFC file: file name$
+  Save left channel as NeXT/Sun file: file name$
+  Save left channel as NIST file: file name$
+  Save left channel as FLAC file: file name$
+  Save right channel as WAV file: file name$
+  Save right channel as AIFF file: file name$
+  Save right channel as AIFC file: file name$
+  Save right channel as NeXT/Sun file: file name$
+  Save right channel as NIST file: file name$
+  Save right channel as FLAC file: file name$
+  Save part as audio file: audio file$, type$, from time, to time, file name$
+
+---
+
+*End of LongSound commands.*

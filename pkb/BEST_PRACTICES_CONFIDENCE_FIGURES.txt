@@ -1,0 +1,601 @@
+# ============================================================================
+# BEST_PRACTICES_CONFIDENCE_FIGURES.txt
+# ============================================================================
+# Per-measure diagnostic PNG output for clinical voice analysis scripts
+#
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Author: Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
+# Version: 1.1
+# Date: 6 March 2026
+# Provenance: Patterns extracted from CAPE-V Auto-Segmenter v2.3 and
+#   validated on real data (5 Mar 2026).
+#
+# v1.1 changes (from v1.0):
+#   - All EML procedure references updated to @eml namespace
+#     (matches EML_DRAWING_PROCEDURES_v2_4.txt and plugin file)
+#   - §1B erratum marked RESOLVED (Ltas path corrected in v2.3/v2.4)
+#   - §9 procedure list updated to @eml names
+# ============================================================================
+#
+# PURPOSE
+#
+# Confidence figures are single-panel diagnostic PNGs — one per acoustic
+# measure per token — that allow the clinician or researcher to visually
+# verify that an extracted value is trustworthy. They answer the question:
+# "Does the analysis object look like it should for this token?"
+#
+# These are NOT publication figures. They are rapid-review diagnostics
+# with a fixed layout, auto-generated filenames, and no user
+# customisation. They are designed to be scanned in bulk (e.g., 30–60
+# PNGs per recording) and should be visually self-explanatory without
+# reference to the CSV.
+#
+# ============================================================================
+
+
+# ============================================================================
+# §1  Y-AXIS BOUNDS — CANONICAL QUERY CHAINS
+# ============================================================================
+#
+# The central trap in diagnostic figures is obtaining correct Y-axis
+# bounds for each object type. Praat's Draw: commands display data in
+# transformed units (dB, Hz) but intermediate objects (Matrix) may store
+# raw untransformed values. Using the wrong query chain produces axis
+# bounds that are meaningless or cause the figure to be blank.
+#
+# The table below gives the CORRECT query chain for each object type.
+# "Trap" column describes what goes wrong with the naive approach.
+#
+# -----------------------------------------------------------------------
+# Object type      | Draw units | Query chain for bounds     | Trap
+# -----------------------------------------------------------------------
+# Pitch            | Hz         | Get minimum/maximum:       | None.
+#                  |            |   0, 0, "Hertz",           | Direct query
+#                  |            |   "parabolic"              | returns Hz.
+# -----------------------------------------------------------------------
+# Harmonicity      | dB         | To Matrix → Get minimum /  | Harmonicity
+#                  |            |   Get maximum →             | has no
+#                  |            |   removeObject: matrixId    | parameterized
+#                  |            |                             | Get min/max.
+#                  |            |                             | Matrix
+#                  |            |                             | returns dB
+#                  |            |                             | (correct).
+# -----------------------------------------------------------------------
+# Intensity        | dB         | Get minimum/maximum:       | None.
+#                  |            |   0, 0, "parabolic"        | Direct query
+#                  |            |                             | returns dB.
+# -----------------------------------------------------------------------
+# Spectrum         | dB/Hz      | To Ltas (1-to-1) →         | TRAP: Direct
+#                  |            |   To Matrix →               | Spectrum →
+#                  |            |   Get minimum / Get maximum  | To Matrix →
+#                  |            |   → remove Matrix, Ltas     | Get min/max
+#                  |            |                             | returns RAW
+#                  |            |                             | POWER (Pa^2
+#                  |            |                             | /Hz), NOT dB.
+#                  |            |                             | Spectrum Draw:
+#                  |            |                             | interprets
+#                  |            |                             | bounds as dB.
+# -----------------------------------------------------------------------
+# PowerCepstrum    | dB         | Get peak: 60, 333.3,       | TRAP: Matrix
+#                  |            |   "parabolic"               | conversion
+#                  |            | Then derive bounds from      | returns raw
+#                  |            | peak value (see §1A below)  | power, not dB.
+#                  |            |                             | Use Get peak:
+#                  |            |                             | which returns
+#                  |            |                             | dB directly.
+# -----------------------------------------------------------------------
+# PowerCepstrogram | (heatmap)  | No explicit bounds needed.  | Paint: with
+#                  |            | Use Paint: with autoscale   | 0, "yes" for
+#                  |            | (0 for dB max, "yes" for    | maximum and
+#                  |            | autoscale).                 | autoscale.
+# -----------------------------------------------------------------------
+# Sound            | amplitude  | Get maximum/minimum:        | Use absolute
+# (waveform)       |            |   tStart, tEnd, "Sinc70"   | max for
+#                  |            | Derive symmetric bound      | symmetric
+#                  |            | from absolute maximum.      | display.
+# -----------------------------------------------------------------------
+#
+#
+# §1A  PowerCepstrum axis derivation
+#
+# PowerCepstrum Draw: converts internal values to dB for display.
+# Get peak: returns the peak value in dB. Derive axis bounds from
+# this anchor:
+#
+#   .cepPeak = Get peak: 60, 333.3, "parabolic"
+#   .cYLo = 0
+#   .cYHi = ceiling ((.cepPeak + 40) / 20) * 20
+#   if .cYHi < 60
+#       .cYHi = 60
+#   endif
+#
+# Rationale: +40 dB above peak provides headroom. Round to nearest
+# 20 dB for tidy ticks. Floor of 60 dB prevents collapsed axes on
+# quiet signals.
+#
+#
+# §1B  Spectrum dB bounds — Ltas path (MANDATORY)
+#
+# The Spectrum object stores power spectral density internally.
+# Direct Matrix conversion returns raw power values (Pa^2/Hz).
+# Spectrum Draw: expects dB bounds. The ONLY reliable path for
+# dB bounds is through Ltas:
+#
+#   selectObject: spectrumId
+#   .ltasId = To Ltas (1-to-1)
+#   selectObject: .ltasId
+#   .ltasMatId = To Matrix
+#   selectObject: .ltasMatId
+#   .dbMin = Get minimum
+#   .dbMax = Get maximum
+#   removeObject: .ltasMatId
+#   removeObject: .ltasId
+#
+# The Ltas object stores values in dB natively, so its Matrix
+# conversion yields dB values that match what Spectrum Draw: expects.
+#
+# ERRATUM (RESOLVED): EML_DRAWING_PROCEDURES v2.3 (KB, 5 Mar 2026)
+# originally had a direct Matrix path for Spectrum that returned raw
+# power instead of dB. This was corrected in the KB v2.3 update
+# (5 Mar 2026) and carried forward to v2.4. The Ltas path shown
+# above is now the canonical pattern in both the KB file and the
+# CAPE-V v2.3 implementation.
+
+
+# ============================================================================
+# §2  AXES REASSERTION RULE
+# ============================================================================
+#
+# Many Praat Draw: commands silently reset the axes to auto-scaled
+# values, even when explicit bounds are passed. Any overlay drawn
+# after a Draw: command (reference lines, annotations, markers)
+# will be positioned in the WRONG coordinate system unless Axes: is
+# reasserted.
+#
+# RULE: After EVERY Draw: call that accepts power/dB/frequency bounds,
+# immediately reassert Axes: with the same bounds used for drawing.
+#
+# Pattern:
+#
+#   selectObject: objectId
+#   Draw: tStart, tEnd, yLo, yHi, "no"
+#
+#   # Reassert — Draw: may have silently changed the axes
+#   Axes: tStart, tEnd, yLo, yHi
+#
+#   # Now overlays are correctly positioned
+#   Draw line: tStart, meanValue, tEnd, meanValue
+#
+# This applies to: Pitch Draw:, Intensity Draw:, Harmonicity Draw:,
+# Spectrum Draw:, PowerCepstrum Draw:, Sound Draw:. It does NOT
+# apply to Paint: commands (PowerCepstrogram Paint: does not reset
+# axes in the same way — but reasserting after Paint: is harmless
+# and therefore still recommended).
+#
+# Objects confirmed to reset axes silently:
+#   - Pitch (always)
+#   - Spectrum (always)
+#   - PowerCepstrum (always)
+#   - Sound (sometimes, depending on amplitude bounds)
+#   - Harmonicity (has no garnish parameter — may reset)
+#   - Intensity (confirmed in v2.3 testing)
+#
+# Cost of defensive reassertion: zero. Cost of omitting it: overlays
+# appear at wrong positions with no error message. Always reassert.
+
+# ============================================================================
+# §3  SINGLE-PANEL DIAGNOSTIC FIGURE TEMPLATE
+# ============================================================================
+#
+# All confidence figures follow this template. The template enforces
+# consistent layout, correct axis handling, and proper save sequence.
+#
+# v2.6 PATTERN (canonical — replaces v2.3 and v2.4):
+#
+#   procedure drawConf[Measure]: .objectId, .dir$, .base$, .token$
+#       ... [additional arguments: summary values for annotation]
+#
+#       # --- Setup ---
+#       Erase all
+#       Select outer viewport: 0, confFigW, 0, confFigH
+#       @emlSetAdaptiveTheme: confFigW, confFigH
+#
+#       # --- Query bounds ---
+#       selectObject: .objectId
+#       [measure-specific bound queries per §1]
+#       @emlComputeAxisRange: .dataMin, .dataMax, .roundTo, 0
+#       .yLo = emlComputeAxisRange.axisMin
+#       .yHi = emlComputeAxisRange.axisMax
+#
+#       # --- Axes (NO Select inner viewport) ---
+#       Axes: .xLo, .xHi, .yLo, .yHi
+#
+#       # --- Primary draw ---
+#       Black
+#       Line width: 1
+#       selectObject: .objectId
+#       Draw: .xLo, .xHi, .yLo, .yHi, "no"
+#
+#       # --- REASSERT AXES (mandatory per §2) ---
+#       Axes: .xLo, .xHi, .yLo, .yHi
+#
+#       # --- Overlays (reference lines, markers) ---
+#       Colour: emlSetColorPalette.line$[1]
+#       Draw line: .xLo, .meanValue, .xHi, .meanValue
+#
+#       # --- Title ---
+#       @emlSanitizeLabel: .base$ + " " + .token$
+#       .title$ = emlSanitizeLabel.result$ + " — [Measure]"
+#
+#       # --- Axes, ticks, labels, title (FULL dimensions) ---
+#       @emlDrawAxes: .xLo, .xHi, .yLo, .yHi,
+#           ... "[X-axis label]", "[Y-axis label]", .title$,
+#           ... confFigW, confFigH
+#
+#       # --- Legend (on top of axes — filled background) ---
+#       legendN = [number of entries]
+#       legendColor$[1] = emlSetColorPalette.line$[1]
+#       legendLabel$[1] = "mean=" + fixed$ (.meanValue, 1)
+#       [... additional entries ...]
+#       @emlDrawLegend: .xLo, .xHi, .yLo, .yHi, "top-left",
+#           ... emlSetAdaptiveTheme.bodySize - 1
+#
+#       # --- Save ---
+#       @emlAssertFullViewport: confFigW, confFigH
+#       .savePath$ = .dir$ + "/" + .base$ + "_" + .token$
+#           ... + "_[measure].png"
+#       Save as 300-dpi PNG file: .savePath$
+#   endproc
+#
+# KEY DESIGN PRINCIPLES (v2.6):
+#
+#   1. ONE viewport: Select outer viewport only. Never Select inner
+#      viewport. Praat's far-label placement handles all margin
+#      spacing automatically.
+#
+#   2. FULL dimensions to @emlDrawAxes: Pass confFigW, confFigH
+#      (not reduced values). @emlSetAdaptiveTheme computes margins,
+#      fonts, and tick density for the actual figure size.
+#
+#   3. Colours via @emlSetColorPalette: Called once at initialization.
+#      All drawConf procedures reference emlSetColorPalette.line$[N].
+#      No local confColor*$ variables.
+#
+#   4. Legend via @emlDrawLegend: Draws filled white background
+#      rectangle with thin grey border, colored line samples, and
+#      text labels. Called AFTER @emlDrawAxes so it renders on top
+#      of the inner box. Uses global arrays legendN, legendColor$[],
+#      legendLabel$[].
+#
+#   5. Draw order: data → overlays → @emlDrawAxes → @emlDrawLegend
+#      → @emlAssertFullViewport → save. Legend is the last drawn
+#      element; its background covers any box/data beneath it.
+#
+# §3A  History: margin clipping (RESOLVED in v2.6)
+#
+# v2.3: Hardcoded margins (0.6L, 0.2R, 0.4T, 0.4B) via Select inner
+#   viewport. Clips Y-axis labels and tick values on some data ranges.
+# v2.4: Attempted fix using @emlSetAdaptiveTheme margins with Select
+#   inner viewport. BUG: passed reduced dimensions to @emlDrawAxes,
+#   causing double-shrinkage — theme computed margins for a 5.2×3.2
+#   figure inside an already-reduced viewport. Labels still clipped.
+# v2.6: Eliminated Select inner viewport entirely. Select outer
+#   viewport + Axes lets Praat manage the inner/outer boundary.
+#   @emlDrawAxes receives full confFigW × confFigH. Fixed.
+#
+# §3B  History: untidy tick values (RESOLVED in v2.4)
+#
+# Praat's `Marks left: 5` distributes N marks evenly across the axis
+# range, producing arbitrary tick values (e.g., 13.7, 18.4, 23.1).
+# EML Graphs @emlComputeNiceStep → @emlDrawAxes produces human-friendly
+# values (10, 15, 20, 25). Resolved in v2.4 by using @emlDrawAxes.
+#
+# §3C  History: legend without background (RESOLVED in v2.6)
+#
+# v2.3: Legend text drawn directly over data area; collides with
+#   contour, gridlines, or reference lines.
+# v2.4: Identified but not fixed (TODO-049/050).
+# v2.6: @emlDrawLegend in eml-graph-procedures.praat v2.4 provides
+#   filled background rectangle with border. Procedure uses global
+#   arrays (legendN, legendColor$[], legendLabel$[]) and is called
+#   with axis bounds and corner position. See EML_DRAWING_PROCEDURES
+#   v2.4 for signature and documentation.
+```
+
+
+
+# ============================================================================
+# §4  BUFFERED AXIS RANGE COMPUTATION
+# ============================================================================
+#
+# Data-tight axes make contours hard to read. All confidence figures
+# apply a 10% buffer beyond data extremes, rounded to a human-friendly
+# step size.
+#
+# Algorithm (@emlComputeAxisRange from EML_DRAWING_PROCEDURES_v2_4.txt):
+#
+#   @emlComputeAxisRange: .dataMin, .dataMax, .roundTo, 0
+#   .yLo = emlComputeAxisRange.axisMin
+#   .yHi = emlComputeAxisRange.axisMax
+#
+# The 4th argument (.isPercentage) is 0 for all confidence figures.
+#
+# .roundTo values by measure:
+#   F0:         10 Hz
+#   HNR:         5 dB
+#   Intensity:   5 dB
+#   Spectrum:   10 dB
+#
+# The non-negative guard (.axisMin clamped to 0 when data is
+# non-negative) prevents misleading negative axis regions for
+# measures like F0 that cannot be negative.
+#
+# Note: v2.3 used @computeAxisRange_conf (3-arg inline duplicate).
+# v2.4 replaces it with the canonical @emlComputeAxisRange (4-arg).
+
+
+# ============================================================================
+# §5  LABEL SANITIZATION
+# ============================================================================
+#
+# Filenames and token labels often contain characters that are style
+# toggles in Praat's text renderer:
+#   _  subscript
+#   %  italic
+#   #  bold
+#   ^  superscript
+#
+# Any display text derived from filenames, object names, or user input
+# must be sanitized before passing to Text top:, Text left:, Text:,
+# or One mark: commands.
+#
+# Use @emlSanitizeLabel from EML_DRAWING_PROCEDURES_v2_4.txt:
+#
+#   @emlSanitizeLabel: .base$ + " " + .token$
+#   .title$ = emlSanitizeLabel.result$ + " — F0"
+#
+# Note: v2.3 used @sanitizeLabel_conf (inline duplicate). v2.4
+# replaces it with the canonical @emlSanitizeLabel.
+
+
+# ============================================================================
+# §6  COLOR PALETTE FOR ANNOTATIONS
+# ============================================================================
+#
+# Confidence figures use a subset of the EML colour palette.
+# Colours are assigned by semantic role, not by measure:
+#
+#   Line 1: "{0.30, 0.50, 0.75}"   # blue  — mean / primary
+#   Line 2: "{0.85, 0.45, 0.35}"   # red   — (reserved)
+#   Line 3: "{0.25, 0.65, 0.60}"   # teal  — min / secondary
+#   Line 4: "{0.90, 0.70, 0.25}"   # gold  — max / tertiary
+#   Line 6: "{0.65, 0.40, 0.60}"   # purple — quaternary
+#
+# Black is used for the primary data contour. Annotation colours are
+# used only for overlays (reference lines, markers, legend text).
+#
+# In v2.4, load via @emlSetColorPalette: "color" and reference as
+# emlSetColorPalette.line$[1], emlSetColorPalette.line$[3], etc.
+# v2.3 used hardcoded confColor1$–confColor6$ variables.
+
+
+# ============================================================================
+# §7  FILE NAMING CONVENTION
+# ============================================================================
+#
+# Pattern:  baseName$_token_measure.png
+#
+# Examples:
+#   JohnDoe_CAPEV_a_1_f0.png
+#   JohnDoe_CAPEV_a_1_perturbation.png
+#   JohnDoe_CAPEV_a_1_hnr.png
+#   JohnDoe_CAPEV_a_1_spectrum.png
+#   JohnDoe_CAPEV_a_1_cpp.png
+#   JohnDoe_CAPEV_a_1_cpps.png
+#   JohnDoe_CAPEV_a_1_intensity.png
+#   JohnDoe_CAPEV_glide_f0.png
+#   JohnDoe_CAPEV_sentence_1_f0.png
+#
+# baseName$ is derived from the input filename (extension stripped).
+# token is the task label + index (e.g., a_1, i_2, glide, sentence_1).
+# measure is one of: f0, perturbation, hnr, spectrum, cpp, cpps,
+#   intensity.
+#
+# All PNGs are saved to a subfolder: output_folder$/confidence_checks/
+# Collision avoidance: if the subfolder already contains files with
+# matching names, a suffix is appended: confidence_checks_2/,
+# confidence_checks_3/, etc.
+
+
+# ============================================================================
+# §8  EVERY-NTH TOKEN FILTERING
+# ============================================================================
+#
+# For recordings with many sustained vowel tokens (e.g., 9 /a/ tokens),
+# generating all figures for all tokens can produce 60+ PNGs. The
+# "save every Nth token" parameter reduces this for /a/ tokens only:
+#
+#   - N=1: all tokens drawn (default)
+#   - N=3: tokens 1, 4, 7 drawn; others skipped
+#   - Token 1 is ALWAYS drawn regardless of N
+#
+# Glides, sentences, and spontaneous speech tokens are always drawn
+# (no filtering) because they are few in number and each is unique.
+#
+# Implementation: the filtering decision is made at the call site,
+# not inside the drawing procedures. The drawing procedures themselves
+# are unconditional — if called, they draw.
+
+
+# ============================================================================
+# §9  INCLUDE-BASED FOLDER ARCHITECTURE
+# ============================================================================
+#
+# Scripts with Picture window output should be packaged as folders
+# with an included EML procedures file. This avoids reinventing
+# standard utilities and ensures consistency with the canonical
+# drawing library.
+#
+# Folder structure:
+#
+#   CAPEV_AutoSegmenter_v2_4/
+#   ├── CAPEV_AutoSegmenter_v2_4.praat     (main script)
+#   ├── EML_drawing_procedures.praat       (included library)
+#   └── capev_config.txt                   (auto-generated config)
+#
+# Main script header:
+#
+#   include EML_drawing_procedures.praat
+#
+# The included file is a copy of the plugin's eml-graph-procedures.praat.
+# All procedures use the @eml namespace.
+#
+# Benefits:
+#   - Standard procedures (@emlSetAdaptiveTheme, @emlComputeAxisRange,
+#     @emlDrawAxes, @emlSanitizeLabel, @emlSetColorPalette, etc.) are
+#     available without duplication
+#   - Adaptive margins replace hardcoded viewport values
+#   - Nice-number tick algorithm replaces Marks left: N
+#   - Palette management is centralized
+#   - Bug fixes in the library propagate automatically
+#
+# The inline _conf duplicate procedures (@computeAxisRange_conf,
+# @sanitizeLabel_conf) from v2.3 are deleted in v2.4.
+
+
+# ============================================================================
+# §10  MEASURE-SPECIFIC NOTES
+# ============================================================================
+#
+# §10A  F0 (Pitch contour)
+#
+# Draw: Pitch Draw: with garnish "no".
+# Overlays: horizontal lines at mean, min, max F0 values (from
+#   Phase B analysis, passed as arguments).
+# Guard: if Get minimum: and Get maximum: both return undefined,
+#   the token is entirely unvoiced. Draw a blank figure with
+#   "(no voiced frames)" in the title. Do not skip — the blank
+#   figure itself is diagnostic.
+# Legend: mean/min/max with values in Hz.
+#
+#
+# §10B  Perturbation (waveform + pulses)
+#
+# Draw: Sound Draw: with garnish "no", amplitude bounds symmetric.
+# Overlays: PointProcess pulses as vertical lines (Draw line: per
+#   point, 80% of amplitude range, coloured).
+# Amplitude bound: stepped (0.25 / 0.5 / 1.0) based on absolute
+#   maximum, not data-tight. This prevents excessive whitespace on
+#   quiet signals while keeping the waveform readable.
+# No legend needed (two visual elements are self-evident: waveform
+#   and pulse marks).
+# Note: iterating PointProcess points is slow for long tokens.
+#   Acceptable for diagnostic figures (tokens are short, <5 s).
+#
+#
+# §10C  HNR (Harmonicity contour)
+#
+# Draw: Harmonicity Draw: (no garnish parameter — always draws with
+#   auto-scale, making Axes reassertion essential).
+# Bounds: via Matrix conversion (§1 table). Matrix values are in dB
+#   (correct for HNR).
+# Overlays: horizontal line at mean HNR.
+# Legend: mean with value in dB.
+#
+#
+# §10D  Spectrum (power spectral density)
+#
+# Draw: Spectrum Draw: with garnish "no", frequency range 0–5000 Hz.
+# Bounds: via Ltas (1-to-1) path (§1B — MANDATORY).
+# Overlays: vertical lines at M1 (spectral centroid) and M2 (spectral
+#   standard deviation), both in Hz. M3 (skewness) and M4 (kurtosis)
+#   are dimensionless — annotated in legend text only.
+# Legend: M1–M4 with values and units.
+# Note: M1/M2 vertical lines are clipped to the 0–5000 Hz display
+#   range. If M1 or M2 exceeds 5000 Hz, the line is suppressed.
+#
+#
+# §10E  CPP (PowerCepstrum with trend line)
+#
+# Draw: PowerCepstrum Draw: with garnish "no", quefrency 0–0.05 s.
+# Bounds: via Get peak: (§1A — returns dB directly).
+# Overlays: Draw trend line: in the same viewport with matching bounds.
+#   Parameters: 0.001, 0.05, "Straight", "Robust" (matching CPPS
+#   trend line parameters from APPENDIX_D).
+# Legend: CPP value (dB) and trend line label.
+# Note: Draw trend line: is verified in COMMANDS_PowerCepstrogram.txt.
+#
+#
+# §10F  CPPS (PowerCepstrogram heatmap)
+#
+# Draw: PowerCepstrogram Paint: — a 2D heatmap, not a contour.
+# Parameters: Paint: 0, 0, 0, 0.05, 0, "yes", 60, 0, "no"
+#   - Time range: full (0, 0)
+#   - Quefrency range: 0–0.05 s
+#   - dB maximum: 0 (auto)
+#   - Autoscale: "yes"
+#   - Dynamic range: 60 dB
+#   - Dynamic compression: 0 (none)
+#   - Garnish: "no"
+# No overlays — the heatmap is self-contained.
+# No legend — single visual element.
+# Note: CPPS itself is a single scalar value computed over the full
+#   token. The heatmap shows the time-quefrency structure that the
+#   CPPS algorithm summarizes, allowing visual verification that the
+#   cepstral peak is consistent across the token.
+#
+#
+# §10G  Intensity (Intensity contour)
+#
+# Draw: Intensity Draw: with garnish "no".
+# Bounds: via Get minimum/maximum: (direct query, returns dB).
+# Overlays: horizontal line at mean intensity (dB).
+# Legend: mean with value in dB.
+# Note: For SPL-calibrated recordings, the Y-axis label should read
+#   "SPL (dB)" rather than "Intensity (dB)". The v2.3 implementation
+#   uses "Intensity (dB)" unconditionally. A future version could
+#   check the calibration flag and switch labels.
+
+
+# ============================================================================
+# §11  CONDITIONAL OBJECT RETENTION
+# ============================================================================
+#
+# In normal (non-confidence) mode, analysis procedures remove their
+# intermediate objects (Pitch, PointProcess, Harmonicity, Spectrum,
+# PowerCepstrum, PowerCepstrogram, Intensity) immediately after
+# extracting scalar values.
+#
+# When confidence figures are enabled, these objects must survive
+# until after the drawing procedure has used them. The pattern is:
+#
+#   # Inside analysis procedure (e.g., @analyzeF0_phaseB)
+#   .pitchId = noprogress To Pitch (filtered autocorrelation): [params]
+#   [extract scalar values]
+#   # Do NOT remove — caller needs it for @drawConfF0
+#
+#   # At the call site, after drawing:
+#   if generate_confidence_figures = 1
+#       @drawConfF0: analyzeF0_phaseB.pitchId, confDir$, ...
+#   endif
+#   removeObject: analyzeF0_phaseB.pitchId
+#
+# The conditional removeObject: must be placed at the call site (the
+# analysis loop), not inside the analysis procedure. The analysis
+# procedure's .pitchId (or .harmId, .specId, etc.) output variable
+# is the contract between the analysis and drawing layers.
+#
+# In non-confidence mode, the removeObject: inside the analysis
+# procedure is restored. The v2.3 implementation wraps the
+# removeObject: in a conditional:
+#
+#   if generate_confidence_figures = 0
+#       removeObject: .pitchId
+#   endif
+#
+# This ensures v2.2-identical behaviour when the flag is OFF.
+
+
+# ============================================================================
+# END OF BEST_PRACTICES_CONFIDENCE_FIGURES.txt
+# ============================================================================

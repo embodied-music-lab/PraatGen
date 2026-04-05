@@ -1,0 +1,66 @@
+# PRAAT COMMANDS: PointProcess
+# Source: Praat C API (praatlib.h), June 2025
+# Additional commands: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+
+---
+
+  # Create / Read
+  Create empty PointProcess: name$, start time, end time
+  Create Poisson process: name$, start time, end time, density
+
+  # Query — jitter (PointProcess only)
+  Get jitter (local): from time, to time, shortest period, longest period, maximum period factor
+  # Verified: Get jitter (local): 0, 0, 0.0001, 0.02, 1.3
+
+  # Query — shimmer (requires PointProcess + Sound selected)
+  Get shimmer (local): from time, to time, shortest period, longest period, maximum period factor, maximum amplitude factor
+  # Verified: Get shimmer (local): 0, 0, 0.0001, 0.02, 1.3, 1.6
+    Get shimmer (local_dB): from time, to time, shortest period, longest period, maximum period factor, maximum amplitude factor
+  # Verified: Get shimmer (local_dB): 0, 0, 0.0001, 0.02, 1.3, 1.6
+  # Provenance: Phonanium AVQI v02.06 script; Paste Commands 24 Feb 2026
+  # DISAMBIGUATION NOTE:
+  # To query a PointProcess point's time, use the UNIVERSAL command:
+  #   Get time from index: point number
+  # Do NOT use "Get time of point:" — that is a TextGrid point-tier command
+  # (see COMMANDS_TextGrid.txt) and will fail on PointProcess objects.
+
+  # Modify
+  Add point: time
+  Add points
+  Remove point: point number
+  Remove point near: time
+  Remove points: from point number, to point number
+  Remove points between: from time, to time
+
+  # Convert / Analyze
+  To TextGrid: tier names$, point tiers$
+  To PitchTier: maximum interval
+  To TextGrid (vuv): maximum period, mean period
+  To Sound (pulse train): sampling frequency, adaptation factor, adaptation time, interpolation depth
+  To Sound (phonation): sampling frequency, adaptation factor, maximum period, open phase, collision phase, power1, power2
+  To Sound (hum)
+  To Matrix
+  Up to TextTier: text$
+  Up to PitchTier: frequency
+  Up to IntensityTier: intensity
+  To AmplitudeTier (point)
+  To AmplitudeTier (period): from time, to time, shortest period, longest period, maximum period factor
+  To H1minusH2Tier: from time, to time, shortest period, longest period, maximum period factor
+  To Ltas: maximum frequency, bandwidth, shortest period, longest period, maximum period factor
+  To Ltas (only harmonics): maximum harmonic, shortest period, longest period, maximum period factor
+
+  # Draw
+  Draw: from time, to time, garnish?
+
+  # Other
+  View & Edit
+  View & Edit with Sound?
+  Play as pulse train
+  Hum
+  Fill: from time, to time, period
+  Voice: period, maximum voiced period
+
+---
+
+*End of PointProcess commands.*

@@ -1,0 +1,47 @@
+# PRAAT COMMANDS: Strings
+# Source: Praat C API (praatlib.h), June 2025
+# Additional commands: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+
+---
+
+  # Create / Read
+  Create Strings from texts: name$
+  Create Strings as file list: name$, path$
+  Create Strings as folder list: name$, path$
+  Create Strings from tokens: name$, text$, separators$
+  Read Strings from raw text file: file name$
+
+  # Query (API)
+  Get string: position
+  List all strings
+
+  # Query (session-verified)
+  Get number of strings
+  # Verified: Get number of strings
+
+  # Modify
+  Set string: position, new string$
+  Insert string: at position, string$
+  Remove string: position
+  Replace all: find$, replace with$, replace limit per string, find and replace strings are$
+
+  # Convert / Analyze
+  To Distributions
+  To Permutation: sorting method$
+  To WordList
+
+  # Extract / Combine
+  Extract part: from index, to index
+
+  # Other
+  Save as raw text file: file name$
+  Equal?
+  Randomize
+  Sort
+  Convert to backslash trigraphs
+  Convert to Unicode
+
+---
+
+*End of Strings commands.*

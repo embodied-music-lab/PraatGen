@@ -1,0 +1,32 @@
+# PRAAT COMMANDS: Ltas
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+
+---
+
+  # Query (session-verified)
+  Get slope: low band floor, low band ceiling, high band floor, high band ceiling, averaging method$
+  # Verified: Get slope: 0, 1000, 1000, 10000, "energy"
+  # Provenance: Phonanium AVQI v02.06 script; Paste Commands 24 Feb 2026
+
+  # Modify
+  Formula: formula$
+  # Convert / Analyze
+  To SpectrumTier (peaks)
+  To Matrix
+  # Draw
+  Draw: from frequency, to frequency, from power, to power, garnish?, drawing method$
+  # Other
+  Report spectral trend: from frequency, to frequency, frequency scale$, fit method$
+  Compute trend line: from frequency, to frequency
+  Subtract trend line: from frequency, to frequency
+
+---
+
+*End of Ltas commands.*

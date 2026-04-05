@@ -1,0 +1,836 @@
+# PRAAT COMMANDS: Demo Window
+# Source: Praat manual (Demo window 1–8, Functions page), Praat 6.4.59 docs
+# Empirical findings: EML Tutorial Plugin development (10+ sessions, Feb 2026)
+# Empirical findings: 3D Scatter Plot development (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+#         functionName (arguments) — for scripting functions
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# The Demo window is NOT an object type. It is a scriptable graphical
+# environment for interactive presentations, experiments, simulations,
+# and stand-alone applications. It cannot be created from the GUI —
+# only through the `demo` keyword in a script.
+#
+# Cross-type dependencies: Uses Picture window commands (prefixed with
+# `demo`) and object-specific Draw commands (prefixed with `demo`
+# when appropriate object is selected). Load COMMANDS_PictureWindow.txt
+# for the full set of drawable commands.
+#
+# Version: 1.2
+# Date: 2 March 2026
+#
+# v1.2 changes (from v1.1):
+#   - Section 6 REPLACED: demoPeekInput() confirmed unsafe during
+#     animation on macOS (recursive interpreter re-entrance). Both
+#     v1.1 approaches removed. Only safe pattern: no input checking
+#     during animation loops. Replay pattern via event loop added.
+#
+# v1.1 changes (from v1.0):
+#   - Section 6 revised: key buffer drain pattern added as safe
+#     alternative to click-only detection during animation
+#   - New Section 7: Arbitrary filled shapes — documents Polygon
+#     coordinate bug and scanline rasterization workaround
+#   - Section 8 (formerly 7): added anti-pattern note for manual
+#     point-by-point data plotting; prefer Table Sort rows: for
+#     painter's algorithm depth sorting
+#   - New Section 11: Animation stability — pre-computed global
+#     screen bounds pattern
+#   - Section 14 (Known Bugs) updated with Polygon bug and
+#     refined keyboard crash entry
+
+# ============================================================================
+# SECTION 1: THE `demo` KEYWORD
+# ============================================================================
+#
+# The keyword `demo` prefixes any Picture window command or object-specific
+# drawing command to redirect output to the Demo window instead of the
+# Picture window. The first `demo` command in a script creates the window.
+#
+# Syntax:
+#   demo CommandName: arguments
+#   demo CommandName
+#
+# Examples:
+#   demo Erase all
+#   demo Draw line: 0, -1, 3, 1
+#   demo Axes: 0, 100, 0, 100
+#   demo Text: 50, "centre", 50, "half", "Hello"
+#   demo Paint rectangle: "purple", 0, 100, 0, 100
+#   demo Paint rounded rectangle: "pink", 30, 70, 16, 24
+#   demo Draw rounded rectangle: 30, 70, 16, 24
+#   demo Draw circle: 50, 50, 10
+#   demo Paint circle: "red", 50, 50, 10
+#   demo Draw inner box
+#   demo Marks left: 5, "yes", "yes", "no"
+#   demo Select outer viewport: 0, 100, 50, 100
+#   demo Select inner viewport: 0, 100, 0, 100
+#
+# Font family is set by name alone after demo:
+#   demo Helvetica
+#   demo Times
+#   demo Courier
+#
+# Font size is set by writing just the number after demo:
+#   demo 24
+#   demo 12
+#   demo Font size: 12
+#
+# Colour commands work directly:
+#   demo Red
+#   demo Black
+#   demo Pink
+#   demo White
+#   demo Colour: "{0.3, 0.5, 0.7}"
+#   demo Line width: 2
+#
+# Object-specific commands work when the appropriate object is selected:
+#   selectObject: soundId
+#   demo Draw: 0, 3, -1, 1, "yes", "curve"
+#
+# CRITICAL: The `demo` keyword is a statement prefix — it has no
+# parentheses and no return value.
+#
+# Commands that do NOT take the `demo` prefix:
+# All demo-specific query/event functions are standalone:
+#   demoWaitForInput(), demoPeekInput(), demoClicked(), demoClickedIn(),
+#   demoX(), demoY(), demoKeyPressed(), demoKey$(), demoInput(),
+#   demoShiftKeyPressed(), demoCommandKeyPressed(), demoOptionKeyPressed(),
+#   demoShow(), demoWindowTitle:
+#
+# The Demo window and Picture window are independent. Commands without
+# `demo` prefix go to the Picture window. Commands with `demo` prefix
+# go to the Demo window. Both can be open simultaneously.
+
+# ============================================================================
+# SECTION 2: COORDINATE SYSTEM
+# ============================================================================
+#
+# The Demo window coordinate system differs from the Picture window
+# in three critical ways:
+#
+# 1. SIZE: 100 × 100 units (not 60 × 60 inches).
+#    The internal canvas maps to approximately 12 × 12 inches.
+#    Conversion: percentage * 12 / 100 = inches.
+#    (Derived from manual pp. 1–2; used in production code.)
+#
+# 2. ORIGIN: (0, 0) is at BOTTOM LEFT.
+#    In the Picture window, (0, 0) is at TOP LEFT.
+#    Y increases UPWARD in Demo, DOWNWARD in Picture.
+#
+# 3. PIXEL SIZE: Initial window is 1344 × 756 pixels
+#    (70% of 1920 × 1080 standard HD).
+#
+# Set coordinates with: demo Axes: 0, 100, 0, 100
+# Always reassert after viewport operations.
+#
+# Comparison table:
+#
+# | Property               | Picture Window          | Demo Window            |
+# |------------------------|-------------------------|------------------------|
+# | Size                   | 60 × 60 inches          | 100 × 100 units        |
+# | Internal canvas        | 60 × 60 inches          | ~12 × 12 inches        |
+# | Origin (0,0)           | Top left                | Bottom left            |
+# | Y direction            | Increases downward      | Increases upward       |
+# | Created by             | Always open             | First `demo` command   |
+# | Save to file           | Save as PNG/PDF/EPS     | No save command        |
+# | User interaction       | None                    | Click/key input        |
+# | Graphics buffering     | Immediate               | Deferred (use demoShow)|
+# | Command prefix         | (none)                  | `demo`                 |
+# | Scroll                 | No                      | No                     |
+# | Text wrapping          | No                      | No                     |
+# | Programmatic close     | N/A                     | Not possible           |
+#
+# CRITICAL — Y-axis inversion for viewport mapping:
+# When converting Demo window coordinates (y=0 at bottom) to viewport
+# coordinates (y=0 at top):
+#
+#   .vpScale = 12 / 100
+#   .vpLeft = .x1 * .vpScale
+#   .vpRight = .x2 * .vpScale
+#   .vpTop = (100 - .y2) * .vpScale      # Invert Y
+#   .vpBottom = (100 - .y1) * .vpScale    # Invert Y
+#
+# Example: Demo window top half = y from 50 to 100
+#   demo Select outer viewport: 0, 100, 50, 100
+# This selects the TOP half because viewport y=50 maps to the top
+# of the content area and y=100 maps to the bottom.
+#
+# Font size scaling for projection:
+# A font at size 35 in the default 1344×756 window looks the same
+# as size 50 at full 1920×1080 projection.
+
+# ============================================================================
+# SECTION 3: DEMO-SPECIFIC FUNCTIONS
+# ============================================================================
+#
+# These functions exist only for the Demo window. They handle user input,
+# display control, and window management.
+#
+# NOTE: These functions are absent from APPENDIX_B_FUNCTIONS.txt and
+# must be added. See Section 12 of this file for the addendum.
+
+  # --- Input: Blocking ---
+
+  # demoWaitForInput ()
+  # Blocks until the user clicks or presses a key in the Demo window.
+  # ALWAYS returns 1, making it usable as a while-loop condition.
+  # After return, query demoClicked()/demoKeyPressed()/demoKey$().
+  # Also triggers OS graphics buffer flush — deferred drawings become
+  # visible at this point.
+
+  # --- Input: Non-blocking ---
+
+  # demoPeekInput ()
+  # Returns immediately without waiting. Use in animation loops to
+  # check for user input between frames without blocking.
+  # After return, query demoClicked()/demoKeyPressed() as usual.
+
+  # --- Input: Query what happened ---
+
+  # demoClicked ()
+  # Returns 1 if the last input event was a mouse click, 0 otherwise.
+
+  # demoKeyPressed ()
+  # Returns 1 if the last input event was a key press, 0 otherwise.
+
+  # demoKey$ ()
+  # Returns the key character that was pressed. Special keys:
+  #   "→" (Unicode 8594)  right arrow
+  #   "←" (Unicode 8592)  left arrow
+  #   "↑" (Unicode 8593)  up arrow
+  #   "↓" (Unicode 8595)  down arrow
+  #   " " (Unicode 32)    space bar
+  #   Enter/Return:       Unicode 10 or 13
+  #   Escape:             Unicode 27
+  # Detection patterns:
+  #   demoKey$ () = "→"                        — direct string comparison
+  #   unicode (demoKey$ ()) = 8594             — numeric comparison
+  #   unicode (demoKey$ ()) = 10 or unicode (demoKey$ ()) = 13   — Enter
+
+  # demoInput (characters$)
+  # Compound test: returns 1 if the last input matches ANY character
+  # in the string. The bullet "•" (Unicode 2022) represents a mouse click.
+  #   demoInput ("•→ ")     — true if click, right arrow, or space
+  #   demoInput ("←")       — true if left arrow
+  #   demoInput ("yn")      — true if 'y' or 'n'
+  # Primarily used with conditional goto:
+  #   goto NEXT_PAGE demoInput ("•→ ")
+
+  # --- Input: Click location ---
+
+  # demoX ()
+  # Returns x world coordinate of last click, relative to current Axes.
+
+  # demoY ()
+  # Returns y world coordinate of last click, relative to current Axes.
+
+  # demoClickedIn (xmin, xmax, ymin, ymax)
+  # Returns 1 if last click was within the specified rectangle
+  # (in world coordinates of the current viewport).
+  # IMPORTANT: Ensure correct viewport is selected before calling.
+
+  # --- Input: Modifier keys ---
+
+  # demoShiftKeyPressed ()
+  # Returns 1 if Shift was held during the last input event.
+
+  # demoCommandKeyPressed ()
+  # Returns 1 if Command (Mac) / Ctrl (Windows/Linux) was held.
+
+  # demoOptionKeyPressed ()
+  # Returns 1 if Option (Mac) / Alt (Windows/Linux) was held.
+
+  # --- Display control ---
+
+  # demoShow ()
+  # Forces immediate rendering of all deferred drawing commands.
+  # Required for animation. Without it, drawings appear only when
+  # demoWaitForInput() is called.
+
+  # --- Window management ---
+
+  # demoWindowTitle (newTitle$)
+  # Changes the title bar text of the Demo window.
+  # Also callable as: demoWindowTitle: "My Title"
+
+  # --- Related functions (already in APPENDIX_B) ---
+  # sleep (duration) — pause script for duration seconds
+  # asynchronous — keyword before Play; script continues during playback
+
+---
+
+# ============================================================================
+# SECTION 4: CRITICAL BUG — FONT METRIC CONTAMINATION
+# ============================================================================
+#
+# ** This is the single most important practical finding for Demo window
+# development. It is not documented in the Praat manual. **
+#
+# PROBLEM:
+# Praat's Demo window maintains internal font metric state that
+# contaminates `demo Paint rectangle` positioning. The contamination:
+#   - Accumulates across `demo Erase all` / redraw cycles (not reset)
+#   - Is proportional to font size differences (e.g. 18pt → 11pt)
+#   - Affects the FIRST Paint rectangle after a font size change
+#   - Is window-size-dependent (padding scales with pixel dimensions)
+#
+# SYMPTOMS:
+# Buttons drawn with `demo Paint rectangle` render at wrong vertical
+# positions after a page header drawn at a larger font size.
+# The first button absorbs a vertical offset; subsequent buttons may
+# be fine. The drift worsens after multiple page transitions.
+#
+# ROOT CAUSE (confirmed via 3 rounds of diagnostics):
+# `demo Paint rectangle` and `demo Text` use different internal
+# coordinate mapping when font metrics are dirty. After a large font
+# size (e.g., 18pt for a title), the first `Paint rectangle` at a
+# smaller font size absorbs a vertical offset.
+#
+# SOLUTION — The Three-Line Reset:
+# Every procedure that draws geometry or renders text MUST begin with:
+#
+#   demo Helvetica
+#   demo Font size: [target size]
+#   demo Axes: 0, 100, 0, 100
+#
+# All three lines are required:
+#   - `demo Helvetica` alone is insufficient.
+#   - `demo Font size:` + `demo Axes:` alone is insufficient after
+#     multiple redraws.
+#   - `demo Helvetica` flushes the internal font metric state.
+#
+# Apply to ALL drawing procedures: any procedure that calls
+# `demo Paint rectangle`, `demo Draw rectangle`, `demo Text`, etc.
+#
+# APPLIES TO ANIMATION FRAMES:
+# In animation loops that redraw the entire scene each frame, include
+# the three-line reset at the top of every frame — not just once before
+# the loop. Font metric contamination accumulates across frames.
+#
+# RULE FOR GENERATED CODE:
+# When generating Demo window drawing procedures, the three-line reset
+# MUST be the first executable lines. Omitting it causes position drift
+# that manifests only after 2–3 page transitions — extremely difficult
+# to debug after the fact.
+
+# ============================================================================
+# SECTION 5: TEXT ALIGNMENT LIMITATION
+# ============================================================================
+#
+# PROBLEM:
+# `demo Text: x, "left"` applies font-size-dependent internal padding
+# that scales with window pixel dimensions. Different font sizes at the
+# same x coordinate render at different pixel positions. There is no way
+# to lock two different font sizes to the same left pixel edge.
+#
+# This means section titles (e.g. 14pt) and body text (e.g. 11pt) at
+# the same x coordinate will never visually align.
+#
+# WHY IT IS UNFIXABLE:
+#   - A fixed offset can't compensate because the padding ratio changes
+#     on resize.
+#   - The Demo window has no container concept.
+#   - Each `demo Text: x, "left"` applies independent bearing.
+#
+# DESIGN SOLUTIONS:
+#
+# A) Same font size, colour-only hierarchy:
+#    Title at 11pt in primary blue, body at 11pt in dark gray.
+#
+# B) Visual nesting (recommended):
+#    Section titles at contentLeft (e.g. 5). Body text indented to
+#    bodyLeft (e.g. 8). The offset becomes a design feature.
+#
+# C) Accept it — the misalignment is subtle and reads as intentional.
+
+# ============================================================================
+# SECTION 6: ANIMATION — INPUT HANDLING
+# ============================================================================
+#
+# ⚠️  ERRATA (1 Mar 2026): This section supersedes v1.1 guidance.
+# Both Approach A (click + demoPeekInput) and Approach B (while
+# demoKeyPressed drain) from v1.1 are UNSAFE and have been removed.
+#
+# ROOT CAUSE:
+# demoPeekInput() triggers Cocoa event dispatch on macOS. Any queued
+# key event causes recursive interpreter re-entrance through
+# [GuiCocoaDrawingArea keyDown:] → Interpreter_resume →
+# Demo_peekInput, crashing Praat with:
+#
+#   Assertion failed in Interpreter.cpp at line 3846:
+#   our currentLevel == 0
+#
+# The crash occurs whenever demoPeekInput() is called while the script
+# is actively running (i.e., during animation), NOT when the script is
+# waiting (i.e., at demoWaitForInput). Mouse clicks do not trigger
+# the re-entrance — only key events.
+#
+# ONLY SAFE ANIMATION PATTERN — No input checking:
+# Let the animation run to completion with no demoPeekInput() call.
+# demoShow() and all drawing commands are confirmed safe.
+#
+#   # Safe animation loop — no input checking
+#   for .frame from 1 to .nFrames
+#       demo Erase all
+#       demo Axes: 0, 100, 0, 100
+#       # ... draw frame content ...
+#       demoShow ()
+#       sleep (0.033)       # ~30 fps
+#       # NO demoPeekInput() here — it crashes if keys are queued
+#   endfor
+#
+# CONSEQUENCES:
+#   - Animations cannot be interrupted by the user mid-loop
+#   - Keep animations short (2–5 seconds) or provide a visual
+#     progress indicator so the user knows to wait
+#   - For "replay" functionality, return to the demoWaitForInput
+#     event loop after animation completes, then re-trigger the
+#     animation on a specific click region or key press
+#
+# REPLAY PATTERN:
+# After animation completes, the main event loop (which uses
+# demoWaitForInput, NOT demoPeekInput) can detect replay requests:
+#
+#   # In main event loop (safe — script is waiting, not running):
+#   while demoWaitForInput ()
+#       if demoKeyPressed ()
+#           .key$ = demoKey$ ()
+#           if .key$ = "r" or .key$ = "R"
+#               @runAnimation
+#           endif
+#       elsif demoClicked ()
+#           if demoClickedIn (.replayX1, .replayX2, .replayY1, .replayY2)
+#               @runAnimation
+#           endif
+#       endif
+#   endwhile
+#
+# EVENT LOOP INPUT REMAINS SAFE:
+# The existing demoWaitForInput() + if demoKeyPressed() pattern is
+# unaffected. The crash occurs ONLY when demoPeekInput() is called
+# while the interpreter is actively executing (not waiting). All
+# input handling in non-animation event loops works as documented
+# in Section 3.
+#
+# WHAT ABOUT demoClicked() DURING ANIMATION?
+# In principle, demoClicked() uses a different code path than
+# demoKeyPressed() and might not trigger re-entrance. However,
+# demoClicked() requires demoPeekInput() to have been called first
+# to populate the click state — so there is no safe way to check
+# for clicks during animation either.
+#
+# Provenance: DFT Demo v3.6.0–v3.6.3 debugging, 1 Mar 2026.
+# Confirmed via elimination testing: removing demoPeekInput() from
+# the animation loop stopped all crashes. demoShow() confirmed safe.
+# Previous v1.1 guidance (Approach A click-only, Approach B key drain)
+# both relied on demoPeekInput() and are therefore both unsafe.
+
+# ============================================================================
+# SECTION 7: ARBITRARY FILLED SHAPES — POLYGON BUG AND WORKAROUND
+# ============================================================================
+#
+# ** This section applies to BOTH the Demo window and the Picture window.
+# The bug is in Praat's Polygon rendering, not specific to the Demo
+# window, but it is most commonly encountered in Demo window development
+# where custom shapes (buttons, faces, regions) are routine. **
+#
+# PROBLEM — POLYGON Paint: IGNORES Axes: COORDINATE SYSTEM:
+# Praat's Polygon object type provides `Create Polygon from values:`
+# and a `Paint:` command. However, when a Polygon is painted in either
+# the Picture window or the Demo window, it does NOT respect the
+# current `Axes:` coordinate mapping. The Polygon's vertex coordinates
+# are mapped to some internal coordinate system, producing mispositioned
+# and/or misscaled output regardless of the Axes: settings.
+#
+# This makes Polygon objects UNUSABLE for positioned fills in both
+# the Picture window and the Demo window.
+#
+# FAILED APPROACHES (do not attempt):
+#   - Create Polygon from values: + Polygon Paint:
+#   - Adjusting Polygon coordinates to compensate for Axes: mismatch
+#   - Using Select inner viewport: to work around the mapping
+#
+# WORKING SOLUTION — SCANLINE RASTERIZATION WITH Paint rectangle:
+# Decompose any arbitrary filled shape into horizontal (or vertical)
+# strips and fill each strip with `Paint rectangle:`. This is the same
+# strategy used by `@drawViolin` in EML_DRAWING_PROCEDURES.txt and by
+# `@fillQuad` / `@demoFillQuad` in the 3D Scatter Plot.
+#
+# `Paint rectangle:` correctly respects the Axes: coordinate system
+# in both the Picture window and the Demo window.
+#
+# General pattern for filling a quadrilateral (4 vertices):
+#
+#   procedure fillQuad: .ax, .ay, .bx, .by, .cx, .cy, .dx, .dy, .color$
+#       # Find vertical extent
+#       .yLo = min (.ay, min (.by, min (.cy, .dy)))
+#       .yHi = max (.ay, max (.by, max (.cy, .dy)))
+#       .nSteps = 50
+#       .yStep = (.yHi - .yLo) / .nSteps
+#
+#       for .s from 0 to .nSteps - 1
+#           .yMid = .yLo + (.s + 0.5) * .yStep
+#           .yBot = .yLo + .s * .yStep
+#           .yTop = .yBot + .yStep
+#
+#           # Find leftmost and rightmost edge intersections at .yMid
+#           # (requires an edge-intersection helper like @xAtY)
+#           # ... compute .xLeft, .xRight ...
+#
+#           Paint rectangle: .color$, .xLeft, .xRight, .yBot, .yTop
+#       endfor
+#   endproc
+#
+# For the Demo window variant, prefix all drawing commands with `demo`:
+#
+#   demo Paint rectangle: .color$, .xLeft, .xRight, .yBot, .yTop
+#
+# PERFORMANCE NOTES:
+#   - 50 scanline steps per face is sufficient for smooth appearance
+#     in static rendering. Reduce to 30–40 for animation.
+#   - Three filled faces at 50 steps each = ~150 Paint rectangle calls,
+#     which is fast enough for both static and animated contexts.
+#   - For circles/ellipses, the same scanline approach works — compute
+#     left/right edge from the equation at each y-step. However,
+#     `Paint circle:` and `demo Paint circle:` DO respect Axes: and
+#     are preferred for circular shapes.
+#
+# COMMANDS THAT CORRECTLY RESPECT Axes::
+#   Paint rectangle: ✓
+#   Paint circle: ✓
+#   Paint rounded rectangle: ✓ (confirmed in Demo window)
+#   Draw line: ✓
+#   Draw rectangle: ✓
+#   Draw circle: ✓
+#   Text: ✓
+#
+# COMMANDS THAT DO NOT RESPECT Axes::
+#   Polygon Paint: ✗ (mispositioned/misscaled)
+#
+# Provenance: Polygon bug discovered and workaround confirmed in
+# 3D Scatter Plot development (Feb 2026). Scanline approach used
+# successfully for three-face box rendering at 40–50 steps per face
+# in both static and animated modes.
+
+# ============================================================================
+# SECTION 8: DRAWING PRAAT OBJECTS IN THE DEMO WINDOW
+# ============================================================================
+#
+# Use `demo Select outer viewport:` to target a region, then call the
+# object's `demo Draw:` command. This produces anti-aliased, resolution-
+# independent rendering — always prefer it over manual point-by-point
+# plotting.
+#
+# Pattern:
+#
+#   # Convert 0–100 demo coords to viewport inches
+#   .vpScale = 12 / 100
+#   .vpLeft = .x1 * .vpScale
+#   .vpRight = .x2 * .vpScale
+#   .vpTop = (100 - .y2) * .vpScale      # Y inversion
+#   .vpBottom = (100 - .y1) * .vpScale    # Y inversion
+#
+#   demo Select outer viewport: .vpLeft, .vpRight, .vpTop, .vpBottom
+#   selectObject: .soundId
+#   demo Draw: .startTime, .endTime, -.ampBound, .ampBound, "no", "Curve"
+#
+#   # CRITICAL: Restore coordinate system after viewport drawing
+#   demo Select inner viewport: 0, 100, 0, 100
+#   demo Axes: 0, 100, 0, 100
+#
+# VIEWPORT RESTORATION IS MANDATORY:
+# After any `demo Select outer viewport:` call, restore the coordinate
+# system before drawing anything else. Failing to do this causes all
+# subsequent coordinate-based operations (click detection, text
+# placement, rectangle drawing) to use the wrong coordinate system.
+#
+# ANTI-PATTERN — manual point-by-point plotting (avoid):
+# Do NOT use hundreds of Get value at time: queries + Draw line:
+# segments to plot waveforms or analysis curves. Always use the
+# object's native `demo Draw:` command.
+#
+# DEPTH SORTING FOR OVERLAPPING ELEMENTS:
+# When drawing many elements that may overlap (e.g., scatter plot
+# points, multiple curves), use Praat's `Table Sort rows:` command
+# for painter's algorithm ordering rather than implementing bubble
+# sort or similar in-script. Store screen coordinates and depth in
+# a Table, sort on the depth column, then draw in order.
+#
+# Pattern:
+#   selectObject: tableId
+#   Sort rows: "depth"
+#   nRows = Get number of rows
+#   for iRow from 1 to nRows
+#       selectObject: tableId
+#       .sx = Get value: iRow, "screenX"
+#       .sy = Get value: iRow, "screenY"
+#       # ... draw element at (.sx, .sy) ...
+#   endfor
+
+# ============================================================================
+# SECTION 9: ASYNCHRONOUS PLAYBACK
+# ============================================================================
+#
+# Syntax:
+#   selectObject: soundId
+#   asynchronous Play
+#
+# The `asynchronous` keyword lets the script continue while the sound
+# plays in the background. Available since Praat 5.3.79.
+#
+# STOP PLAYBACK WORKAROUND:
+# Praat provides no native "stop playback" command. The workaround is
+# to play a 1ms silent sound, which interrupts the previous playback:
+#
+#   procedure stopPlayback
+#       .silentId = Create Sound from formula: "emlSilent",
+#       ... 1, 0, 0.001, 44100, "0"
+#       selectObject: .silentId
+#       Play
+#       removeObject: .silentId
+#   endproc
+
+# ============================================================================
+# SECTION 10: WINDOW LIFECYCLE AND GRACEFUL EXIT
+# ============================================================================
+#
+# "YOU INTERRUPTED THE SCRIPT" MESSAGE:
+# If the user closes the Demo window while demoWaitForInput() is
+# blocking, Praat shows this message. Prevent by ensuring the user
+# can always reach the end of the script via navigation.
+#
+# NO PROGRAMMATIC CLOSE:
+# There is no command to close the Demo window from a script. The
+# window persists as a static image until manually closed.
+#
+# FINAL SCREEN PATTERN:
+# Show an informative final screen so the user knows the script ended:
+#
+#   demo Erase all
+#   demo Axes: 0, 100, 0, 100
+#   demo Colour: "{0.25, 0.45, 0.70}"
+#   demo Font size: 20
+#   demo Text: 50, "centre", 55, "half", "Session complete."
+#   demo Colour: "{0.5, 0.5, 0.5}"
+#   demo Font size: 11
+#   demo Text: 50, "centre", 45, "half", "You may close this window."
+#
+# ESCAPE KEY RECOMMENDATION:
+# Map Escape to "return to menu" rather than "exit script" to avoid
+# the confusing dead-window state. Provide an explicit "Exit" button.
+
+# ============================================================================
+# SECTION 11: ANIMATION STABILITY — PRE-COMPUTED GLOBAL BOUNDS
+# ============================================================================
+#
+# PROBLEM:
+# In animations where the scene rotates, translates, or otherwise
+# changes geometry each frame, recomputing screen-space axis bounds
+# per frame causes the plot to visually jump and jitter as the
+# coordinate mapping shifts.
+#
+# SOLUTION:
+# Pre-compute the global screen-space envelope BEFORE the animation
+# loop by scanning the extreme positions across the full animation
+# range. Use the resulting bounds as fixed Axes: for all frames.
+#
+# Pattern for rotation animations:
+#
+#   # Scan all key frames to find global screen extent
+#   .globalXMin = 1e30
+#   .globalXMax = -1e30
+#   .globalYMin = 1e30
+#   .globalYMax = -1e30
+#
+#   .scanStep = 15    # degrees — coarser than animation step is fine
+#   for .scanDeg from 0 to 359
+#       .scanRad = .scanDeg * pi / 180
+#       # Project all extreme points (e.g., 8 box corners) at this angle
+#       # Update globalXMin/Max, globalYMin/Max from projected coords
+#       .scanDeg = .scanDeg + .scanStep - 1
+#       # (subtract 1 because for-loop increments by 1)
+#   endfor
+#
+#   # Add margin for perspective bulge or label clearance
+#   .marginFraction = 0.25
+#   .xMargin = (.globalXMax - .globalXMin) * .marginFraction
+#   .yMargin = (.globalYMax - .globalYMin) * .marginFraction
+#   .globalXMin = .globalXMin - .xMargin
+#   .globalXMax = .globalXMax + .xMargin
+#   .globalYMin = .globalYMin - .yMargin
+#   .globalYMax = .globalYMax + .yMargin
+#
+#   # Animation loop uses fixed bounds
+#   for .frame from 0 to .nFrames - 1
+#       demo Erase all
+#       demo Axes: .globalXMin, .globalXMax, .globalYMin, .globalYMax
+#       # ... draw frame ...
+#       demoShow ()
+#   endfor
+#
+# The margin fraction should be generous (20–25%) to accommodate
+# perspective effects and label placement. Tight margins cause
+# clipping during frames with maximum perspective bulge.
+#
+# This pattern also applies to non-rotation animations where data
+# ranges change over time (e.g., streaming data, parameter sweeps).
+#
+# Provenance: Pre-computed bounds pattern developed for 3D Scatter
+# Plot rotation animation (Feb 2026), scanning 8 box corners at 15°
+# intervals with 25% margin.
+
+# ============================================================================
+# SECTION 12: LAYOUT AND CONTENT OVERFLOW
+# ============================================================================
+#
+# FIXED-CANVAS CONSTRAINT:
+# The Demo window is a fixed 100 × 100 canvas with no scroll capability
+# and no text wrapping. The author manages all line breaks manually.
+#
+# VERTICAL SPACE BUDGET:
+# After reserving header (~15 units) and navigation bar (~15 units),
+# usable content area is approximately 67 vertical units.
+#
+# Approximate element sizes:
+#   Title:            ~6 units
+#   Body text line:   ~3.5 units
+#   Code block:       ~30–36 units (for 4–6 rows)
+#   Callout box:      ~10 units
+#   Gap between:      ~3 units
+#   Media panel:      ~25 units
+#
+# DESIGN IMPLICATIONS:
+#   - Vertical space is the scarce resource; horizontal space is abundant
+#   - Side-by-side layouts save vertical space vs stacked layouts
+#   - Content exceeding ~67 units must be split across pages
+#   - Reducing line spacing (e.g. 4 → 3.5) can recover 3–6 units
+#
+# SELECTIVE REDRAWING:
+# `demo Erase all` may flash white briefly. For smoother transitions,
+# repaint only the content region:
+#
+#   demo Paint rectangle: backgroundColor$,
+#   ... 0, 100, navDivider + 0.5, headerDivider - 0.5
+#
+# This leaves header and navigation intact, reducing flicker.
+
+# ============================================================================
+# SECTION 13: APPENDIX_B_FUNCTIONS.txt ADDENDUM
+# ============================================================================
+#
+# The following demo-specific functions should be added to
+# APPENDIX_B_FUNCTIONS.txt (alphabetical position in the d section):
+#
+#  demo – execute a graphics command in the Demo window (keyword, not function)
+#  demoClicked ( ) – determine whether the user clicked in the Demo window
+#  demoClickedIn (xmin, xmax, ymin, ymax) – determine whether the user clicked in a rectangular region in the Demo window
+#  demoCommandKeyPressed ( ) – determine whether the user pressed the Command key when they typed into the Demo window
+#  demoInput (characters$) – determine whether the user typed (or clicked) the specified characters into the Demo window
+#  demoKey$ ( ) – determine the key that the user typed into the Demo window
+#  demoKeyPressed ( ) – determine whether the user typed anything into the Demo window
+#  demoOptionKeyPressed ( ) – determine whether the user pressed the Option key when they typed into the Demo window
+#  demoPeekInput ( ) – see whether a user event (click or key press) is available in the Demo window
+#  demoShiftKeyPressed ( ) – determine whether the user pressed the Shift key when they typed into the Demo window
+#  demoShow ( ) – make all deferred drawing commands immediately visible in the Demo window
+#  demoWaitForInput ( ) – wait for a user event (click or key press) in the Demo window
+#  demoWindowTitle (newTitle$) – change the title of the Demo window
+#  demoX ( ) – the horizontal position of a mouse click in the Demo window
+#  demoY ( ) – the vertical position of a mouse click in the Demo window
+#
+# Also absent from APPENDIX_B but used in Demo window patterns:
+#  clearinfo – clear the Info window
+#  createFolder (folderPath$) – create a new folder, or do nothing if it already exists
+
+# ============================================================================
+# SECTION 14: PREFERENCES AND STATE PERSISTENCE
+# ============================================================================
+#
+# Demo window applications can persist state in the Praat preferences
+# folder. Use the `apps` subfolder per the manual recommendation.
+#
+# Setup:
+#   createFolder: preferencesDirectory$ + "/apps"
+#   createFolder: preferencesDirectory$ + "/apps/MyApp"
+#
+# Save:
+#   writeFileLine: .progressFile$, string$ (.lastLesson)
+#   appendFileLine: .progressFile$, string$ (.maxLesson)
+#
+# Load:
+#   if fileReadable (.progressFile$)
+#       .lines$# = readLinesFromFile$# (.progressFile$)
+#       .lastLesson = number (.lines$#[1])
+#       .maxLesson = number (.lines$#[2])
+#   endif
+
+# ============================================================================
+# SECTION 15: KNOWN BUGS AND LIMITATIONS
+# ============================================================================
+#
+# | Issue                              | Severity | Workaround              |
+# |------------------------------------|----------|-------------------------|
+# | Font metric contamination of       | Critical | Three-line reset        |
+# |   Paint rectangle (Section 4)      |          |   (Section 4)           |
+# | Keyboard crash during animation    | Critical | Click-only (Section 6A) |
+# |   — unconsumed key events          |          |  or key buffer drain    |
+# |                                    |          |  (Section 6B)           |
+# | Polygon Paint: ignores Axes:       | Critical | Scanline rasterization  |
+# |   coordinate system (Section 7)    |          |  with Paint rectangle:  |
+# |   — affects Picture window too     |          |  (Section 7)            |
+# | Text alignment varies by font size | Moderate | Visual nesting layout   |
+# |   (Section 5)                      |          |   (Section 5)           |
+# | No programmatic window close       | Minor    | Informative final screen|
+# | No scroll capability               | Minor    | Paginate; 67-unit budget|
+# | No text wrapping                   | Moderate | Manual line breaks      |
+# | Resize distorts click coordinates  | Moderate | Design for 1344×756     |
+# | `demo Erase all` flicker           | Minor    | Selective repaint       |
+# | Escape key missing on Windows      | Fixed    | Fixed in Praat 6.2+     |
+# | Nested scripts with Demo window    | Fixed    | Fixed in Praat 6.4.59   |
+#
+# SAVING DEMO WINDOW CONTENTS:
+# The Demo window has NO save command. To capture contents as an image:
+#   A) OS screenshot tools
+#   B) Replicate drawing in Picture window (without `demo`) and save
+#   C) Insert picture from file... (for embedding bitmaps — limited)
+
+# ============================================================================
+# SECTION 16: RETRIEVAL PROTOCOL INTEGRATION
+# ============================================================================
+#
+# Add to the master prompt Reference Retrieval Protocol table:
+#
+# | `COMMANDS_DemoWindow.txt` | Script uses the Demo window for       |
+# |                           | interactive presentations, experiments,|
+# |                           | simulations, or stand-alone apps       |
+# |                           | (any `demo` keyword, demoWaitForInput, |
+# |                           | demoClicked, etc.)                     |
+#
+# Co-loading requirements:
+#   - ALWAYS also load COMMANDS_PictureWindow.txt (Demo uses Picture
+#     window commands with `demo` prefix)
+#   - Load relevant COMMANDS_*.txt for object types being drawn
+#   - APPENDIX_E_SPECIAL_CHARACTERS.txt applies to Demo window text
+#     (same rendering engine as Picture window)
+#
+# The EML_DRAWING_PROCEDURES.txt procedures target Picture window
+# output and are NOT directly compatible with the Demo window due to
+# the y-direction inversion. Colour palettes and math can be adapted
+# but viewport logic must be reworked.
+#
+# SELF-AUDIT addition for Demo window scripts:
+#
+#   ✓ **Demo window (COMMANDS_DemoWindow.txt):**
+#     - Three-line reset in all drawing procedures (and animation frames)
+#     - Viewport restoration after every `demo Select outer viewport:`
+#     - Animation input: click-only (6A) or key buffer drain (6B)
+#     - No Polygon Paint: — use scanline rasterization for filled shapes
+#     - Graceful exit path from every page
+#     - Axes: 0, 100, 0, 100 restored before click detection
+#     - Pre-computed global bounds if animating changing geometry
+
+---
+
+*End of Demo Window commands and reference.*

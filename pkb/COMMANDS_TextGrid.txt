@@ -1,0 +1,108 @@
+# PRAAT COMMANDS: TextGrid
+# Source: Praat C API (praatlib.h), June 2025
+# Additional commands: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+
+---
+
+  # Create / Read
+  Create TextGrid: start time, end time, all tier names$, which of these are point tiers$
+  Read TextGrid from Xwaves: sound file path$, tiers are point tiers?, override number of tiers, file name$
+
+  # Query (API)
+  List: include line number?, time decimals, include tier names?, include empty intervals?
+  Get tier name: tier number
+  Get label of interval: tier number, interval number
+  Get label of point: tier number, point number
+  Get starting points: tier number, get starting points whose label$, the text$
+  Get end points: tier number, get end points whose label$, the text$
+  Get centre points: tier number, get centre points whose label$, the text$
+  Get points: tier number, get points whose label$, the text$
+  Get points (preceded): tier number, get points whose label$, the text$, preceded by a label that$, the text$
+  Get points (followed): tier number, get points whose label$, the text$, followed by a label that$, the text$
+
+  # Query — interval tier (session-verified)
+  Get number of intervals: tier number
+  # Verified: Get number of intervals: 1
+  Get interval at time: tier number, time
+  # Verified: Get interval at time: 1, 0.5
+  Get start time of interval: tier number, interval number
+  # Verified: Get start time of interval: 1, 1
+  Get end time of interval: tier number, interval number
+  # Verified: Get end time of interval: 1, 1
+
+  # Query — point tier (session-verified)
+  Get number of points: tier number
+  # Verified: Get number of points: 1
+  Get time of point: tier number, point number
+  # Verified: Get time of point: 1, 1
+
+  # Modify
+  Insert interval tier: position, name$
+  Insert point tier: position, name$
+  Remove tier: tier number
+  Set tier name: tier n umber, name$
+  Insert boundary: tier number, time
+  Remove left boundary: tier number, interval number
+  Remove right boundary: tier number, interval number
+  Remove boundary at time: tier number, time
+  Set interval text: tier number, interval number, text$
+  Replace interval texts: tier number, from interval, to interval, search string$, replace string$, search type$
+  Insert point: tier number, time, text$
+  Remove point: tier number, point number
+  Remove points: tier number, remove every point whose label$, the text$
+  Set point text: tier number, point number, text$
+  Replace point texts: tier number, from interval, to interval, search string$, replace string$, search type$
+
+  # Convert / Analyze
+  Down to Table: include line number?, time decimals, include tier names?, include empty intervals?
+  To DurationTier: tier number, time scale factor, left transition duration, right transition duration, scale intervals whose label$, the text$
+
+  # Extract / Combine
+  Append
+  Extract all intervals: tier number, preserve times?
+  Extract non-empty intervals: tier number, preserve times?
+  Extract intervals where: tier number, preserve times?, extract every interval whose label$, the text$
+  Extract one tier: tier number
+  Extract part: from time, to time, preserve times?
+  Merge: equalize domains?
+  Concatenate
+
+  # Draw
+  Draw: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  Draw logarithmic: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  Draw semitones: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  Draw mel: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  Draw erb: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  Speckle: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Speckle logarithmic: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Speckle semitones: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Speckle mel: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Speckle erb: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Draw separately: from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Draw separately (logarithmic): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Draw separately (semitones): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Draw separately (mel): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Draw separately (erb): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  Draw: from time, to time, show boundaries?, use text styles?, garnish?
+  Draw with Sound?
+  Draw with Pitch?
+
+  # Other
+  View & Edit
+  Scale times
+  Align interval: tier number, interval number, language$, include words?, include phonemes?
+  Clone time domain
+  Save as chronological text file: file name$
+  View & Edit alone
+  View & Edit with Sound?
+  Tabulate occurrences: list every label that$, the text$, case sensitive?
+  Is interval tier: tier number
+  Convert to backslash trigraphs
+  Convert to Unicode
+  Extend time: extend domain by, position$
+  Duplicate tier: tier number, position, name$
+
+---
+
+*End of TextGrid commands.*

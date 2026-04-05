@@ -1,0 +1,93 @@
+# PRAAT COMMANDS: Picture Window
+# Source: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# These are environment commands (not object-specific).
+# They operate on the Picture window coordinate system and drawing surface.
+
+---
+
+  # Viewport
+  Select outer viewport: left, right, top, bottom
+  # Verified: Select outer viewport: 0, 6, 0, 4
+  Select inner viewport: left, right, top, bottom
+  # Verified: Select inner viewport: 0, 6, 0, 4
+
+  # Edit
+  Erase all
+  # Verified: Erase all
+
+  # Font
+  Font size: size
+  # Verified: Font size: 12
+  Helvetica
+  # Verified: Helvetica
+
+  # Pen
+  Black
+  # Verified: Black
+  Solid line
+  # Verified: Solid line
+  Line width: width
+  # Verified: Line width: 1
+  Colour: colour$
+  # Verified: Colour: "{0.30, 0.50, 0.75}"
+
+  # Margins
+  Draw inner box
+  # Verified: Draw inner box
+  Marks left: number of marks, draw numbers?, draw ticks?, draw dotted lines?
+  # Verified: Marks left: 5, "yes", "yes", "no"
+  Marks bottom: number of marks, draw numbers?, draw ticks?, draw dotted lines?
+  # Verified: Marks bottom: 5, "yes", "yes", "no"
+  One mark left: position, draw number?, draw tick?, draw dotted line?, text$
+  # Verified: One mark left: 0, "yes", "yes", "no", ""
+  One mark bottom: position, draw number?, draw tick?, draw dotted line?, text$
+  # Verified: One mark bottom: 1, "no", "yes", "no", "Condition A"
+  Text left: far?, text$
+  # Verified: Text left: "yes", "Amplitude"
+  Text bottom: far?, text$
+  # Verified: Text bottom: "yes", "Time (s)"
+  Text top: far?, text$
+  # Verified: Text top: "no", "Title"
+
+  # File (save)
+  Save as 300-dpi PNG file: file path$
+  # Verified: Save as 300-dpi PNG file: "/path/to/file.png"
+  Save as 600-dpi PNG file: file path$
+  # Verified: Save as 600-dpi PNG file: "/path/to/file.png"
+  Save as praat picture file: file path$
+  # Verified: Save as praat picture file: outputPath$
+  # Note: Saves Picture window contents as .prapic file. Can be reopened
+  #   and edited in Praat later. Not an image format — use PNG/PDF for
+  #   publication.
+  # Provenance: Tier 2 (Praat manual), 10 Mar 2026
+
+  # World
+  Axes: x minimum, x maximum, y minimum, y maximum
+  # Verified: Axes: 0.5, 4.5, 0, 200
+  Paint rectangle: colour$, x1, x2, y1, y2
+  # Verified: Paint rectangle: "{0.85, 0.90, 0.95}", 0.7, 1.3, 0, 142.5
+  Draw rectangle: x1, x2, y1, y2
+  # Verified: Draw rectangle: 0.7, 1.3, 0, 142.5
+  Draw line: x1, y1, x2, y2
+  # Verified: Draw line: 1, 130.2, 1, 154.8
+  Text: x, horizontal alignment$, y, vertical alignment$, text$
+  # Verified: Text: 1, "centre", 0, "top", "Condition A"
+  # Note: horizontal alignment = "left", "centre", "right"; vertical = "top", "half", "bottom"
+  Paint circle: colour$, centreX, centreY, radius
+  # Verified: Paint circle: "Blue", 1.5, 200, 0.03
+  # Note: radius is in world x-coordinates. Visual size varies with axis range.
+  # Provenance: Paste Commands equivalent (dialog screenshot), 4 Mar 2026
+  Draw circle: centreX, centreY, radius
+  # Verified: Draw circle: 0.5, 0.5, 1.0
+  # Note: radius is in world x-coordinates (same as Paint circle).
+  # Provenance: Praat manual (sendpraat example), 4 Mar 2026
+
+---
+
+*End of Picture Window commands.*

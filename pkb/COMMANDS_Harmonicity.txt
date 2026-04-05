@@ -1,0 +1,25 @@
+# PRAAT COMMANDS: Harmonicity
+# Source: Praat C API (praatlib.h), June 2025
+# Additional commands: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+
+---
+
+  # Query (session-verified)
+  Get value at time: time, interpolation$
+  # Verified: Get value at time: 0.5, "cubic"
+  Get mean: from time, to time
+  # Verified: Get mean: 0, 0
+
+  # Modify
+  Formula: formula$
+
+  # Convert / Analyze
+  To Matrix
+
+  # Draw
+  Draw: from time, to time, minimum, maximum
+
+---
+
+*End of Harmonicity commands.*
