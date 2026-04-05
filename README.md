@@ -57,14 +57,14 @@ In Claude (claude.ai or the Claude app):
 
 ### 2. Set the System Prompt
 
-1. In your new project, click **Set custom instructions**
+1. In your new project, click **instructions**
 2. Paste the entire contents of `MASTER_PROMPT_CORE_v13.md` into the instructions field
 3. Scroll to the bottom and edit the "Canary" text if you wish. It will present this text to you as a confidence measure that PraatGen read the entire master prompt file.
 4. Save
 
 ### 3. Upload the Knowledge Base
 
-1. In your project, click **Add project knowledge**
+1. In your project, click **add files**
 2. Upload all files from the `pkb/` folder — these are the verified reference files that PraatGen uses to validate commands and functions
 3. Do not rename the files; the master prompt references them by their exact filenames
 
