@@ -1,0 +1,49 @@
+# PRAAT COMMANDS: PitchTier
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+
+---
+
+  # Create / Read
+  Create PitchTier: name$, start time, end time
+  # Modify
+  Add point: time, pitch
+  Formula: formula$
+  # Convert / Analyze
+  To PointProcess
+  To Sound (pulse train): sampling frequency, adaptation factor, adaptation time, interpolation depth, hum?
+  To Sound (phonation): sampling frequency, adaptation factor, maximum period, open phase, collision phase, power1, power2, hum?
+  To Sound (sine): sampling frequency
+  To Pitch: step size, pitch floor, pitch ceiling
+  Down to PointProcess
+  Down to RealTier
+  Down to TableOfReal: unit$
+  To PitchTier
+  # Draw
+  Draw: from time, to time, from frequency, to frequency, line type for nonperiodic intervals$, garnish?, drawing method$
+  Draw: from time, to time, from frequency, to frequency, garnish?, drawing method$
+  # Other
+  Save as PitchTier spreadsheet file: file name$
+  Save as headerless spreadsheet file: file name$
+  View & Edit
+  View & Edit with Sound?
+  Play pulses
+  Hum
+  Play sine
+  & Manipulation: Replace?
+  Modify interval: from time, to time, time offset$, pitches string$, pitch as$, pitch is$, pitch unit$
+  Modify interval (tone levels): from time, to time, fmin, fmax, number of tone levels, time offset$
+  Stylize: frequency resolution, unit$
+  Interpolate quadratically: number of points per parabola, unit$
+  Shift frequencies: from time, to time, frequency shift, unit i$
+  Multiply frequencies: from time, to time, factor
+
+---
+
+*End of PitchTier commands.*

@@ -1,0 +1,214 @@
+# PRAAT GUI INPUT SYNTAX REFERENCE
+# Source: Official Praat manual (Scripting 6.1, Scripting 6.6)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+
+# Authoritative syntax for form and beginPause/endPause constructs.
+
+---
+
+## C.1 FORM BLOCKS
+
+Structure:
+
+    form: "Window Title"
+        [field declarations]
+    endform
+
+Placement: Must appear before any executable code. Only one per script.
+
+### Numeric fields
+
+    real: "Variable name (unit)", "default"
+
+Any real number.
+
+    positive: "Variable name", "default"
+
+Positive real; form errors if user enters ≤ 0.
+
+    integer: "Variable name", "default"
+
+Whole number; truncates decimals.
+
+    natural: "Variable name", "default"
+
+Positive whole number; form errors if user enters ≤ 0.
+
+### String fields
+
+    word: "Variable name", "default"
+
+Single word; reads only to first space.
+
+    sentence: "Variable name", "default"
+
+Short string; single line.
+
+    text: "Variable name", "default"
+
+Long string; variable name appears above field.
+
+    text: numberOfLines, "Variable name", "default"
+
+Multi-line text field; numberOfLines = 1–33.
+
+### Boolean
+
+    boolean: "Variable name", 0
+    boolean: "Variable name", 1
+
+Checkbox; 0 = off, 1 = on.
+
+    boolean: "Variable name", "yes"
+    boolean: "Variable name", "no"
+
+Also accepts: "on", "off", "ON", "OFF", "Yes", "No", etc.
+
+### Choice (radio buttons)
+
+    choice: "Variable name", defaultIndex
+        option: "Option text 1"
+        option: "Option text 2"
+        option: "Option text 3"
+
+Derives both numeric variable (variable_name = selected index) and string variable (variable_name$ = selected option text).
+
+### Optionmenu (dropdown)
+
+    optionmenu: "Variable name", defaultIndex
+        option: "Option text 1"
+        option: "Option text 2"
+        option: "Option text 3"
+
+Same derivation as choice. Uses less screen space.
+
+### File and folder selectors
+
+    infile: "Variable name", "default"
+
+Existing file path for reading. Native file browser.
+
+    outfile: "Variable name", "default"
+
+New file path for writing. Native file browser.
+
+    folder: "Variable name", "default"
+
+Directory path. Native folder browser.
+
+With height parameter:
+
+    infile: numberOfLines, "Variable name", "default"
+    outfile: numberOfLines, "Variable name", "default"
+
+### Vector fields
+
+    realvector: "Variable name", "(whitespace-separated)", "1 2 3"
+    realvector: "Variable name", "(formula)", "randomUniform# (5, 0, 1)"
+    realvector: numberOfLines, "Variable name", "format", "default"
+
+Also: positivevector, integervector, naturalvector — same patterns with validation.
+
+### Layout helpers
+
+    comment: "Any text to display (not a variable)"
+
+    left: "Variable name", "default"
+    right: "Variable name", "default"
+
+Combine two short fields on one line.
+
+---
+
+## C.2 beginPause/endPause BLOCKS
+
+Structure:
+
+    beginPause: "Window Title"
+        [field declarations — same types as form]
+        [conditional logic allowed here]
+    clicked = endPause: "Button1", "Button2", ..., defaultButton
+
+Placement: Anywhere in executable code. Multiple allowed per script.
+
+Key differences from form:
+- Can appear multiple times
+- Can contain conditional logic between fields
+- Must capture return value from endPause
+- Can suppress Stop button
+
+### endPause signatures
+
+Basic (with Stop button):
+
+    clicked = endPause: "Continue", 1
+
+Single button, index 1, is default. Stop button shown.
+
+    clicked = endPause: "Cancel", "OK", 2
+
+Two buttons; button 2 (OK) is default. Stop button shown.
+
+No Stop button:
+
+    clicked = endPause: "Cancel", "OK", 2, 1
+
+Two buttons; button 2 (OK) is default; button 1 (Cancel) is cancel button.
+No Stop button. Closing window = clicking Cancel.
+
+**Field-variable caveat:** When the cancel button is clicked (or the
+window is closed), field variables are NOT updated — they retain their
+prior values or remain undefined. Code after the cancel path must not
+use field variables without checking. The preferred pattern (see
+APPENDIX_F S0A) uses 0 instead of a cancel-button index, which ensures
+field variables are always updated regardless of which button is clicked.
+
+No default button:
+
+    clicked = endPause: "1", "2", "3", "4", "5", 0
+
+Five buttons; 0 means no default (Enter key does nothing).
+
+### Return value
+
+clicked receives the 1-based index of the button the user clicked.
+
+### Cancel handling pattern
+
+    beginPause: "Confirm operation"
+        comment: "This will modify your files."
+    clicked = endPause: "Cancel", "Proceed", 2, 1
+    if clicked = 1
+        exitScript: "User cancelled."
+    endif
+
+### Example with conditional fields
+
+    beginPause: "Analysis settings"
+        positive: "Pitch floor (Hz)", "75"
+        positive: "Pitch ceiling (Hz)", "500"
+        if advancedMode
+            real: "Voicing threshold", "0.45"
+            real: "Octave cost", "0.01"
+        endif
+    clicked = endPause: "Cancel", "Analyze", 2, 1
+
+---
+
+## C.3 VARIABLE DERIVATION ALGORITHM
+
+Both form and beginPause derive variable names from field labels:
+
+1. Strip parenthetical content: "Pitch floor (Hz)" → "Pitch floor "
+2. Strip leading/trailing whitespace: "Pitch floor " → "Pitch floor"
+3. Replace spaces with underscores: "Pitch floor" → "Pitch_floor"
+4. Lowercase first character: "Pitch_floor" → "pitch_floor"
+5. Append $ for string types: word, sentence, text, infile, outfile, folder → pitch_floor$
+6. choice/optionmenu: Two variables — name (numeric) and name$ (string)
+
+Height parameters do not affect derivation:
+infile: 2, "Sound file", "" → sound_file$
+
+---
+
+*End of Appendix C. This appendix is authoritative for GUI input syntax (Rules 18, 19, 20).*

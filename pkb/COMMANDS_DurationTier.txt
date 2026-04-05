@@ -1,0 +1,28 @@
+# PRAAT COMMANDS: DurationTier
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+
+---
+
+  # Create / Read
+  Create DurationTier: name$, start time, end time
+  # Modify
+  Add point: time, relative duration
+  Formula: formula$
+  # Convert / Analyze
+  Down to PointProcess
+  Down to RealTier
+  # Other
+  View & Edit
+  View & Edit with Sound?
+  & Manipulation: Replace?
+
+---
+
+*End of DurationTier commands.*

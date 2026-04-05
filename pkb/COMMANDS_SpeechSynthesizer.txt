@@ -1,0 +1,150 @@
+# PRAAT COMMANDS: SpeechSynthesizer
+# Source: PRAAT_DEFINITIVE_CATALOGUE.txt (v6.4.62) + session-verified
+# Part of EML PraatGen (CC BY-NC-SA 4.0) — Ian Howell, Embodied Music Lab
+#
+# Version: 1.0
+# Date: 5 April 2026
+#
+# eSpeak-NG text-to-speech integration in Praat. Used for:
+#   - Forced alignment (via cross-type Align interval command)
+#   - Canonical IPA transcription of known text
+#   - Synthetic speech generation with aligned TextGrids
+#
+# IMPORTANT NOTES:
+#
+# 1. CREATION
+#    Two string arguments: language and voice.
+#    Language names follow eSpeak conventions.
+#    Provenance: Paste Commands, 25 March 2026.
+#
+# 2. To Sound WITH TEXTGRID
+#    To Sound: text$, "yes" creates BOTH a Sound and a TextGrid with
+#    word and phoneme tiers aligned to the synthetic audio. Both objects
+#    are selected after the command. The "yes" argument is for creating
+#    the TextGrid annotation — without it, only a Sound is produced.
+#    Provenance: Empirical testing, 25 March 2026.
+#
+# 3. PHONEME OUTPUT
+#    Get phonemes from text (space-separated): returns IPA string.
+#    The phoneme inventory includes standard IPA vowels plus ɐ, ɚ, ᵻ.
+#
+# 4. ALIGN INTERVAL (cross-type command)
+#    The most important use case for SpeechSynthesizer in auto-annotation.
+#    See cross-type section below for full details.
+
+---
+
+  # Create
+  Create SpeechSynthesizer: language$, voice$
+  # Verified: Create SpeechSynthesizer: "English (America)", "Female1"
+  # Provenance: Paste Commands, 25 March 2026.
+  # Known language values: "English (America)", "English (Great Britain)"
+  # Known voice values: "Female1", "Male1"
+
+  # Query
+  Get language name
+  Get voice name
+  Get voice variant
+  Get phoneme set name
+
+  Get phonemes from text: text$
+  # Returns: IPA string with no separators
+
+  Get phonemes from text (space-separated): text$
+  # Verified: returns IPA string with spaces between phonemes
+  # Provenance: Catalogue + session use, 25 March 2026.
+
+  # Modify
+  Set speech output settings: sampling_frequency, gap_between_words, pitch_adjustment, pitch_range, words_per_minute, estimate_rate_from_data, output_phoneme_codes$
+  # From catalogue:
+  #   sampling frequency (Hz) = 44100
+  #   gap between words (s) = 0.01
+  #   pitch adjustment (0-99) = 50
+  #   pitch range (0-99) = 50
+  #   words per minute (80-450) = 175
+  #   estimate rate from data = "true"
+  #   output phoneme codes: "Kirshenbaum_espeak" or "IPA"
+
+  Set text input settings: input_text_format$, input_phoneme_codes$
+  # From catalogue:
+  #   input text format: "text only", "phoneme codes only", "mixed with tags"
+  #   input phoneme codes: "Kirshenbaum_espeak"
+
+  Estimate speech rate from speech: estimate$
+
+  # Generate
+  To Sound: text$, create_TextGrid_with_annotations$
+  # Verified: To Sound: "The blue spot is on the key again", "yes"
+  # When create_TextGrid = "yes": creates BOTH Sound and TextGrid,
+  #   both selected after command. TextGrid contains word and phoneme tiers.
+  # When create_TextGrid = "no" or "false": creates Sound only.
+  # Provenance: Empirical testing, 25 March 2026.
+
+  Play text: text$
+
+  # Other
+  Speech output settings
+  # Opens settings dialog (GUI only)
+
+  View & Edit
+  SpeechSynthesizer help
+
+---
+
+# Cross-type: SpeechSynthesizer & TextGrid (1 command)
+
+  To Sound: tier_number, interval_number, create_TextGrid_with_annotations$
+  # Verified: synthesizes the text in the specified interval
+  # Provenance: Catalogue, 5 April 2026.
+
+---
+
+# Cross-type: SpeechSynthesizer & Sound & TextGrid (2 commands)
+#
+# CRITICAL: These are the forced alignment commands. All three objects
+# must be selected simultaneously.
+
+  To TextGrid (align): tier_number, from_interval, to_interval, silence_threshold, minimum_silent_interval, minimum_sounding_interval
+  # Verified signature from catalogue:
+  #   tier number = 1
+  #   from interval number = 1
+  #   to interval number = 1
+  #   silence threshold (dB) = -35.0
+  #   minimum silent interval duration (s) = 0.1
+  #   minimum sounding interval duration (s) = 0.1
+
+  To TextGrid (align,trim): tier_number, from_interval, to_interval, silence_threshold, minimum_silent_interval, minimum_sounding_interval, silence_trim_duration
+  # Same as above plus:
+  #   silence trim duration (s) = 0.08
+
+---
+
+# Standalone alignment command (alternative to the cross-type above):
+#
+# Align interval: tier_number, interval_number, language$, include_words$, include_phonemes$
+#
+# Verified: Align interval: 1, 1, "English (America)", "yes", "yes"
+# Provenance: Empirical testing, 25 March 2026.
+#
+# Requires: TextGrid AND Sound both selected
+# Does NOT require a SpeechSynthesizer to be selected — creates one internally
+#
+# On first call: creates two new tiers:
+#   "[TierName] / word" and "[TierName] / phon"
+# On subsequent calls (different intervals, same tier):
+#   populates the SAME word/phon tiers (does not create duplicates)
+# Also creates internal "silences" and "VAD" tiers (remove in cleanup)
+#
+# Tier name note: the phoneme tier is named "phon" not "phoneme".
+#   When searching programmatically, match on "phon" not "phoneme".
+#
+# CRITICAL SELECTION STATE: Both TextGrid and Sound must be selected.
+#   selectObject: gridId, soundId
+#   Align interval: 1, 1, "English (America)", "yes", "yes"
+# Failure to select both objects is the most common error source.
+#
+# Provenance: Paste Commands + empirical debugging, 25 March 2026.
+
+---
+
+*End of SpeechSynthesizer commands.*

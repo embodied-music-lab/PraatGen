@@ -1,0 +1,241 @@
+# EML DRAWING BEST PRACTICES
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Mandatory patterns and conventions for Picture window output.
+# Load this file when the script involves Picture window drawing.
+#
+# For procedure signatures: see EML_PROCEDURE_REGISTRY.md
+# For procedure implementations: see eml-graph-procedures.praat,
+#   eml-draw-procedures.praat, eml-annotation-procedures.praat
+# For methodology and routing: see EML_PROCEDURE_GUIDE.md
+#
+# Date: 4 April 2026
+
+# ============================================================================
+# BEST PRACTICES
+# ============================================================================
+
+## Drawing Sound + TextGrid together
+
+# When displaying a waveform with its TextGrid annotations, select both
+# objects simultaneously and use the TextGrid Draw: command:
+#
+#   selectObject: soundId, gridId
+#   Draw: windowStart, windowEnd, "yes", "yes", "no"
+#
+# This produces perfect vertical alignment between the waveform bottom and
+# TextGrid top — the same rendering Praat uses in its editor window.
+# Drawing them separately with viewport manipulation cannot achieve the
+# same seamless join.
+
+## Waveform amplitude display
+
+# For waveform visualization, use symmetric amplitude bounds centered on 0.
+# Query the absolute maximum and use ±max for the y-axis:
+#
+#   selectObject: soundId
+#   absMax = Get absolute extremum: 0, 0, "None"
+#   # Use -absMax to absMax for display
+#
+# If multiple Sounds are displayed in the same figure, compute the global
+# absMax across all sounds first, then use that for all panels. This
+# ensures visual amplitude comparison is accurate.
+#
+# For very low-level signals (e.g., residual noise), the default ±1
+# range may flatten the waveform to a line. Always query and scale.
+#
+# For stereo sounds, query each channel separately or convert to mono first
+# (see stereo guard pattern below). Stereo sounds drawn with Draw: stack
+# channels vertically, halving the display height per channel.
+
+## Waveform axis marking
+
+# When drawing waveform axes manually, use 5–7 ticks on the y-axis
+# and scale marks to the data range. For normalized waveforms (±1),
+# marks at -1, -0.5, 0, 0.5, 1 are standard.
+# For unnormalized waveforms, use @emlComputeNiceStep.
+
+# ============================================================================
+# MANDATORY DRAWING PATTERNS
+# ============================================================================
+#
+# These patterns must be followed whenever the script writes to the
+# Picture window. Violation of any pattern is a SELF-AUDIT failure.
+
+## Sound + TextGrid combined display (MANDATORY)
+
+# When displaying Sound + TextGrid together:
+#
+# CORRECT:
+#   selectObject: soundId, gridId
+#   Draw: windowStart, windowEnd, "yes", "yes", "no"
+#
+# WRONG:
+#   # Drawing Sound in one viewport, TextGrid in another
+#   selectObject: soundId
+#   Draw: ...
+#   Select inner viewport: ...
+#   selectObject: gridId
+#   Draw: ...
+#
+# The wrong pattern creates a visible seam between waveform and TextGrid
+# because viewport manipulation cannot precisely match Praat's internal
+# layout algorithm for combined drawing.
+
+## Multi-panel figure save (MANDATORY)
+
+# Before ANY Save as ... file: command, select the full figure viewport.
+# The viewport at save time determines what is captured.
+#
+# CORRECT (using library procedure — preferred):
+#   @emlAssertFullViewport
+#   Save as 300-dpi PNG file: outputPath$
+#
+# CORRECT (manual — when library not available):
+#   Select outer viewport: 0, totalWidth, 0, totalHeight
+#   Save as 300-dpi PNG file: outputPath$
+#
+# WRONG:
+#   # Last panel viewport is still active
+#   Save as 300-dpi PNG file: outputPath$
+#   # Only the last panel is saved!
+#
+# For multi-panel figures, track the full extent across all panels.
+# @emlExpandDrawnExtent updates the bounding box;
+# @emlAssertFullViewport reads it.
+
+## Single-panel diagnostic figure viewport (MANDATORY)
+
+# Even single-panel figures must assert the viewport before save.
+# Praat's Picture window may have residual viewport state from
+# previous operations.
+#
+# CORRECT:
+#   Erase all
+#   Select inner viewport: 0.5, 5.5, 0.5, 4
+#   # ... drawing commands ...
+#   Select outer viewport: 0, 6, 0, 4.5
+#   Save as 300-dpi PNG file: outputPath$
+#
+# The outer viewport should include margins for axis labels and title.
+# Use @emlSetAdaptiveTheme outputs (.outerLeft, .outerRight,
+# .outerTop, .outerBottom) for exact bounds.
+
+## Standalone waveform display checklist
+
+# When drawing a waveform without a TextGrid:
+# 1. Query amplitude extremes
+# 2. Set symmetric y-axis bounds (±absMax)
+# 3. Suppress garnish (Draw: ... "no")
+# 4. Draw inner box
+# 5. Manual axis marks (time on bottom, amplitude on left)
+# 6. Axis labels with units: "Time (s)", "Amplitude"
+# 7. Title
+# 8. Assert full viewport before save
+
+## Text label safety (MANDATORY)
+
+# Praat uses %, #, ^, _ as inline style toggles in all text commands.
+# Any display text derived from variables (object names, column headers,
+# file names, user input) MUST be sanitized before rendering.
+#
+# The @emlSanitizeLabel procedure handles this:
+#   @emlSanitizeLabel: rawLabel$
+#   safeLabel$ = emlSanitizeLabel.result$
+#
+# Manual escaping (when library not available):
+#   safe$ = replace$ (raw$, "%", "\% ", 0)
+#   safe$ = replace$ (safe$, "#", "\# ", 0)
+#   safe$ = replace$ (safe$, "^", "\^ ", 0)
+#   safe$ = replace$ (safe$, "_", "\_ ", 0)
+#
+# Static string literals (e.g., "Time (s)") need only visual inspection.
+# The danger is with variables — user input like "F0_Hz" or "50% VOT"
+# will break rendering without sanitization.
+
+## Stereo sound guard for drawing
+
+# Stereo sounds drawn with Draw: stack channels vertically, halving
+# the display height per channel. This is rarely the desired behavior
+# for analysis figures.
+#
+# Before drawing a Sound, check channel count and handle stereo:
+#
+#   selectObject: soundId
+#   nChannels = Get number of channels
+#   if nChannels > 1
+#       @emlHandleStereo: soundId, fileName$
+#       soundId = emlHandleStereo.resultId
+#   endif
+#
+# For batch scripts with a pre-selected channel_handling variable:
+#
+#   selectObject: soundId
+#   nChannels = Get number of channels
+#   if nChannels > 1
+#       @emlApplyChannelChoice: soundId, channel_handling
+#       soundId = emlApplyChannelChoice.resultId
+#   endif
+#
+# See Rule 29 for the full specification.
+
+## Spectrum, Ltas, and PowerCepstrum axis alignment (MANDATORY)
+
+# When drawing these objects with manual axis bounds, the axis range
+# commands (Axes:) and the object's Draw: command must use the same
+# frequency/quefrency bounds. Mismatched bounds cause the data to
+# render at the wrong position relative to the axis labels.
+#
+# Pattern for Spectrum:
+#
+#   selectObject: spectrumId
+#   lowFreq = Get lowest frequency
+#   highFreq = Get highest frequency
+#   # Compute nice axis range from data
+#   @emlComputeAxisRange: dataMin, dataMax, 10, 0
+#   yMin = emlComputeAxisRange.axisMin
+#   yMax = emlComputeAxisRange.axisMax
+#   # Set viewport and axes FIRST
+#   Select inner viewport: ...
+#   Axes: lowFreq, highFreq, yMin, yMax
+#   # Then draw with garnish suppressed
+#   Draw: lowFreq, highFreq, yMin, yMax, "no"
+#   # Then manual axis marks
+#   Draw inner box
+#   Marks bottom: 5, "yes", "yes", "no"
+#   Marks left: 5, "yes", "yes", "no"
+#
+# Pattern for Ltas:
+#   Same structure. Ltas stores dB directly.
+#
+#   selectObject: ltasId
+#   lowFreq = Get lowest frequency
+#   highFreq = Get highest frequency
+#   # Get dB range from the Ltas itself
+#   minDB = Get minimum: lowFreq, highFreq, "None"
+#   maxDB = Get maximum: lowFreq, highFreq, "None"
+#   @emlComputeAxisRange: minDB, maxDB, 5, 0
+#
+# Pattern for PowerCepstrum:
+#   PowerCepstrum uses quefrency (1/frequency) on the x-axis.
+#   The y-axis units depend on the command:
+#
+#   Draw: converts internal raw power to dB for display.
+#     Use Get peak prominence: for dB bounds.
+#
+#   selectObject: cepstrumId
+#   lowQuefrency = Get start quefrency
+#   highQuefrency = Get end quefrency
+#   # Or use specific range for speech (typically 0.001 to 0.05 s)
+#   Axes: 0, 0.05, .cYLo, .cYHi
+#   selectObject: sliceId
+#   Draw: 0, 0.05, .cYLo, .cYHi, "no"
+#   Draw trend line: 0, 0.05, .cYLo, .cYHi, 0.001, 0.05, "Straight", "Robust"
+#
+# IMPORTANT — dB vs. raw power:
+#   Spectrum Draw: displays power spectral density (dB/Hz) — auto-scale
+#     bounds are in dB. Matrix conversion returns raw values.
+#   Ltas Draw: displays dB — Matrix conversion returns dB directly.
+#   PowerCepstrum Draw: converts internal raw power to dB for display.
+#     Get peak: returns dB directly. Matrix conversion returns RAW POWER
+#     (not dB). Use Get peak: for bounds when possible.

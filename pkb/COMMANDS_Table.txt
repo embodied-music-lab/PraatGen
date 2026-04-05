@@ -1,0 +1,178 @@
+# PRAAT COMMANDS: Table
+# Source: Praat C API (praatlib.h), June 2025
+# Additional commands: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+
+---
+
+  # Create / Read
+ Create Table with column names: name$, number of rows, column names$
+  # Verified: Create Table with column names: "table", 10, { "speaker", "dialect", "age_yr", "F0_Hz", "F1_Hz", "F2_Hz" }
+  # Provenance: Paste Commands, 4 March 2026
+  # Note: Space-separated string form also works: "speaker dialect age_yr F0_Hz F1_Hz F2_Hz"
+  Create Table without column names: name$, number of rows, number of columns
+  Create formant table (Peterson & Barney 1952)
+  Create formant table (Pols & Van Nierop 1973)
+  Create formant table (Weenink 1985)
+  Create H1H2 table (Keating & Esposito 2006)
+  Create Table (Ganong 1980)
+  Create TableOfReal (Sandwell 1987)
+  Read Table from tab-separated file: file name$
+  Read Table from comma-separated file: file name$
+  Read Table from semicolon-separated file: file name$
+  Read Table from whitespace-separated file: file name$
+
+  # Query (API)
+  List: include row numbers?
+
+  # Query (session-verified)
+  Get number of rows
+  # Verified: Get number of rows
+  Get number of columns
+  # Verified: Get number of columns
+  Get column label: column number
+  # Verified: Get column label: 1
+  Get value: row number, column$
+  # Verified: Get value: 1, "columnName"
+
+  # Query (Buttons menu, 26 Feb 2026)
+  Get column index: column name$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Search column: column name$, value$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  List row numbers where: condition$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get minimum: column name$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get maximum: column name$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get sum: column name$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get mean: column name$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get group mean: column name$, group column$, group$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get standard deviation: column name$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get quantile: column name$, quantile
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get median absolute deviation: column name$
+  # Provenance: Buttons menu screenshot 26 Feb 2026
+  Get number of rows where: condition$
+  # Verified: Get number of rows where: ~1; self$["gender"]="M"
+  # Provenance: Paste Commands 2 Mar 2026. Hidden command.
+  Get all numbers in column: column name$
+  # Verified: Get all numbers in column: "F0"
+  # Provenance: Paste Commands 2 Mar 2026. Returns vector.
+  Get all texts in column: column name$
+  # Verified: Get all texts in column: "IPA"
+  # Provenance: Paste Commands 2 Mar 2026. Returns string array.
+  # Modify
+  Set string value: row number, column name$, string value$
+  Set numeric value: row number, column name$, numeric value
+  Remove row: row number
+  Remove column: column name$
+  Insert row: position
+  Insert column: position, name$
+
+  # Convert / Analyze
+  To linear regression
+  To logistic regression: dependent1$, dependent2$
+  To RealTier: column with times$, column with values$, start time, end time
+  Down to TableOfReal: column for row labels$
+  Down to Matrix
+
+  # Extract / Combine
+  Append row
+  Append column: name$
+  Append sum column: column1$, column2$, label$
+  Append difference column: column1$, column2$, label$
+  Append product column: column1$, column2$, label$
+  Append quotient column: column1$, column2$, label$
+  Extract rows where column (number): extract all rows where column$, is$, the number
+  Extract rows where column (text): extract all rows where column$, $, the text$
+  Extract rows where: condition$
+  Extract rows where (mahalanobis): which$, number of sigmas, factor column name$
+
+  # Draw
+  Draw ellipse (standard deviation): horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, number of sigmas, garnish?
+  Draw ellipses: x column name$, xmin, xmax, y column name$, ymin, ymax, factor column name$, number of sigmas, font size, garnish?
+
+  # Other
+  Save as tab-separated file: file name$
+  Save as comma-separated file: file name$
+  Save as semicolon-separated file: file name$
+  View & Edit
+  Scatter plot: horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, marks column name$, font size, garnish?
+  Scatter plot (mark): horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, mark size, garnish?, mark string$
+#   Box plots: data column name$, factor column name$, ymin, ymax, garnish?
+#   # Verified: Box plots: "F0", "Type", 70, 400, "no"
+#   # Provenance: Praat manual (Table__Box_plots___.html), 19 Mar 2026
+#   # Note: Draws one box-and-whisker per factor level. Factors sorted in
+#   #   natural sort order. Uses Tukey whiskers with outlier markers.
+#   #   garnish? adds axis labels and inner box.
+#
+# The original entry was missing the data column parameter.
+# Confirmed via Praat manual example: Create formant table (Peterson & Barney 1952)
+#   Box plots: "F0", "Type", 70, 400, "no"  Normal probability plot: column name$, number of quantiles, number of sigmas, label size, label$, garnish?
+  Quantile-quantile plot: x column name$, y column name$, number of quantiles, xmin, xmax, ymin, ymax, label size, label$, garnish?
+  Quantile-quantile plot (between levels): data column name$, factor column name$, x level string$, y level string$, number of quantiles, xmin, xmax, ymin, ymax, label size, label$, garnish?
+  Lag plot: data column name$, lag, from xy, to xy, label size, label$, garnish?
+  Bar plot: ymin, ymax, label column name$, distance from border, distance between groups, distance within group, angle, garnish?
+  Line graph: y column name$, ymin, ymax, x column name$, xmin, xmax, text$, text font size, angle, garnish?
+  Distribution plot: data column name$, minimum value, maximum value, number of bins, minimum frequency, maximum frequency, garnish?
+  Horizontal error bars plot: x column name$, xmin, xmax, y column name$, ymin, ymax, lower error column name$, upper error column name$, bar size mm, garnish?
+  Vertical error bars plot: x column name$, xmin, xmax, y column name$, ymin, ymax, lower error column name$, upper error column name$, bar size mm, garnish?
+  Report mean (Student t): column$, one tailed unconfidence
+  Report difference (Student t): column1$, column2$, one tailed unconfidence
+  Report group mean (Student t): column$, group column$, group$, one tailed unconfidence
+  Report group difference (Student t): column$, group column$, group1$, group2$, one tailed unconfidence
+  # Verified: Report group difference (Student t): "latency_ms", "peer", "A", "B"
+  # Provenance: Ping analysis v1.4, 10 Mar 2026
+  Report group difference (Wilcoxon rank sum): column$, group column$, group1$, group2$
+  # Verified: Report group difference (Wilcoxon rank sum): "latency_ms", "peer", "A", "B"
+  # Provenance: Ping analysis v1.4, 10 Mar 2026
+  # Behavior: Report output does NOT contain a "U =" field. Use
+  #   "Area under curve:" directly for rank-biserial r computation:
+  #   r = 1 - 2*AUC. Do not attempt to parse U.
+  Report one-way anova: column with data$, factor$, table with means?, table with differences?, table with Tukey's post-hoc?
+  # Provenance: Praat manual fetched 26 Feb 2026. Hidden command. Reports to Info window.
+  # Behavior: All three ? parameters are boolean ("yes"/"no"). Empty string "" causes error.
+  # Behavior: When "table with Tukey's post-hoc?" = "yes", creates Table named {inputTableName}_meansDiffP
+  # Behavior: Tukey table has unnamed column 1 (row labels), remaining columns named by group
+  # Behavior: Groups sorted by ascending mean (ties broken alphabetically), NOT input order
+  # Behavior: Tukey table is upper-triangular: row i vs column j for i < j
+  Report two-way anova: column with data$, first factor$, second factor$, table with means?
+  # Provenance: Praat manual fetched 26 Feb 2026. Hidden command. Reports to Info window.
+  # Behavior: "table with means?" is boolean ("yes"/"no"). Empty string "" causes error.
+  Report one-way Kruskal-Wallis: column with data$, factor$
+  # Provenance: Praat manual fetched 26 Feb 2026. Hidden command. Reports to Info window.
+  Report robust statistics: column name$, Huber's k, tolerance, maximum number of iterations
+  # Verified: Report robust statistics: "F1", 1.5, 1e-06, 30
+  # Provenance: Paste Commands 2 Mar 2026. Hidden command. Reports to Info window.
+  Report correlation (Pearson r): column1$, column2$, one tailed unconfidence
+  Report correlation (Kendall tau): column1$, column2$, one tailed unconfidence
+  Sort rows
+  Randomize rows
+  Reflect rows
+  Formula: formula$
+  # Provenance: Praat manual Table.html fetched 26 Feb 2026
+  Formula (column range): from column$, to column$, formula$
+  # Provenance: Praat manual Table.html fetched 26 Feb 2026
+  Rename column: old name$, new name$
+  Rename column (by number): column number, new name$
+  # Verified: Rename column (by number): 1, "eml_row"
+  # Provenance: Used in @emlTukeyHSD, 4 March 2026. Renames unnamed column 1 in Tukey output table.
+  Transpose
+  Collapse rows
+  Rows to columns: column to transpose$
+
+---
+
+*End of Table commands.*
