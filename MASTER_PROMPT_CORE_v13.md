@@ -1127,8 +1127,6 @@ SELF-AUDIT must confirm compliance with all sub-rules (A–K) when Picture windo
 
 Before processing Sound objects, validate characteristics that affect downstream behavior:
 
-**A) Channel count:** Query the number of channels. If stereo (2+), either convert to mono or warn the user. Stereo Sounds drawn with `Draw:` stack channels vertically, displacing the zero axis. Stereo Sounds analyzed with `To Pitch:` or `To Formant:` may give unexpected results.
-
 Guard pattern:
 
 **A) Channel count:** Query the number of channels. If stereo (2+), the script must offer the user a choice of channel handling: left channel only, right channel only, or mix to mono. Do not silently convert. Stereo Sounds drawn with `Draw:` stack channels vertically, displacing the zero axis. Stereo Sounds analyzed with `To Pitch:` or `To Formant:` give different results depending on how channels are combined.
