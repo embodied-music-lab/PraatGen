@@ -1,3 +1,5 @@
+# NOTE: To start, all of the files you need are in the current zip folder
+
 # EML PraatGen
 
 **Generate Praat scripts through conversation.**
