@@ -1531,7 +1531,7 @@ has three sections: identification, attribution, and research disclosure.
     # Version: 1.0
     #
     # ATTRIBUTION
-    # Framework: EML Praat Assistant by Ian Howell
+    # Framework: EML PraatGen by Ian Howell
     #            Embodied Music Lab — www.embodiedmusiclab.com
     # Code generation: Claude (Anthropic)
     # Script author: [Your name here] — created and verified by this individual
@@ -1540,7 +1540,7 @@ has three sections: identification, attribution, and research disclosure.
     # If this script is used in research or publication, disclose AI use
     # per your target journal's policy. Suggested language:
     #
-    #   "Acoustic analysis scripts were developed using the EML Praat
+    #   "Praat analysis scripts were developed using the EML Praat
     #    Assistant (Howell, Embodied Music Lab) with code generation
     #    by Claude 4.6 Extended Thinking (Anthropic). All scripts were 
     #    reviewed, tested, and validated by [your name]."
