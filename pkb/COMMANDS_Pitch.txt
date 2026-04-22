@@ -38,6 +38,11 @@
    Get standard deviation: from time, to time, unit$
   # Verified: Get standard deviation: 0, 0, "Hertz"
   # Provenance: Paste Commands 24 Feb 2026
+  Get quantile: from time, to time, quantile, unit$
+  # Verified: Get quantile: 0, 0, 0.5, "Hertz"
+  # Returns the F0 value at the specified quantile (0.5 = median).
+  # Parameter order: from time, to time, quantile (0–1), unit$.
+  # Provenance: Successful execution, 22 April 2026.
 
   # Modify
   Formula

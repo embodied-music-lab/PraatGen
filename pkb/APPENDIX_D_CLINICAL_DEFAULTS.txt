@@ -243,7 +243,101 @@ Get shimmer (local): 0, 0, 0.0001, 0.02, 1.3, 1.6
 
 ## 4. FORMANT ANALYSIS
 
-### 4A. Formant (burg) — general vowel analysis
+# ALGORITHM ROUTING (hard):
+#
+# Choose the formant analysis algorithm based on whether the formant
+# ceiling is known:
+#
+#   CONDITION                             ALGORITHM            SECTION
+#   ------------------------------------  -------------------  -------
+#   Ceiling uncertain, gender unknown,    FormantPath (burg)   §4A
+#     no protocol requirement                                  [DEFAULT]
+#
+#   Specific ceiling required             Formant (burg)       §4B
+#     (replication, protocol, user
+#     request)
+#
+# DEFAULT: FormantPath (burg). This algorithm searches across a range
+# of formant ceilings and selects the optimal one per frame. No user
+# decision about vocal tract size or gender is needed. This is the
+# correct default for any script where the formant ceiling is not
+# predetermined by a specific protocol.
+#
+# OVERRIDE: Formant (burg) with explicit ceiling. Use only when:
+#   1. Replicating a published study that used a specific ceiling
+#   2. Protocol requires identical ceiling across all participants
+#      for between-subject comparability
+#   3. User explicitly requests a fixed ceiling
+#
+# RATIONALE: The previous version of §4 mandated manual ceiling
+# selection ("Smaller / Larger" optionmenu) as the universal pattern.
+# This forced a Tier 3 decision (estimate a physiological parameter)
+# into every formant analysis script, even when the user had no basis
+# for making the choice. FormantPath eliminates this friction by
+# automating the ceiling search — which is exactly the problem it was
+# designed to solve. Per Appendix F's progressive disclosure philosophy,
+# parameters that an algorithm can optimize should not be presented to
+# the user as mandatory choices.
+
+### 4A. FormantPath (burg) — DEFAULT (automated ceiling optimization)
+
+# Use case: Any formant analysis where the ceiling is not protocol-specified.
+# The algorithm evaluates multiple ceilings and selects the optimal one
+# per analysis frame based on formant track smoothness.
+
+To FormantPath (burg): 0.005, 5.0, 5500, 0.025, 50, 0.05, 4
+
+# Parameter breakdown (Praat GUI defaults, verified 21 Mar 2026):
+#   time step = 0.005 s
+#   max number of formants = 5.0
+#   middle formant ceiling = 5500 Hz    (center of ceiling search range)
+#   window length = 0.025 s
+#   pre-emphasis from = 50 Hz
+#   ceiling step size = 0.05            (exponential step between candidates)
+#   number of steps up/down = 4         (4 steps above and below middle)
+#
+# CEILING SEARCH RANGE:
+#   The algorithm evaluates 2 * nSteps + 1 = 9 candidate ceilings:
+#     min ceiling = 5500 * exp(-0.05 * 4) ≈ 4510 Hz
+#     max ceiling = 5500 * exp(+0.05 * 4) ≈ 6722 Hz
+#
+#   This range covers the typical adult male vocal tract (5000 Hz)
+#   through adult female (5500 Hz) and somewhat beyond. For children
+#   or very small vocal tracts, increase middle ceiling to 6500–8000 Hz
+#   or increase nSteps.
+#
+# QUERY WORKFLOW:
+#   After creating the FormantPath, extract the Formant object and
+#   query it using standard Formant commands:
+#
+#     selectObject: soundId
+#     fpId = noprogress To FormantPath (burg): 0.005, 5.0, 5500,
+#         ... 0.025, 50, 0.05, 4
+#     selectObject: fpId
+#     formantId = Extract Formant
+#     selectObject: formantId
+#     meanF1 = Get mean: 1, 0, 0, "Hertz"
+#     meanF2 = Get mean: 2, 0, 0, "Hertz"
+#
+# ⚠️ BUG (Praat 6.4.60–6.4.62):
+#   Extract Formant segfaults after Set path: or Set optimal path:.
+#   WORKAROUND: Call Extract Formant IMMEDIATELY after FormantPath
+#   creation, before any Set command. See COMMANDS_Formant.txt for
+#   details.
+#
+# OPTIMAL CEILING QUERY (optional, for reporting):
+#   To report which ceiling was selected:
+#     selectObject: fpId
+#     optCeiling = Get optimal ceiling: 0.0, 0.0, "3 3 3", 1.25
+#     appendInfoLine: "Optimal formant ceiling: ",
+#         ... fixed$ (optCeiling, 0), " Hz"
+
+### 4B. Formant (burg) — OVERRIDE (explicit ceiling, protocol-specified)
+
+# Use case: Replication of published studies, protocol-mandated ceiling,
+# or user-requested fixed ceiling.
+# NOTE: Use this ONLY when FormantPath is inappropriate. See routing
+# decision above.
 
 To Formant (burg): 0.0, 5, 5500, 0.025, 50
 
@@ -254,9 +348,10 @@ To Formant (burg): 0.0, 5, 5500, 0.025, 50
 #   window length = 0.025 s
 #   pre-emphasis from = 50 Hz
 #
-# FORMANT CEILING SELECTION (hard):
-# Formant ceiling must ALWAYS be user-accessible via a form or
-# beginPause field. Never hardcode a single value.
+# FORMANT CEILING SELECTION:
+# When using Formant (burg), the ceiling must be user-accessible via
+# a form or beginPause field. Never hardcode a single ceiling value
+# when using this algorithm.
 #
 # Recommended GUI pattern:
 #
@@ -278,13 +373,76 @@ To Formant (burg): 0.0, 5, 5500, 0.025, 50
 # If the user's protocol specifies a different ceiling, they can
 # override via a raw numeric field instead of the optionmenu.
 
-### 4B. Formant (burg) — voice quality / clinical context
+### 4C. Formant analysis — voice quality / clinical context
 
-# Same command, but ceiling choice matters for clinical accuracy.
+# Same algorithms, but ceiling choice matters for clinical accuracy.
 # When formants feed into clinical measures (e.g., formant-based
-# vowel space area), document the ceiling choice in the script header
-# and SELF-AUDIT.
+# vowel space area), document the algorithm and ceiling choice in the
+# script header and SELF-AUDIT.
+#
+# For FormantPath: report the optimal ceiling that was selected.
+# For Formant (burg): report the fixed ceiling that was used.
 
+### 4D. FormantModeler — formant tracking quality assessment
+
+# FormantModeler fits polynomial curves to formant tracks and provides
+# goodness-of-fit metrics: R-squared, residual standard deviation,
+# outlier detection, track separation. These quantify how reliable the
+# formant tracking is — a crucial confidence indicator when reporting
+# formant means.
+#
+# CREATION:
+#   selectObject: formantId
+#   fmId = To FormantModeler: startTime, endTime, 3, 3
+#   # 3 formants, 3rd-order polynomial
+#
+# KEY METRICS:
+#   R-squared (Get coefficient of determination):
+#     High (>0.8) = stable, trustworthy tracking
+#     Low (<0.5) = unstable — either tracking errors or the polynomial
+#     model is wrong for this data (see limitation below)
+#
+#   Track standard deviation (Get formant standard deviation):
+#     Scatter of raw data around the polynomial, in Hz.
+#     Large SD = noisy tracking or formant movement.
+#
+#   Track separation (Get average distance between tracks):
+#     Average Hz between adjacent formant tracks. Low separation
+#     suggests tracks are merging — a signature of unreliable tracking.
+#
+#   Invalid data points (Get number of invalid data points):
+#     Frames flagged as outliers (>3 SD from polynomial). High counts
+#     indicate tracking problems OR a wrong model (see below).
+#
+# SCOPE LIMITATION (hard):
+#
+# FormantModeler assumes formants vary smoothly within the analysis
+# window. It is VALID for:
+#   - Sustained vowels
+#   - Single extracted vowel tokens
+#   - Sustained singing tones
+#
+# It is INVALID for:
+#   - Connected speech spanning multiple vowels
+#   - Vowel sequences with large transitions (e.g., /u i u/)
+#   - Any signal where formants change rapidly by design
+#
+# On connected speech, the polynomial smooths away real formant
+# transitions and flags real vowel targets as outliers. Low R-squared
+# in this context does NOT mean tracking failed — it means the model
+# is wrong for the data. If FormantModeler is needed on connected
+# speech, segment by vowel first and apply per segment.
+#
+# REPORTING:
+# When FormantModeler metrics are included in script output, report
+# them alongside the formant means as confidence indicators:
+#
+#   appendInfoLine: "F1 mean: ", fixed$ (meanF1, 0), " Hz",
+#       ... " (R-sq = ", fixed$ (rSqF1, 2), ")"
+#
+# Provenance: Empirical testing on sustained vowels (R-sq > 0.9) and
+# connected speech /u i u/ sequence (R-sq < 0.3, all transitions
+# flagged as outliers). 21 April 2026.
 ---
 
 ## 5. CEPSTRAL ANALYSIS (CPPS)
@@ -301,11 +459,12 @@ To PowerCepstrogram: 60, 0.002, 5000, 50
 
 ### 5B. CPPS query (Maryn et al. parameters)
 
-Get CPPS: "yes", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0.05, "Straight", "Robust slow"
+Get CPPS: "no", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0, "Straight", "Robust"
 
-# Parameter breakdown (per Maryn et al., 2009 — CLINICAL RECOMMENDATION,
-# may differ from Praat dialog defaults):
-#   subtract tilt before smoothing = "yes"
+# Parameter breakdown (per Maryn & Weenink, 2015; confirmed by
+# Phonanium Cepstrography v01.02 script, Watts, Awan & Maryn 2017,
+# Vojtech et al. 2020, Heller Murray et al. 2022):
+#   subtract tilt before smoothing = "no"
 #   time averaging window = 0.01 s
 #   quefrency averaging window = 0.001 s
 #   peak search pitch floor = 60 Hz
@@ -313,13 +472,22 @@ Get CPPS: "yes", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0.05, "Straight
 #   tolerance = 0.05
 #   interpolation = "parabolic"
 #   tilt line quefrency floor = 0.001 s
-#   tilt line quefrency ceiling = 0.05 s
+#   tilt line quefrency ceiling = 0 s (= no upper bound)
 #   line type = "Straight"
-#   fit method = "Robust slow"
+#   fit method = "Robust"
 #
-# NOTE: These are the Maryn et al. parameters widely used in clinical
-# CPPS research. They may differ from Praat's dialog defaults. The
-# citation justifies the deviation per Principle 2 above.
+# NOTE: These parameters differ from the Praat dialog defaults on
+# three values: Praat defaults use subtract tilt = "yes", quefrency
+# ceiling = 0.05, and fit method = "Robust slow". The Maryn values
+# above are what the clinical CPPS literature consistently uses.
+#
+# ERRATUM (21 April 2026): Prior version of this section had the
+# Praat dialog defaults labeled as "Maryn et al." parameters. Corrected
+# after comparison with Phonanium Cepstrography v01.02 source script.
+#
+## When computing BOTH AVQI and per-token clinical measures in the same
+# script, maintain TWO SEPARATE analysis pipelines. Never substitute
+# one parameter set for the other. See Section 9 (isolation warning).
 
 ---
 
@@ -404,14 +572,13 @@ To Intensity: 100, 0.0, "yes"
 #   ---------------    -----------------------    -----------------------
 #   HNR method         Voice report               To Harmonicity (cc)
 #   Shimmer units      × 100 (percentage)         Raw proportion (0–1) or offer as percentage (x 100)
-#   CPPS subtract tilt "no"                        "yes"
-#   CPPS fit method    "Robust"                   "Robust slow"
 #   High-pass filter   34 Hz stop Hann band       Not applied
 #
-# When a script computes BOTH AVQI and per-token clinical measures,
-# it must maintain two separate analysis pipelines with their respective
-# parameter sets. Never substitute Appendix D values into AVQI computation
-# or vice versa.
+# NOTE: The CPPS parameters (subtract tilt, quefrency ceiling, fit
+# method) are IDENTICAL between AVQI and clinical defaults. Prior
+# versions of this section incorrectly listed three CPPS differences;
+# those were Praat dialog defaults, not Maryn's clinical parameters.
+# Corrected 21 April 2026.
 #
 # For the complete AVQI parameter specification, see the Script A2
 # handoff document (HANDOFF_A2_Batch_Analyzer.md §4).
@@ -487,22 +654,20 @@ To Intensity: 100, 0.0, "yes"
 
 # Get CPPS: "no", 0.01, 0.001, 60, 330, 0.05, "Parabolic", 0.001, 0, "Straight", "Robust"
 #
-#   subtract mean = "no"                    ← DIFFERS from clinical ("yes")
-#   time averaging window = 0.01 s          (same as clinical)
-#   quefrency averaging window = 0.001 s    (same as clinical)
-#   pitch floor = 60 Hz                     (same as clinical)
-#   pitch ceiling = 330 Hz                  (same as clinical)
-#   tolerance = 0.05                        (same as clinical)
-#   interpolation = "Parabolic"             (same as clinical)
-#   tilt line quefrency range floor = 0.001 (same as clinical)
-#   tilt line quefrency range ceiling = 0   ← DIFFERS from clinical (0.05)
-#   line type = "Straight"                  (same as clinical)
-#   fit method = "Robust"                   ← DIFFERS from clinical ("Robust slow")
+#   subtract tilt before smoothing = "no"
+#   time averaging window = 0.01 s
+#   quefrency averaging window = 0.001 s
+#   pitch floor = 60 Hz
+#   pitch ceiling = 330 Hz
+#   tolerance = 0.05
+#   interpolation = "Parabolic"
+#   tilt line quefrency range floor = 0.001
+#   tilt line quefrency range ceiling = 0
+#   line type = "Straight"
+#   fit method = "Robust"
 #
-# THREE PARAMETERS DIFFER FROM APPENDIX D CLINICAL DEFAULTS:
-#   1. subtract mean: "no" (AVQI) vs "yes" (clinical)
-#   2. tilt line quefrency ceiling: 0 (AVQI) vs 0.05 (clinical)
-#   3. fit method: "Robust" (AVQI) vs "Robust slow" (clinical)
+# All CPPS parameters are IDENTICAL to the clinical defaults in §5B.
+# No AVQI-specific CPPS deviations exist. (Corrected 21 April 2026.)
 
 # ----------------------------------------------------------------------------
 # 10D. LTAS SLOPE
@@ -633,13 +798,15 @@ To Intensity: 100, 0.0, "yes"
 #   Parameter                    AVQI (Phonanium v02.06)    Clinical (Appendix D)
 #   -------------------------    -----------------------    ----------------------
 #   High-pass filter             34 Hz stop Hann band       Not applied
-#   CPPS subtract mean           "no"                       "yes"
-#   CPPS quefrency ceiling       0                          0.05
-#   CPPS fit method              "Robust"                   "Robust slow"
 #   Shimmer units                × 100 (percentage)         Raw proportion (0–1)
 #   HNR method                   Voice report parsing       To Harmonicity (cc)
 #   PointProcess pitch range     50–400 Hz                  Varies by speaker
 #   Pitch (for HNR)              raw cross-correlation      raw cross-correlation
+#
+# NOTE: CPPS parameters are identical between AVQI and clinical.
+# Three former rows (subtract tilt, quefrency ceiling, fit method)
+# were removed — they reflected Praat dialog defaults, not Maryn's
+# clinical parameters. Corrected 21 April 2026.
 #
 # When computing BOTH AVQI and per-token clinical measures in the same
 # script, maintain TWO SEPARATE analysis pipelines. Never substitute

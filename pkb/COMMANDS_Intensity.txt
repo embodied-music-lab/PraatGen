@@ -26,7 +26,10 @@
 
   # Draw
   Draw: from time, to time, minimum, maximum, garnish?
-
+  # Verified: Draw: 0, 0, 0, 0, "no"
+  # NOTE: 5 parameters including garnish$. Differs from Harmonicity
+  # Draw which takes only 4 (no garnish parameter).
+  # Provenance: Successful execution, 22 April 2026.
 ---
 
 *End of Intensity commands.*

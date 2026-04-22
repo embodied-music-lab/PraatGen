@@ -2,6 +2,8 @@
 # Source: Praat manual (Demo window 1–8, Functions page), Praat 6.4.59 docs
 # Empirical findings: EML Tutorial Plugin development (10+ sessions, Feb 2026)
 # Empirical findings: 3D Scatter Plot development (Feb 2026)
+# Empirical findings: Demo window diagnostics (aspect ratio, text alignment,
+#   viewport coordinates), 1 April 2026
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 #
 # Format: CommandName: param1, param2 (if arguments)
@@ -19,8 +21,27 @@
 # when appropriate object is selected). Load COMMANDS_PictureWindow.txt
 # for the full set of drawable commands.
 #
-# Version: 1.2
-# Date: 2 March 2026
+# Version: 1.3
+# Date: 21 April 2026
+#
+# v1.3 changes (from v1.2):
+#   - Section 2: Internal canvas corrected from ~12×12 to ~12×7 inches
+#     (1.726:1 aspect ratio). Stale viewport conversion formula removed
+#     — viewport commands take 0-100 demo units, not inches. Viewport
+#     parameter order documented: (left, right, bottom, top) Y-up.
+#     Aspect ratio correction block added with true-square formula.
+#   - Section 2 table: Internal canvas, Text wrapping rows corrected
+#   - Section 3: Note updated — demo functions already in APPENDIX_B
+#   - Section 4: Three-line reset font size must be FIXED, not variable.
+#     Cross-reference to Section 5 added.
+#   - Section 5: Retitled — no longer a "limitation." Fix via
+#     demo Text special: documented. Former design workarounds removed.
+#   - New Section 5B: Rectangle text commands (wrap & truncate,
+#     maximal fit) with character-level wrapping caveat
+#   - Section 8: Viewport conversion corrected to demo units
+#   - Section 12: Rectangle text note added
+#   - Section 15: Stale bug table entries corrected
+#   - Section 16: SELF-AUDIT template updated
 #
 # v1.2 changes (from v1.1):
 #   - Section 6 REPLACED: demoPeekInput() confirmed unsafe during
@@ -112,9 +133,9 @@
 # in three critical ways:
 #
 # 1. SIZE: 100 × 100 units (not 60 × 60 inches).
-#    The internal canvas maps to approximately 12 × 12 inches.
-#    Conversion: percentage * 12 / 100 = inches.
-#    (Derived from manual pp. 1–2; used in production code.)
+#    The internal canvas is approximately 12 inches wide and ~7 inches
+#    tall (aspect ratio 1.726:1). The 100-unit axis maps to different
+#    physical distances in x and y.
 #
 # 2. ORIGIN: (0, 0) is at BOTTOM LEFT.
 #    In the Picture window, (0, 0) is at TOP LEFT.
@@ -131,7 +152,7 @@
 # | Property               | Picture Window          | Demo Window            |
 # |------------------------|-------------------------|------------------------|
 # | Size                   | 60 × 60 inches          | 100 × 100 units        |
-# | Internal canvas        | 60 × 60 inches          | ~12 × 12 inches        |
+# | Internal canvas        | 60 × 60 inches          | ~12 × ~7 in (1.726:1)  |
 # | Origin (0,0)           | Top left                | Bottom left            |
 # | Y direction            | Increases downward      | Increases upward       |
 # | Created by             | Always open             | First `demo` command   |
@@ -140,23 +161,41 @@
 # | Graphics buffering     | Immediate               | Deferred (use demoShow)|
 # | Command prefix         | (none)                  | `demo`                 |
 # | Scroll                 | No                      | No                     |
-# | Text wrapping          | No                      | No                     |
+# | Text wrapping          | Character-level only    | Character-level only   |
+# |                        | (Rectangle text cmds)   | (Rectangle text cmds)  |
 # | Programmatic close     | N/A                     | Not possible           |
 #
-# CRITICAL — Y-axis inversion for viewport mapping:
-# When converting Demo window coordinates (y=0 at bottom) to viewport
-# coordinates (y=0 at top):
+# ASPECT RATIO:
+# Demo window pixel dimensions: 2686 × 1556 (Retina)
+# Aspect ratio: 1.726:1
+# 1 vertical unit = ~58% of 1 horizontal unit physically.
 #
-#   .vpScale = 12 / 100
-#   .vpLeft = .x1 * .vpScale
-#   .vpRight = .x2 * .vpScale
-#   .vpTop = (100 - .y2) * .vpScale      # Invert Y
-#   .vpBottom = (100 - .y1) * .vpScale    # Invert Y
+# To draw a visually true square of side S in demo coordinates:
+#   width = S (x-axis)
+#   height = S * 1.726 (y-axis)
+#
+# Paint circle: renders as a horizontal ellipse — this is expected.
+# All vertical spacing, padding, and gap values must account for
+# this ratio. A coordinate "square" from (0,0) to (20,20) renders
+# as a wide rectangle.
+#
+# Provenance: Diagnostic test, 1 April 2026. Pixel dimensions from
+# Retina screenshot measurement.
+#
+# VIEWPORT PARAMETER ORDER:
+# demo Select outer viewport: and demo Select inner viewport: take
+# 0–100 demo units directly (NOT inches).
+# Parameter order: (left, right, BOTTOM, TOP) — Y-up, matching demo
+# coordinate system. OPPOSITE of Picture window (left, right, top,
+# bottom).
 #
 # Example: Demo window top half = y from 50 to 100
 #   demo Select outer viewport: 0, 100, 50, 100
-# This selects the TOP half because viewport y=50 maps to the top
-# of the content area and y=100 maps to the bottom.
+#
+# Restore full viewport:
+#   demo Select inner viewport: 0, 100, 0, 100
+#
+# Provenance: Four-corner Viewport text test, 1 April 2026.
 #
 # Font size scaling for projection:
 # A font at size 35 in the default 1344×756 window looks the same
@@ -169,8 +208,8 @@
 # These functions exist only for the Demo window. They handle user input,
 # display control, and window management.
 #
-# NOTE: These functions are absent from APPENDIX_B_FUNCTIONS.txt and
-# must be added. See Section 12 of this file for the addendum.
+# NOTE: These functions are listed in APPENDIX_B_FUNCTIONS.txt
+# (errata section) and documented in detail in Section 13 below.
 
   # --- Input: Blocking ---
 
@@ -187,6 +226,7 @@
   # Returns immediately without waiting. Use in animation loops to
   # check for user input between frames without blocking.
   # After return, query demoClicked()/demoKeyPressed() as usual.
+  # ⚠️ UNSAFE during active script execution on macOS — see Section 6.
 
   # --- Input: Query what happened ---
 
@@ -293,7 +333,7 @@
 # Every procedure that draws geometry or renders text MUST begin with:
 #
 #   demo Helvetica
-#   demo Font size: [target size]
+#   demo Font size: [FIXED startup size — never varies]
 #   demo Axes: 0, 100, 0, 100
 #
 # All three lines are required:
@@ -301,6 +341,10 @@
 #   - `demo Font size:` + `demo Axes:` alone is insufficient after
 #     multiple redraws.
 #   - `demo Helvetica` flushes the internal font metric state.
+#
+# The font size in the reset MUST be the same value every time.
+# Section 5 documents why: changing the ambient font size shifts
+# coordinate mapping. Use demo Text special: for size variation.
 #
 # Apply to ALL drawing procedures: any procedure that calls
 # `demo Paint rectangle`, `demo Draw rectangle`, `demo Text`, etc.
@@ -317,34 +361,88 @@
 # to debug after the fact.
 
 # ============================================================================
-# SECTION 5: TEXT ALIGNMENT LIMITATION
+# SECTION 5: TEXT ALIGNMENT — FIX VIA Text special
 # ============================================================================
 #
 # PROBLEM:
 # `demo Text: x, "left"` applies font-size-dependent internal padding
 # that scales with window pixel dimensions. Different font sizes at the
 # same x coordinate render at different pixel positions. There is no way
-# to lock two different font sizes to the same left pixel edge.
+# to lock two different font sizes to the same left pixel edge using
+# demo Text:.
 #
 # This means section titles (e.g. 14pt) and body text (e.g. 11pt) at
-# the same x coordinate will never visually align.
+# the same x coordinate will never visually align with demo Text:.
 #
-# WHY IT IS UNFIXABLE:
+# WHY demo Text: CANNOT FIX THIS:
 #   - A fixed offset can't compensate because the padding ratio changes
 #     on resize.
 #   - The Demo window has no container concept.
 #   - Each `demo Text: x, "left"` applies independent bearing.
 #
-# DESIGN SOLUTIONS:
+# FIX:
+# Use demo Text special: for all text rendering. It takes its own
+# font size parameter without changing global Font size: state.
+# Set demo Font size: once at script startup and never change it.
+# All text at the same x coordinate aligns correctly regardless of
+# rendered size.
 #
-# A) Same font size, colour-only hierarchy:
-#    Title at 11pt in primary blue, body at 11pt in dark gray.
+#   demo Text special: x, halign$, y, valign$, font$, size, "0", text$
 #
-# B) Visual nesting (recommended):
-#    Section titles at contentLeft (e.g. 5). Body text indented to
-#    bodyLeft (e.g. 8). The offset becomes a design feature.
+# Example:
+#   demo Text special: 10, "left", 80, "half", "Helvetica", 28, "0", "Title"
+#   demo Text special: 10, "left", 70, "half", "Helvetica", 14, "0", "Body"
 #
-# C) Accept it — the misalignment is subtle and reads as intentional.
+# Both render at their specified sizes but share the same ambient font
+# size, so the coordinate transformation is identical and left edges
+# align perfectly.
+#
+# VERIFIED: Screenshot confirms pixel-perfect left-edge alignment across
+# 14pt, 20pt, 28pt, and 36pt text with constant ambient font size.
+#
+# IMPLICATIONS:
+#   - demo Text: should be avoided in favor of demo Text special:
+#   - The three-line reset (Section 4) must always use the same fixed
+#     font size — never vary it
+#   - In the Picture window, Text special: aligns perfectly regardless
+#     of ambient Font size: changes (this fix is Demo-window-specific)
+#
+# NOTE ON ROTATION PARAMETER:
+# demo Text special: rotation parameter is string "0" (not numeric 0).
+# Same as Picture window Text special:.
+#
+# Provenance: Diagnostic test, 1 April 2026. Verified empirically.
+
+# ============================================================================
+# SECTION 5B: RECTANGLE TEXT COMMANDS
+# ============================================================================
+#
+# Two commands provide bounded text rendering in both Picture window
+# and Demo window. Use with `demo` prefix for Demo window.
+#
+# Rectangle text (wrap & truncate): fromX, toX, horizontalAlignment$,
+#   fromY, toY, verticalAlignment$, text$
+# Wraps text within bounding box, truncates overflow.
+# Uses current font size for rendering. Respects current colour.
+# WARNING: Wraps at CHARACTER boundaries, not word boundaries.
+# Unsuitable for body text paragraphs — use manual word-wrap.
+# Good for short labels inside boxes and nodes.
+#
+# Rectangle text (maximal fit): fromX, toX, horizontalAlignment$,
+#   minHMarginTextHeights, minHMarginMM,
+#   fromY, toY, verticalAlignment$,
+#   minVMarginTextHeights, minVMarginMM, text$
+# Auto-sizes font to maximally fill the rectangle.
+# Uses current font size as MAXIMUM size.
+# Ideal for button labels — give it a box and text, it picks the size.
+#
+# Both commands are affected by the font-size coordinate offset
+# documented in Section 5. When using demo Text special: for other
+# text, these commands still use the ambient demo Font size: for
+# coordinate mapping. Keep the ambient size fixed.
+#
+# Provenance: Paste Commands verification + production use in
+# EML Stats Demo, 1 April 2026.
 
 # ============================================================================
 # SECTION 6: ANIMATION — INPUT HANDLING
@@ -368,6 +466,15 @@
 # waiting (i.e., at demoWaitForInput). Mouse clicks do not trigger
 # the re-entrance — only key events.
 #
+# NOTE ON sleep + demoPeekInput PATTERN:
+# Some scripts (e.g., the spectrogram scrolling player) use
+# sleep(0.03) + demoPeekInput() in a polling loop. This does NOT
+# crash, but keyboard events never arrive — the keyboard handling
+# in such loops is effectively dead code. The sleep() may prevent
+# the crash by blocking before Cocoa dispatch, but it also prevents
+# keyboard events from being delivered. Click events in this pattern
+# are untested. (Verified 21 April 2026.)
+#
 # ONLY SAFE ANIMATION PATTERN — No input checking:
 # Let the animation run to completion with no demoPeekInput() call.
 # demoShow() and all drawing commands are confirmed safe.
@@ -379,7 +486,7 @@
 #       # ... draw frame content ...
 #       demoShow ()
 #       sleep (0.033)       # ~30 fps
-#       # NO demoPeekInput() here — it crashes if keys are queued
+#       # NO demoPeekInput() here — it crashes or silently drops events
 #   endfor
 #
 # CONSEQUENCES:
@@ -389,6 +496,29 @@
 #   - For "replay" functionality, return to the demoWaitForInput
 #     event loop after animation completes, then re-trigger the
 #     animation on a specific click region or key press
+#
+# SEGMENTED ANIMATION WORKAROUND:
+# For longer animations that need user interruption, break the
+# animation into short segments (e.g., 0.5–1 second bursts) with
+# demoWaitForInput() between segments. The script is waiting (not
+# running) at each checkpoint, so input is safe:
+#
+#   for .segment from 1 to .nSegments
+#       # Draw ~15-30 frames without input checking
+#       for .frame from 1 to .framesPerSegment
+#           # ... draw frame ...
+#           demoShow ()
+#           sleep (0.033)
+#       endfor
+#       # Safe checkpoint — script is about to wait
+#       # Use a very short timeout via demoPeekInput? No — unsafe.
+#       # Instead, draw a "press Q to stop" indicator and use
+#       # demoWaitForInput if you want to pause between segments,
+#       # or just continue to the next segment for uninterrupted flow.
+#   endfor
+#
+# This trades smooth continuous animation for interruptibility.
+# The pause between segments may be perceptible.
 #
 # REPLAY PATTERN:
 # After animation completes, the main event loop (which uses
@@ -427,6 +557,7 @@
 # the animation loop stopped all crashes. demoShow() confirmed safe.
 # Previous v1.1 guidance (Approach A click-only, Approach B key drain)
 # both relied on demoPeekInput() and are therefore both unsafe.
+# sleep + demoPeekInput keyboard dead code confirmed 21 April 2026.
 
 # ============================================================================
 # SECTION 7: ARBITRARY FILLED SHAPES — POLYGON BUG AND WORKAROUND
@@ -526,14 +657,9 @@
 #
 # Pattern:
 #
-#   # Convert 0–100 demo coords to viewport inches
-#   .vpScale = 12 / 100
-#   .vpLeft = .x1 * .vpScale
-#   .vpRight = .x2 * .vpScale
-#   .vpTop = (100 - .y2) * .vpScale      # Y inversion
-#   .vpBottom = (100 - .y1) * .vpScale    # Y inversion
-#
-#   demo Select outer viewport: .vpLeft, .vpRight, .vpTop, .vpBottom
+#   # demo Select outer viewport: takes 0–100 demo units, NOT inches.
+#   # Parameter order: (left, right, bottom, top) — Y-up.
+#   demo Select outer viewport: .x1, .x2, .y1, .y2
 #   selectObject: .soundId
 #   demo Draw: .startTime, .endTime, -.ampBound, .ampBound, "no", "Curve"
 #
@@ -687,8 +813,13 @@
 # ============================================================================
 #
 # FIXED-CANVAS CONSTRAINT:
-# The Demo window is a fixed 100 × 100 canvas with no scroll capability
-# and no text wrapping. The author manages all line breaks manually.
+# The Demo window is a fixed 100 × 100 canvas with no scroll capability.
+# The author manages all line breaks manually for demo Text: calls.
+#
+# NOTE: Rectangle text (wrap & truncate): provides character-level
+# wrapping within a bounding box (Section 5B). However, it wraps at
+# CHARACTER boundaries, not word boundaries — unsuitable for body text.
+# Manual word-wrap procedures are still needed for paragraph text.
 #
 # VERTICAL SPACE BUDGET:
 # After reserving header (~15 units) and navigation bar (~15 units),
@@ -774,17 +905,18 @@
 # |------------------------------------|----------|-------------------------|
 # | Font metric contamination of       | Critical | Three-line reset        |
 # |   Paint rectangle (Section 4)      |          |   (Section 4)           |
-# | Keyboard crash during animation    | Critical | Click-only (Section 6A) |
-# |   — unconsumed key events          |          |  or key buffer drain    |
-# |                                    |          |  (Section 6B)           |
+# | Keyboard crash during animation    | Critical | No input during         |
+# |   — demoPeekInput re-entrance      |          |   animation (Section 6) |
 # | Polygon Paint: ignores Axes:       | Critical | Scanline rasterization  |
 # |   coordinate system (Section 7)    |          |  with Paint rectangle:  |
 # |   — affects Picture window too     |          |  (Section 7)            |
-# | Text alignment varies by font size | Moderate | Visual nesting layout   |
+# | Text alignment varies by font size | Fixed    | demo Text special:      |
 # |   (Section 5)                      |          |   (Section 5)           |
 # | No programmatic window close       | Minor    | Informative final screen|
 # | No scroll capability               | Minor    | Paginate; 67-unit budget|
-# | No text wrapping                   | Moderate | Manual line breaks      |
+# | Text wrapping: character-level     | Moderate | Rectangle text for      |
+# |   only (Section 5B)                |          |   labels; manual word-  |
+# |                                    |          |   wrap for paragraphs   |
 # | Resize distorts click coordinates  | Moderate | Design for 1344×756     |
 # | `demo Erase all` flicker           | Minor    | Selective repaint       |
 # | Escape key missing on Windows      | Fixed    | Fixed in Praat 6.2+     |
@@ -825,11 +957,12 @@
 #   ✓ **Demo window (COMMANDS_DemoWindow.txt):**
 #     - Three-line reset in all drawing procedures (and animation frames)
 #     - Viewport restoration after every `demo Select outer viewport:`
-#     - Animation input: click-only (6A) or key buffer drain (6B)
+#     - Animation input: no demoPeekInput during animation (Section 6)
 #     - No Polygon Paint: — use scanline rasterization for filled shapes
 #     - Graceful exit path from every page
 #     - Axes: 0, 100, 0, 100 restored before click detection
 #     - Pre-computed global bounds if animating changing geometry
+#     - All text via demo Text special: (Section 5)
 
 ---
 

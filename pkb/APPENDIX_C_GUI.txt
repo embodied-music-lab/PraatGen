@@ -193,6 +193,36 @@ clicked receives the 1-based index of the button the user clicked.
         endif
     clicked = endPause: "Cancel", "Analyze", 2, 1
 
+### Procedure calls inside beginPause/endPause
+
+Procedure calls execute normally inside an open beginPause/endPause
+block. Field declarations (comment:, boolean:, optionmenu:, etc.)
+inside the called procedure are injected into the active dialog.
+
+Verified: 13 April 2026 (Praat 6.4.62, macOS).
+
+    procedure myFields
+        comment: "Test"
+    endproc
+
+    beginPause: ""
+        @myFields
+    endPause: "Continue", 1, 0
+
+Variable derivation follows Rule 20 as normal — field variables are
+available in the calling scope after endPause returns.
+
+### Application: shared wrapper fields
+
+    beginPause: "Compare k Groups"
+        # ... wrapper-specific fields ...
+        @emlWrapperCommonFields
+    clicked = endPause: "Quit", "Run", 2, 0
+
+The procedure body must contain only commands valid inside a beginPause
+block (field declarations, comment:). Nested beginPause inside the
+procedure will error.
+
 ---
 
 ## C.3 VARIABLE DERIVATION ALGORITHM

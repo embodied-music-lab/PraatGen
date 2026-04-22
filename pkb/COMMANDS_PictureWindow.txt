@@ -32,6 +32,10 @@
   # Verified: Black
   Solid line
   # Verified: Solid line
+  Dashed line
+  # Verified: Dashed line
+  Dotted line
+  # Verified: Dotted line
   Line width: width
   # Verified: Line width: 1
   Colour: colour$
@@ -48,6 +52,10 @@
   # Verified: One mark left: 0, "yes", "yes", "no", ""
   One mark bottom: position, draw number?, draw tick?, draw dotted line?, text$
   # Verified: One mark bottom: 1, "no", "yes", "no", "Condition A"
+  One mark right: position, draw number?, draw tick?, draw dotted line?, text$
+  # Verified: One mark right: 215.3, "no", "no", "yes", "mean=215.3"
+  One mark top: position, draw number?, draw tick?, draw dotted line?, text$
+  # (Not yet verified — included for completeness; same parameter pattern)
   Text left: far?, text$
   # Verified: Text left: "yes", "Amplitude"
   Text bottom: far?, text$

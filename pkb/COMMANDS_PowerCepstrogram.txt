@@ -13,8 +13,10 @@
 
   # Query (session-verified)
   Get CPPS: subtract tilt before smoothing$, time averaging window, quefrency averaging window, peak search pitch floor, peak search pitch ceiling, tolerance, interpolation$, tilt line quefrency floor, tilt line quefrency ceiling, line type$, fit method$
-  # Verified: Get CPPS: "yes", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0.05, "Straight", "Robust slow"
-  # NOTE: Parameters per Maryn et al. — use these values unless user specifies otherwise
+# Verified: Get CPPS: "no", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0, "Straight", "Robust"
+  # NOTE: Parameters per Maryn & Weenink (2015) / Phonanium Cepstrography v01.02.
+  # Use these values unless user specifies otherwise.
+  # ERRATUM (21 Apr 2026): Prior version had Praat dialog defaults here.
 
   # Convert / Analyze
   To PowerCepstrum (slice): time
@@ -72,6 +74,16 @@
 
   # Other
   Subtract trend: from quefrency, to quefrency, line type$, fit method$
+
+# ============================================================================
+  # Per-frame CPPS workflow (no slice loop needed)
+  # ============================================================================
+  # PowerCepstrogram → Subtract trend (in-place) → Smooth → To Table
+  # The resulting Table contains per-frame smoothed CPP values.
+  # Eliminates the need to loop through To PowerCepstrum (slice): per frame.
+  # Column names: [NEED PASTE COMMANDS VERIFICATION]
+  # Provenance: Natalie Choir extraction pipeline, 15 April 2026.
+
 
 # ----------------------------------------------------------------------------
 

@@ -19,6 +19,12 @@
 
   # Draw
   Draw: from time, to time, minimum, maximum
+  # Verified: Draw: 0, 0, 0, 40
+  # NOTE: 4 parameters only — NO garnish parameter. Differs from
+  # Intensity Draw which takes 5 (including garnish$). Passing a 5th
+  # argument causes: "requires only 4 arguments, not the 5 given"
+  # To suppress default garnish, use manual axis commands (Rule 28H).
+  # Provenance: Runtime error + fix, 22 April 2026.
 
 ---
 

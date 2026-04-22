@@ -83,10 +83,14 @@
 # numbers, axis name labels — must be drawn at the same ambient font
 # size so that margins are computed identically and everything aligns.
 #
-# Use `Text special:` for any text that needs a different visual size
-# (e.g., titles, annotations). Text special takes its own font size
-# parameter but does NOT change the global Font size state. This is
-# the correct way to render mixed-size text without breaking alignment.
+# ALWAYS use `Text special:` for titles and annotations that need a
+# different visual size than the body font. NEVER use `Font size:` +
+# `Text top:` for titles. The ambient Font size must remain at bodySize
+# for the entire drawing sequence.
+#
+#
+# NEVER use `Marks left:` or `Marks bottom:` for tick placement.
+# Always use EML procedure-based nice-number tick logic with `One mark left:` / `One mark bottom:`.
 #
 # CORRECT:
 #   Font size: 10
@@ -350,3 +354,81 @@
 #   PowerCepstrum Draw: converts internal raw power to dB for display.
 #     Get peak: returns dB directly. Matrix conversion returns RAW POWER
 #     (not dB). Use Get peak: for bounds when possible.
+#
+# ============================================================================
+# ACCESSIBLE COLOR PALETTE (hard)
+# ============================================================================
+#
+# When generating any script that produces Picture window figures with
+# multiple colors (data series, groups, categories, overlays), ask the
+# user during PRE-FLIGHT:
+#
+#   "Do you want an accessible color palette (Okabe-Ito, safe for
+#    color vision deficiency)?"
+#
+# If yes, use the EXACT Okabe-Ito RGB values from the EML library
+# (@emlSetColorPalette in eml-graph-procedures.praat). Do NOT
+# approximate or recall from training data — load the values from PKB.
+#
+# CANONICAL OKABE-ITO LINE COLORS (0–1 RGB for Praat Colour: command):
+#
+#   Index  Name         RGB string                  Hex equivalent
+#   1      Blue         "{0.00, 0.45, 0.70}"        #0073B3
+#   2      Orange       "{0.90, 0.62, 0.00}"        #E69F00
+#   3      Sky blue     "{0.34, 0.71, 0.91}"        #56B4E8
+#   4      Green        "{0.00, 0.62, 0.45}"        #009E73
+#   5      Vermillion   "{0.84, 0.37, 0.00}"        #D65E00
+#   6      Purple       "{0.80, 0.47, 0.65}"        #CC78A6
+#   7      Yellow       "{0.95, 0.90, 0.25}"        #F0E640
+#   8      Black        "{0.00, 0.00, 0.00}"        #000000
+#
+# CANONICAL FILL COLORS (70% blend toward white):
+#
+#   1  "{0.70, 0.83, 0.91}"    5  "{0.95, 0.81, 0.70}"
+#   2  "{0.97, 0.89, 0.70}"    6  "{0.94, 0.84, 0.90}"
+#   3  "{0.80, 0.91, 0.97}"    7  "{0.99, 0.97, 0.78}"
+#   4  "{0.70, 0.89, 0.83}"    8  "{0.70, 0.70, 0.70}"
+#
+# CANONICAL LIGHT LINE COLORS (50% blend toward white):
+#
+#   1  "{0.50, 0.73, 0.85}"    5  "{0.92, 0.69, 0.50}"
+#   2  "{0.95, 0.81, 0.50}"    6  "{0.90, 0.73, 0.82}"
+#   3  "{0.67, 0.85, 0.96}"    7  "{0.98, 0.95, 0.63}"
+#   4  "{0.50, 0.81, 0.73}"    8  "{0.50, 0.50, 0.50}"
+#
+# USAGE IN STANDALONE SCRIPTS (no EML library dependency):
+#
+# For PraatGen-generated scripts (which must be self-contained per
+# Rule 34's flattening model), inline the palette as variables:
+#
+#   color1$ = "{0.00, 0.45, 0.70}"
+#   color2$ = "{0.90, 0.62, 0.00}"
+#   color3$ = "{0.34, 0.71, 0.91}"
+#   # ... etc.
+#   Colour: color1$
+#
+# For scripts that include the EML library:
+#
+#   @emlSetColorPalette: "color"
+#   Colour: emlSetColorPalette.line$[1]
+#
+# PALETTE OPTIMIZATION (for small group counts):
+# When K < 7, call @emlOptimizePaletteContrast: K after
+# @emlSetColorPalette to skip confusable pairs (sky blue/blue
+# when K < 7; vermillion/orange when K < 5).
+#
+# B/W ALTERNATIVE:
+# If the user needs greyscale output, use the B/W palette from
+# @emlSetColorPalette: "bw". Combine with line-style redundancy
+# (Solid line / Dashed line / Dotted line) for accessibility.
+#
+# B/W line colors:
+#   1  "{0.00, 0.00, 0.00}"    5  "{0.25, 0.25, 0.25}"
+#   2  "{0.35, 0.35, 0.35}"    6  "{0.65, 0.65, 0.65}"
+#   3  "{0.55, 0.55, 0.55}"    7  "{0.15, 0.15, 0.15}"
+#   4  "{0.45, 0.45, 0.45}"    8  "{0.50, 0.50, 0.50}"
+#
+# SELF-AUDIT must confirm: palette source (PKB exact values vs.
+# hardcoded), whether user was asked about accessibility, and which
+# palette was applied.
+# ============================================================================
