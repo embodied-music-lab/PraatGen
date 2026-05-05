@@ -1,4 +1,4 @@
-# ⚠️ Best practice: Use Claude Opus 4.6 with Extended Thinking for anything beyond simple projects. Opus 4.7 is not capable of holding the required information in context. Start every session in Opus 4.6 + ET unless PraatGen tells you otherwise during pre-flight.
+⚠️ Best practice: Claude has had ups and downs since 4.7 was released, but the current versions of both Opus 4.6 and 4.7 appear stable and usable. 4.7 appears trained to take the lead and push through to the end of projects as an agent. This makes it especially useful as a 'first iteration model' in PraatGen. I have found that it is less likely to wait for your approval when deeper in debugging rounds.
 
 # NOTE: To start, all of the files you need are in the current zip folder
 
