@@ -40,6 +40,58 @@
 
 ---
 
+## 0. CANONICAL PARAMETER DISCIPLINE (hard)
+
+All analysis commands in this appendix carry canonical parameter sets
+derived from Praat GUI defaults or published clinical norms. These
+values are the standard for all PraatGen-generated scripts.
+
+**Deviation policy:** A parameter may be changed from its canonical
+value ONLY when the canonical value would cause the algorithm to
+miss, clip, or mischaracterize signal that is demonstrably present
+in the data. The justification must identify:
+
+1. Which signal would be missed (e.g., "F0 at 65 Hz falls below
+   the 75 Hz floor — the algorithm cannot detect periods longer
+   than 1/floor")
+2. Why the canonical value fails for this specific data
+
+The following are NOT valid justifications for deviation:
+- "Provides extra headroom" / "doesn't hurt"
+- "The canonical ceiling exceeds what's needed, so I lowered it"
+- "Wider range gives better coverage"
+- "The singer might occasionally go below X"
+- "It's closer to the expected range" (without signal-loss evidence)
+
+Narrowing a range below canonical is just as much a deviation as
+widening it. A ceiling of 500 Hz when canonical is 600 Hz requires
+the same justification as a floor of 50 Hz when canonical is 75 Hz.
+
+**PRE-FLIGHT obligation:** When the task involves singing or
+non-speech phonation, ask whether the expected range extends beyond
+the canonical detection window (below floor or above ceiling/top).
+If the user does not confirm that it does, use canonical values.
+Do not preemptively adjust.
+
+**Interaction with the 2× pitch top rule (§1A):** The filtered
+autocorrelation algorithm's LPF creates a genuine signal-loss
+scenario: if the singer's highest expected F0 exceeds pitch_top / 2,
+the algorithm attenuates real pitch energy before analysis. In that
+case, raising pitch_top to 2× the highest expected F0 is a valid
+deviation because the canonical value would miss signal. If the
+highest expected F0 does NOT exceed pitch_top / 2 (i.e., canonical
+800 / 2 = 400 Hz covers the range), canonical stands.
+
+**SELF-AUDIT requirement:** Every deviation from canonical must cite
+this rule and state the signal-loss evidence:
+
+    "Deviation from canonical [parameter] = [value] because
+    [signal at X Hz would be missed by canonical Y Hz]."
+
+If no deviations exist, state: "All parameters canonical per §0."
+
+---
+
 ## 1. PITCH EXTRACTION
 
 # ALGORITHM SELECTION GUIDE
@@ -99,12 +151,6 @@ To Pitch (filtered autocorrelation): 0.0, 50, 800, 15, "no", 0.03, 0.09, 0.5, 0.
 #   - pitch top = 800 → reliable tracking degrades above ~400 Hz
 #   - To track F0 at frequency X, set pitch top ≥ 2 × X
 #
-# Examples:
-#   Speech only (typical adult):     pitch floor = 75, pitch top = 600
-#   Higher voices (child, soprano):  pitch floor = 50, pitch top = 800
-#   Singing up to C5 (523 Hz):      pitch top ≥ 1050 Hz
-#   Singing up to C6 (1047 Hz):     pitch top ≥ 2100 Hz
-#   Lower voices (bass):            pitch floor = 50, pitch top = 400
 #
 # The 2× rule applies ONLY to filtered autocorrelation because of its
 # internal LPF. Raw cross-correlation and raw autocorrelation use a hard

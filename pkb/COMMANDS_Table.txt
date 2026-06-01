@@ -1,6 +1,6 @@
-# PRAAT COMMANDS: Table
+# PRAAT COMMANDS: Table + TableOfReal
 # Source: Praat C API (praatlib.h), June 2025
-# Additional commands: Session-verified via Paste Commands (Feb 2026)
+# Additional commands: Session-verified via Paste Commands (Feb–Apr 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 #
 # Format: CommandName: param1, param2 (if arguments)
@@ -111,16 +111,15 @@
   View & Edit
   Scatter plot: horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, marks column name$, font size, garnish?
   Scatter plot (mark): horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, mark size, garnish?, mark string$
-#   Box plots: data column name$, factor column name$, ymin, ymax, garnish?
-#   # Verified: Box plots: "F0", "Type", 70, 400, "no"
-#   # Provenance: Praat manual (Table__Box_plots___.html), 19 Mar 2026
-#   # Note: Draws one box-and-whisker per factor level. Factors sorted in
-#   #   natural sort order. Uses Tukey whiskers with outlier markers.
-#   #   garnish? adds axis labels and inner box.
-#
-# The original entry was missing the data column parameter.
-# Confirmed via Praat manual example: Create formant table (Peterson & Barney 1952)
-#   Box plots: "F0", "Type", 70, 400, "no"  Normal probability plot: column name$, number of quantiles, number of sigmas, label size, label$, garnish?
+  Box plots: data column name$, factor column name$, ymin, ymax, garnish?
+  # Verified: Box plots: "F0", "Type", 70, 400, "no"
+  # Provenance: Praat manual (Table__Box_plots___.html), 19 Mar 2026
+  # Note: Draws one box-and-whisker per factor level. Factors sorted in
+  #   natural sort order. Uses Tukey whiskers with outlier markers.
+  #   garnish? adds axis labels and inner box.
+  #   The original (pre-19 Mar 2026) catalogue entry was missing the data
+  #   column parameter; corrected via Praat manual example (Peterson & Barney 1952).
+  Normal probability plot: column name$, number of quantiles, number of sigmas, label size, label$, garnish?
   Quantile-quantile plot: x column name$, y column name$, number of quantiles, xmin, xmax, ymin, ymax, label size, label$, garnish?
   Quantile-quantile plot (between levels): data column name$, factor column name$, x level string$, y level string$, number of quantiles, xmin, xmax, ymin, ymax, label size, label$, garnish?
   Lag plot: data column name$, lag, from xy, to xy, label size, label$, garnish?
@@ -172,6 +171,54 @@
   Transpose
   Collapse rows
   Rows to columns: column to transpose$
+
+---
+
+## TableOfReal
+
+  # TableOfReal is a distinct object type from Table. It has named rows
+  # and named columns, and stores only numeric data. Created by various
+  # analysis commands (e.g., PCA, Discriminant) or via Down to TableOfReal:
+  # from a Table.
+  #
+  # Most commands below show Structure only — exact parameter syntax
+  # needs Paste Commands verification. Commands marked [Verified] have
+  # confirmed syntax.
+
+  # Convert
+  To Table: rowColumnName$
+  # Verified: To Table: "Group"
+  # Converts row labels to a named column. Essential bridge from
+  # TableOfReal statistical output to Table for further processing.
+  # NOTE: Missing from PRAAT_DEFINITIVE_CATALOGUE.txt — catalogue gap.
+  # Provenance: User-verified, Convert menu, 26 Mar 2026
+
+  # Statistical analysis (shown commands)
+  # Provenance: Buttons menu screenshot, 26 Feb 2026
+  # [NEED PASTE for exact parameter syntax on all below]
+  To Discriminant
+  To PCA
+  To SSCP...
+  To SSCP (row weights)...
+  To Covariance
+  To Correlation
+  To Correlation (rank)
+  To CCA...
+  To TableOfReal (means by row labels)...
+  To TableOfReal (medians by row labels)...
+  To Configuration (pca)...
+  To Configuration (lda)...
+
+  # Hidden commands
+  # [NEED PASTE for exact parameter syntax on all below]
+  To GaussianMixture...
+  To GaussianMixture (CEMM)...
+  To GaussianMixture (row labels)...
+  To TableOfReal (rank columns)...
+
+  # Cross-type (2 TableOfReal objects selected)
+  # [NEED PASTE for exact parameter syntax]
+  To TableOfReal (cross-correlations)...
 
 ---
 

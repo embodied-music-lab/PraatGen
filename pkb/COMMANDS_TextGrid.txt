@@ -52,7 +52,9 @@
   Remove point: tier number, point number
   Remove points: tier number, remove every point whose label$, the text$
   Set point text: tier number, point number, text$
-  Replace point texts: tier number, from interval, to interval, search string$, replace string$, search type$
+  Replace point texts: tier number, from interval, to interval, search string$, replace string$, search type$d
+
+  # NOTE important label-handling behavior when inserting/removing interval boundaries. If a longer boundary with a label is bisected by a new boundary, the existing label goes to the left most interval. The 'new' interval to the right will be empty. If a boundary is deleted between two labeled intervals, those labels concatenate in the new, larger interval. 
 
   # Convert / Analyze
   Down to Table: include line number?, time decimals, include tier names?, include empty intervals?
@@ -96,7 +98,17 @@
   Save as chronological text file: file name$
   View & Edit alone
   View & Edit with Sound?
-  Tabulate occurrences: list every label that$, the text$, case sensitive?
+  Tabulate occurrences: search tiers#, list every label that$, the text$, case sensitive?
+  # Verified: Tabulate occurrences: 1, "is equal to", "a", "no"
+  # `search tiers#` is a REALVECTOR of 1-based tier indices; default is
+  # the single-tier case `1` which the autocomplete renderer expands to
+  # the vector literal `{1}`. Multi-tier example: `{1, 2}`.
+  # `list every label that$` (OPTIONMENU_ENUM): canonical "is equal to";
+  #   other options: "contains", "starts with", "ends with",
+  #   "matches (regex)", "is not equal to", "does not contain",
+  #   "does not start with", "does not end with", "does not match (regex)".
+  # The earlier 3-arg signature dropped the leading search-tiers vector.
+  # Provenance: Empirical verification, Praat 6.4.65, 17 May 2026.
   Is interval tier: tier number
   Convert to backslash trigraphs
   Convert to Unicode

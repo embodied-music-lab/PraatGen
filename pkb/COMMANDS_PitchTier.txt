@@ -28,6 +28,10 @@
   # Draw
   Draw: from time, to time, from frequency, to frequency, line type for nonperiodic intervals$, garnish?, drawing method$
   Draw: from time, to time, from frequency, to frequency, garnish?, drawing method$
+  # Verified: Draw: 0, 0, 75, 500, "yes", "lines and speckles"
+  # Drawing method options: "lines and speckles" (default), "lines",
+  # "speckles". Praat 6.4.65 dialog default is "lines and speckles".
+  # Provenance: Empirical verification, Praat 6.4.65, 17 May 2026.
   # Other
   Save as PitchTier spreadsheet file: file name$
   Save as headerless spreadsheet file: file name$
@@ -37,8 +41,25 @@
   Hum
   Play sine
   & Manipulation: Replace?
-  Modify interval: from time, to time, time offset$, pitches string$, pitch as$, pitch is$, pitch unit$
-  Modify interval (tone levels): from time, to time, fmin, fmax, number of tone levels, time offset$
+  Modify interval: from time, to time, relative times#, relative times are$, pitch values$, pitches are$, which is the$, pitch unit$
+  # Verified: Modify interval: 0, 0.5, 0 0.5 1, "fractions", "100 200 100", "frequencies", "start", "Hertz"
+  # OPTIONMENU option strings (empirically verified, Praat 6.4.65, 17 May 2026):
+  #   relative times are$: "fractions" | "percentages"
+  #   pitches are$:        "frequencies" | "fractions" | "percentages" |
+  #                        "start and slopes" | "slopes and end" | "music notes"
+  #   which is the$:       "start" | "end" | "mean of the curve" |
+  #                        "mean of the points" | "current" | "maximum" |
+  #                        "minimum" | "not used"
+  #   pitch unit$:         "Hertz" | "semitones re 100 Hz" | etc.
+  # The earlier 7-arg signature was wrong; the form has 8 args.
+  # The REALVECTOR `relative times#` is written here as space-separated
+  # values without braces so the autocomplete renderer wraps it correctly.
+  # Provenance: Empirical verification + Praat manual lookup, 17 May 2026.
+  Modify interval (tone levels): from time, to time, fmin, fmax, number of tone levels, relative times#, relative times are$, pitches as tone levels#
+  # Verified: Modify interval (tone levels): 0, 0.5, 80, 200, 5, 0 0.5 1, "fractions", 2.1 2.1 5.0
+  # Both `relative times#` and `pitches as tone levels#` are REALVECTORs.
+  # Earlier 6-arg signature was missing both vector args.
+  # Provenance: Empirical verification, Praat 6.4.65, 17 May 2026.
   Stylize: frequency resolution, unit$
   Interpolate quadratically: number of points per parabola, unit$
   Shift frequencies: from time, to time, frequency shift, unit i$

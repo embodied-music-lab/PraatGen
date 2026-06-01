@@ -100,26 +100,26 @@
 # the same dialog:
 #
 #   # Initialize with canonical defaults
-#   pitchFloor = 75
-#   pitchCeiling = 600
-#   voicingThreshold = 0.45
-#   octaveCost = 0.01
+#   formantCeiling = 5500
+#   nFormants = 5
+#   windowLength = 0.025
+#   preEmphasis = 50
 #
 #   repeat
-#       beginPause: "Pitch analysis parameters"
-#           positive: "Pitch floor (Hz)", string$ (pitchFloor)
-#           positive: "Pitch ceiling (Hz)", string$ (pitchCeiling)
-#           real: "Voicing threshold", string$ (voicingThreshold)
-#           real: "Octave cost", string$ (octaveCost)
+#       beginPause: "Formant analysis parameters"
+#           positive: "Formant ceiling (Hz)", string$ (formantCeiling)
+#           natural: "Number of formants", string$ (nFormants)
+#           positive: "Window length (s)", string$ (windowLength)
+#           positive: "Pre-emphasis from (Hz)", string$ (preEmphasis)
 #       clicked = endPause: "Quit", "Standard", "Run", 3, 0
 #       if clicked = 1
 #           exitScript: "User quit."
 #       elsif clicked = 2
 #           # Reset to canonical defaults
-#           pitchFloor = 75
-#           pitchCeiling = 600
-#           voicingThreshold = 0.45
-#           octaveCost = 0.01
+#           @setSpeakerDefaults: speaker_category
+#           nFormants = 5
+#           windowLength = 0.025
+#           preEmphasis = 50
 #           # Loop will redisplay with reset values
 #       endif
 #   until clicked <> 2
@@ -271,63 +271,59 @@
 #   # ---- TIER 3: Advanced (only if requested) ----
 #   if analysis_mode = 2 and customize_parameters = 1
 #       repeat
-#           beginPause: "Analysis parameters"
-#               positive: "Pitch floor (Hz)", string$ (pitchFloor)
-#               positive: "Pitch top (Hz)", string$ (pitchTop)
-#               real: "Voicing threshold", string$ (voicingThreshold)
-#               real: "Octave cost", string$ (octaveCost)
-#               # ... additional parameters ...
+#           beginPause: "Formant analysis parameters"
+#               positive: "Formant ceiling (Hz)", string$ (formantCeiling)
+#               natural: "Number of formants", string$ (nFormants)
+#               positive: "Window length (s)", string$ (windowLength)
+#               positive: "Pre-emphasis from (Hz)", string$ (preEmphasis)
 #           clicked = endPause: "Quit", "Standard", "Run", 3, 0
 #           if clicked = 1
 #               exitScript: "User quit."
 #           elsif clicked = 2
+#               # Reset to canonical defaults for selected speaker category
 #               @setSpeakerDefaults: speaker_category
+#               nFormants = 5
+#               windowLength = 0.025
+#               preEmphasis = 50
+#               # Loop will redisplay with reset values
 #           endif
 #       until clicked <> 2
 #   endif
 #
 # S2B: SPEAKER CATEGORY PATTERN
 #
-# When analysis parameters depend on speaker characteristics (pitch
-# range, formant ceilings), offer a speaker category chooser that
-# silently sets appropriate defaults.
+# When analysis parameters depend on speaker characteristics
+# (formant ceilings), offer a speaker category chooser that
+# silently sets appropriate defaults. Pitch algorithm parameters
+# are governed by APPENDIX_D §0/§1 and are not set by speaker
+# category.
 #
 # Implementation as a procedure for reuse by the Standard button:
 #
 #   procedure setSpeakerDefaults: .category
+#       # Speaker category determines formant ceiling (vocal tract
+#       # size). Pitch algorithm selection and parameters are
+#       # governed by APPENDIX_D §0/§1 — not by speaker category.
 #       if .category = 1
 #           # Adult female (speech)
-#           pitchFloor = 100
-#           pitchTop = 500
 #           formantCeiling = 5500
 #       elsif .category = 2
 #           # Adult male (speech)
-#           pitchFloor = 75
-#           pitchTop = 350
 #           formantCeiling = 5000
 #       elsif .category = 3
 #           # Child (speech)
-#           pitchFloor = 150
-#           pitchTop = 700
 #           formantCeiling = 8000
 #       elsif .category = 4
-#           # Adult female (singing) — 2x rule per Rule 22B
-#           pitchFloor = 100
-#           pitchTop = 1400
+#           # Adult female (singing)
 #           formantCeiling = 5500
 #       elsif .category = 5
-#           # Adult male (singing) — 2x rule per Rule 22B
-#           pitchFloor = 75
-#           pitchTop = 800
+#           # Adult male (singing)
 #           formantCeiling = 5000
 #       elsif .category = 6
 #           # Custom — values unchanged, proceed to Tier 3
 #       endif
 #   endproc
 #
-# NOTE: The pitch top values above assume filtered autocorrelation.
-# Adjust per APPENDIX_D S1A if using a different algorithm. Singing
-# values apply the 2x rule from Rule 22B.
 #
 # S2C: LOOP REPOPULATION (hard)
 #
@@ -341,14 +337,14 @@
 #
 #   # CORRECT — repopulates with current values
 #   beginPause: "Settings"
-#       positive: "Pitch floor (Hz)", string$ (pitchFloor)
-#       positive: "Pitch ceiling (Hz)", string$ (pitchCeiling)
+#       positive: "Formant ceiling (Hz)", string$ (formantCeiling)
+#       positive: "Window length (s)", string$ (windowLength)
 #   clicked = endPause: "Quit", "Run", 2, 0
 #
 #   # WRONG — always shows initial defaults
 #   beginPause: "Settings"
-#       positive: "Pitch floor (Hz)", "75"
-#       positive: "Pitch ceiling (Hz)", "500"
+#       positive: "Formant ceiling (Hz)", "5500"
+#       positive: "Window length (s)", "0.025"
 #   clicked = endPause: "Quit", "Run", 2, 0
 #
 # This is why beginPause is preferred over form for any script that
@@ -379,8 +375,7 @@
 #   input_folder	/Users/researcher/Study1/audio
 #   output_folder	/Users/researcher/Study1/results
 #   speaker_category	1
-#   pitch_floor	100
-#   pitch_ceiling	500
+#   formant_ceiling	5500
 #   include_cpps	1
 #
 # S3C: CONFIG FILE LOCATION
@@ -404,8 +399,7 @@
 #   # --- Config load ---
 #   configPath$ = defaultDirectory$ + "/MyScript_config.txt"
 #   # Initialize with hardcoded defaults
-#   cfg_pitchFloor = 75
-#   cfg_pitchCeiling = 500
+#   cfg_formantCeiling = 5500
 #   cfg_inputFolder$ = ""
 #   cfg_outputFolder$ = ""
 #
@@ -419,10 +413,8 @@
 #               val$ = mid$ (line$,
 #               ... index (line$, tab$) + 1,
 #               ... length (line$))
-#               if key$ = "pitch_floor"
-#                   cfg_pitchFloor = number (val$)
-#               elsif key$ = "pitch_ceiling"
-#                   cfg_pitchCeiling = number (val$)
+#               if key$ = "formant_ceiling"
+#                   cfg_formantCeiling = number (val$)
 #               elsif key$ = "input_folder"
 #                   cfg_inputFolder$ = val$
 #               elsif key$ = "output_folder"
@@ -438,22 +430,21 @@
 #   beginPause: "Analysis settings"
 #       folder: "Input folder", cfg_inputFolder$
 #       folder: "Output folder", cfg_outputFolder$
-#       positive: "Pitch floor (Hz)", string$ (cfg_pitchFloor)
-#       positive: "Pitch ceiling (Hz)", string$ (cfg_pitchCeiling)
+#       positive: "Formant ceiling (Hz)", string$ (cfg_formantCeiling)
 #   clicked = endPause: "Quit", "Standard", "Run", 3, 0
 #   if clicked = 1
 #       exitScript: "User quit."
 #   elsif clicked = 2
-#       # Reset to APPENDIX_D canonical values
-#       cfg_pitchFloor = 75
-#       cfg_pitchCeiling = 500
+#       # Reset to canonical default for selected speaker category
+#       @setSpeakerDefaults: speaker_category
+#       cfg_formantCeiling = formantCeiling
 #       # ... redisplay (wrap in repeat/until loop per S0C) ...
 #   endif
 #
-# Note: The "Standard" button here resets to APPENDIX_D canonical
-# values, which may differ from the config-file values. This gives the
-# user three reference points: canonical defaults, saved preferences,
-# and their current edits.
+# Note: The "Standard" button resets to canonical values for the
+# selected speaker category, which may differ from the config-file
+# values. This gives the user three reference points: canonical
+# defaults, saved preferences, and their current edits.
 #
 # S3E: SAVE PATTERN
 #
@@ -469,8 +460,7 @@
 #   appendFileLine: configPath$, "# Saved: ", date$ ()
 #   appendFileLine: configPath$, "input_folder", tab$, input_folder$
 #   appendFileLine: configPath$, "output_folder", tab$, output_folder$
-#   appendFileLine: configPath$, "pitch_floor", tab$, string$ (pitch_floor)
-#   appendFileLine: configPath$, "pitch_ceiling", tab$, string$ (pitch_ceiling)
+#   appendFileLine: configPath$, "formant_ceiling", tab$, string$ (formant_ceiling)
 #   appendInfoLine: "Settings saved to: ", configPath$
 #
 # Opt-in save (below threshold):
@@ -570,7 +560,7 @@
 #
 #   snapshotPath$ = logDir$ + "/config_" + dateStamp$ + ".txt"
 #   writeFileLine: snapshotPath$, "# Run parameters - ", date$ ()
-#   appendFileLine: snapshotPath$, "pitch_floor", tab$, string$ (pitch_floor)
+#   appendFileLine: snapshotPath$, "formant_ceiling", tab$, string$ (formant_ceiling)ß∑
 #   # ... all parameters ...
 #
 # This is distinct from the config persistence file (S3). The config

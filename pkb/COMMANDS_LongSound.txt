@@ -31,7 +31,13 @@
   Save right channel as NeXT/Sun file: file name$
   Save right channel as NIST file: file name$
   Save right channel as FLAC file: file name$
-  Save part as audio file: audio file$, type$, from time, to time, file name$
+  Save part as audio file: audio file$, type$, from time, to time
+  # Verified: Save part as audio file: "/tmp/out.wav", "WAV", 0, 0.5
+  # The earlier 5-arg signature with trailing `file name$` was wrong —
+  # Praat 6.4.65 reports "Command requires only 4 arguments". `type$` is
+  # an OPTIONMENU; canonical value "WAV". Other valid options: "AIFF",
+  # "AIFC", "NeXT/Sun", "NIST", "FLAC", "MP3".
+  # Provenance: Empirical verification, Praat 6.4.65, 17 May 2026.
 
 ---
 

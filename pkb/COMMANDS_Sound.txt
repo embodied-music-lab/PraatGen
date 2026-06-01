@@ -89,12 +89,13 @@
 
   To Pitch (filtered autocorrelation): time step, pitch floor, pitch top, maximum number of candidates, very accurate?, attenuation at top, silence threshold, voicing threshold, octave cost, octave jump cost, voiced unvoiced cost
 
-  # NOTE: "pitch top" controls an internal low-pass filter that attenuates
+# NOTE: "pitch top" controls an internal low-pass filter that attenuates
   # energy from pitch_top/2 upward BEFORE autocorrelation. For reliable
   # tracking, pitch top must be >= 2× the highest F0 you need to track.
-  # Speech default: 500–600 Hz. Singing: 2× highest expected F0
-  # (e.g., soprano to C6 → pitch top >= 2100 Hz).
-  # See APPENDIX_D §1A for canonical parameter sets.
+  # Canonical: 50/800 (APPENDIX_D §1A). Raise pitch top above 800 only
+  # when the singer's highest expected F0 exceeds 400 Hz (= 800/2),
+  # e.g., soprano to C6 → pitch top >= 2100 Hz. Do not narrow below
+  # canonical without signal-loss justification (APPENDIX_D §0).
 
   To Pitch (raw cross-correlation): time step, pitch floor, pitch ceiling, maximum number of candidates, very accurate?, silence threshold, voicing threshold, octave cost, octave jump cost, voiced unvoiced cost
   To Pitch (raw autocorrelation): time step, pitch floor, pitch ceiling, maximum number of candidates, very accurate?, silence threshold, voicing threshold, octave cost, octave jump cost, voiced unvoiced cost
@@ -103,6 +104,10 @@
   To Pitch (SPINET): time step, window length, minimum frequency, maximum frequency, number of filters, pitch ceiling, maximum number of candidates
   To PointProcess (periodic, cc): pitch floor, pitch ceiling
   To PointProcess (periodic, peaks): pitch floor, pitch ceiling, include maxima?, include minima?
+  # EGG/DEGG usage: On the DEGG (derivative) signal, use:
+#   #   "yes", "no" → detect positive peaks (glottal closure instants)
+#   #   "no", "yes" → detect negative peaks (glottal opening instants)
+#   # See COMMANDS_Electroglottogram.txt §4B for the full pipeline.
   To PointProcess (extrema): channel, include maxima?, include minima?, peak interpolation type$
   To PointProcess (zeroes): channel, include raisers?, include fallers?
   To Harmonicity (cc): time step, pitch floor, silence threshold, periods per window
@@ -143,7 +148,15 @@
 
   # Draw
   Draw: from time, to time, from amplitude, to amplitude, garnish?, drawing method$
+  # Verified: Draw: 0, 0, 0, 0, "yes", "Curve"
   Draw where: from time, to time, ymin, ymax, garnish?, drawing method$, formula$
+  # Verified: Draw where: 0, 0, 0, 0, "yes", "Curve", "x > 0"
+  # `formula$` is a Praat expression evaluated against the Sound's
+  # time axis. The catalogue's default for this field contains a
+  # parenthetical that the autocomplete renderer truncates incorrectly;
+  # this `x > 0` default is safe across all renderers and trivially
+  # editable to the user's actual condition.
+  # Provenance: Empirical verification, Praat 6.4.65, 17 May 2026.
 
   # Save (session-verified with explicit path)
   Save as WAV file: file path$

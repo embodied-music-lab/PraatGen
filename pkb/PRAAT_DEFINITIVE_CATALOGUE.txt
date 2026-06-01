@@ -2500,6 +2500,11 @@ Total parameter fields: 5440
     REAL           left Variance range = "0.0"
     REAL           right Variance range = "0.0"
     OPTIONMENU_ENUM Shift tracks
+    # Verified enum values (Praat 6.4.65, sandbox 17 May 2026):
+    #   "no", "up", "down"  (case-insensitive: "No"/"Up"/"Down" also accepted)
+    # Position confirmed: 5th parameter, between right Variance range and
+    # left Formant range. Earlier session memory describing OPTIONMENU as
+    # "between formant range and garnish" was incorrect.
     NATURAL        left Formant range = "1"
     NATURAL        right Formant range = "4"
     BOOLEAN        Garnish = "true"

@@ -14,6 +14,18 @@
   Get slope: low band floor, low band ceiling, high band floor, high band ceiling, averaging method$
   # Verified: Get slope: 0, 1000, 1000, 10000, "energy"
   # Provenance: Phonanium AVQI v02.06 script; Paste Commands 24 Feb 2026
+  #   Get number of bins
+  # Verified: Get number of bins (no arguments)
+  # Provenance: PRAAT_DEFINITIVE_CATALOGUE.txt, 26 Mar 2026
+
+  Get frequency from bin number: binNumber
+  # Verified: Get frequency from bin number: 1
+  # Provenance: PRAAT_DEFINITIVE_CATALOGUE.txt, 26 Mar 2026
+
+  Get value in bin: binNumber
+  # Verified: Get value in bin: 100
+  # Provenance: PRAAT_DEFINITIVE_CATALOGUE.txt, 26 Mar 2026
+
 
   # Modify
   Formula: formula$

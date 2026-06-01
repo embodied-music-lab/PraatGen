@@ -80,8 +80,8 @@
 #   demo Axes: 0, 100, 0, 100
 #   demo Text: 50, "centre", 50, "half", "Hello"
 #   demo Paint rectangle: "purple", 0, 100, 0, 100
-#   demo Paint rounded rectangle: "pink", 30, 70, 16, 24
-#   demo Draw rounded rectangle: 30, 70, 16, 24
+#   demo Paint rounded rectangle: "pink", 30, 70, 16, 24, 3
+#   demo Draw rounded rectangle: 30, 70, 16, 24, 3
 #   demo Draw circle: 50, 50, 10
 #   demo Paint circle: "red", 50, 50, 10
 #   demo Draw inner box
@@ -848,6 +848,17 @@
 #
 # This leaves header and navigation intact, reducing flicker.
 
+#
+# CAVEAT — ANIMATION LOOPS:
+# Selective repaint is appropriate for page transitions (infrequent
+# redraws) but NOT for animation loops that redraw every frame.
+# In animation, use `demo Erase all` + full redraw each frame.
+# The flicker from demo Erase all is imperceptible at >10 fps.
+# Selective repaint accumulates drawing commands without clearing
+# old ones — over 1000+ frames this causes visible performance
+# degradation as the display list grows unbounded.
+# See BEST_PRACTICES_DEMO_WINDOW.txt §2.
+
 # ============================================================================
 # SECTION 13: APPENDIX_B_FUNCTIONS.txt ADDENDUM
 # ============================================================================
@@ -919,6 +930,10 @@
 # |                                    |          |   wrap for paragraphs   |
 # | Resize distorts click coordinates  | Moderate | Design for 1344×756     |
 # | `demo Erase all` flicker           | Minor    | Selective repaint       |
+# |                                    |          | (page transitions ONLY; |
+# |                                    |          | NOT animation — see     |
+# |                                    |          | BP_DEMO §2)             |
+#
 # | Escape key missing on Windows      | Fixed    | Fixed in Praat 6.2+     |
 # | Nested scripts with Demo window    | Fixed    | Fixed in Praat 6.4.59   |
 #
@@ -963,6 +978,15 @@
 #     - Axes: 0, 100, 0, 100 restored before click detection
 #     - Pre-computed global bounds if animating changing geometry
 #     - All text via demo Text special: (Section 5)
+#     - Audio-synced animation via stopwatch (BP_DEMO §3)
+#     - Matrix-buffered waveform display (BP_DEMO §5)
+#
+# BEST_PRACTICES_DEMO_WINDOW.txt covers canonical patterns for
+# animation rendering, audio sync, matrix-buffered waveforms,
+# session state machines, click-to-pause, button rendering,
+# keyboard navigation, playback controls, and more.
+# Always co-load with this file for Demo window tasks.
+
 
 ---
 

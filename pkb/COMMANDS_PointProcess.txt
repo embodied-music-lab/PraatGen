@@ -25,6 +25,19 @@
   # Do NOT use "Get time of point:" — that is a TextGrid point-tier command
   # (see COMMANDS_TextGrid.txt) and will fail on PointProcess objects.
 
+  # Query — point-by-index navigation
+  Get number of points
+  Get time from index: point number
+  Get low index: time
+  Get high index: time
+  Get nearest index: time
+  # Verified: Get low index: 0.523 — returns index of last point at or before time
+  # Verified: Get high index: 0.523 — returns index of first point at or after time
+  # Provenance: Vibrato analysis, 18 March 2026
+  # NOTE: These are PointProcess commands. The forms `Get low index from time:`
+  # and `Get high index from time:` belong to TimeTier-family objects (PitchTier,
+  # IntensityTier, etc.), NOT to PointProcess. Do not confuse them.
+
   # Modify
   Add point: time
   Add points

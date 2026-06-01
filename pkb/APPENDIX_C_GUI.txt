@@ -184,14 +184,14 @@ clicked receives the 1-based index of the button the user clicked.
 
 ### Example with conditional fields
 
-    beginPause: "Analysis settings"
-        positive: "Pitch floor (Hz)", "75"
-        positive: "Pitch ceiling (Hz)", "500"
+    beginPause: "Formant settings"
+        positive: "Formant ceiling (Hz)", "5500"
+        natural: "Number of formants", "5"
         if advancedMode
-            real: "Voicing threshold", "0.45"
-            real: "Octave cost", "0.01"
+            positive: "Window length (s)", "0.025"
+            positive: "Pre-emphasis from (Hz)", "50"
         endif
-    clicked = endPause: "Cancel", "Analyze", 2, 1
+    clicked = endPause: "Quit", "Analyze", 2, 0
 
 ### Procedure calls inside beginPause/endPause
 

@@ -10,6 +10,45 @@
 
 ---
 
+## Selection Management
+
+  selectObject: id
+  selectObject: id1, id2, ...
+  # Selects one or more objects by numeric ID. Clears previous selection.
+  # Multi-argument form: selectObject: id1, id2, id3
+  # Also accepts string form: selectObject: "Sound mySound"
+  plusObject: id
+  # Adds an object to the current selection.
+  # Also accepts string form: plusObject: "Sound mySound"
+  minusObject: id
+  # Removes an object from the current selection.
+  # Also accepts string form: minusObject: "Sound mySound"
+  removeObject: id
+  removeObject: id1, id2, ...
+  # Permanently removes object(s) from the object list.
+  # Multi-argument form: removeObject: id1, id2, id3
+  select all
+  # Selects all objects in the object list. No colon, no arguments.
+
+  # Selection query functions (use in expressions, not as commands):
+  #   numberOfSelected ()            — total selected objects
+  #   numberOfSelected ("Sound")     — selected objects of a type
+  #   selected ("Sound")             — ID of the first selected Sound
+  #   selected ("Sound", n)          — ID of the nth selected Sound
+  #   selected$ ("Sound")            — name of the first selected Sound
+  #   selected$ ("Sound", n)         — name of the nth selected Sound
+  #   selected# ("Sound")            — vector of all selected Sound IDs
+
+  # INTERPRETER BEHAVIOR: Selection is a set, not a multiset.
+  # Adding an already-selected object via plusObject: is a no-op.
+  # Selection always contains each object exactly once.
+  # selectObject: a, b, b produces the selection {a, b}, not {a, b, b}.
+  # Combine to stereo, Combine to mono, and other multi-selection
+  # commands see each selected object once.
+  # Provenance: Empirical test + Praat source, 12 Mar 2026
+
+---
+
 ## Universal (any selected object)
 
   Rename: new name$
@@ -106,6 +145,17 @@
   #   temp$ = array$[i]
   #   Extract rows where: ~self$["col"] = temp$
   # Provenance: Ping pooling script, 10 Mar 2026
+
+  # ERRATA: nocheck can corrupt interpreter variable state
+  # After nocheck on a failing command, subsequent commands may fail
+  # silently even if they should succeed. Variables may remain undefined.
+  # variableExists() checks don't reliably distinguish "command failed"
+  # from "variable never declared" in this state.
+  # Implication: Never use nocheck for diagnostic branching. Use separate
+  # scripts or file-output diagnostics instead.
+  # Provenance: FormantPath diagnostic series, 21 Mar 2026.
+  # Confirmed: diagnostic v2 (all nocheck) showed all queries failing;
+  # diagnostic v5 (no nocheck, one command) showed same queries passing.
 
 ---
 

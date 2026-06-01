@@ -168,7 +168,7 @@
 # ============================================================================
 #
 # 1. TYPICAL EGG RECORDING SETUP
-#
+# 1A.
 #    Standard EGG recordings produce a stereo (2-channel) file:
 #      Channel 1: acoustic microphone signal
 #      Channel 2: EGG signal
@@ -186,6 +186,45 @@
 #    extract the channel as a Sound instead:
 #      selectObject: stereoId
 #      eggSoundId = Extract one channel: 2
+#
+# 1B. CHANNEL AUTO-DETECTION FOR STEREO EGG RECORDINGS
+#
+# When the channel assignment is unknown, compare the periodicity of
+# each channel's derivative. The DEGG channel has highly periodic
+# sharp closure spikes, giving high HNR on the derivative. The audio
+# channel's derivative is broadband.
+#
+# This is one possible solution for auto-detection. Consider others as specific use cases determine.
+#
+#   for iCh from 1 to 2
+#       selectObject: stereoId
+#       chId[iCh] = Extract one channel: iCh
+#       selectObject: chId[iCh]
+#       derivId = noprogress To Sound (derivative): 5000, 100, 0
+#       selectObject: derivId
+#       hnrId = noprogress To Harmonicity (cc): 0.01, 75, 0.1, 1.0
+#       selectObject: hnrId
+#       hnr[iCh] = Get mean: 0, 0
+#       removeObject: derivId, hnrId, chId[iCh]
+#   endfor
+#   if hnr[1] > hnr[2]
+#       eggChannel = 1
+#   else
+#       eggChannel = 2
+#   endif
+#
+# ALWAYS present the auto-detection result to the user and offer an
+# override via beginPause dialog before proceeding with analysis.
+#
+# Source: EGG plugin v1.0 (scaffold-designed, collaboratively).
+#
+# Add to Section 4 (derivative analysis):
+#
+# NORMALIZATION FOR PHASE PORTRAITS:
+# When plotting EGG-vs-DEGG phase space, normalize the DEGG axis
+# as value / max(|min|, |max|) rather than min-max normalization.
+# Zero in the derivative = zero rate of contact area change —
+# physically meaningful. Min-max normalization buries this reference.
 #
 # 2. POLARITY CHECK
 #
@@ -208,7 +247,7 @@
 #    (suppresses below 20 Hz, transition band 10 Hz)
 #
 # 4. DEGG (DERIVATIVE) ANALYSIS
-#
+# 4A.
 #    The DEGG signal is central to EGG analysis because:
 #      - Positive DEGG peaks correspond to glottal closure instants (GCI)
 #      - Negative DEGG peaks correspond to glottal opening instants (GOI)
@@ -229,6 +268,65 @@
 #    amplified 100x more than a 100 Hz component). Typical recommendation:
 #      Derivative: 5000, 100, 0
 #    (low-pass at 5000 Hz, 100 Hz smoothing, no amplitude scaling)
+#
+# 4B. GCI/GOI DETECTION VIA POINTPROCESS
+#
+# For robust per-cycle analysis, detect glottal closure instants (GCI)
+# and glottal opening instants (GOI) using Sound-domain PointProcess
+# commands on the EGG channel (kept as Sound, not Electroglottogram):
+#
+#   # Extract EGG as Sound (needed for To PointProcess commands)
+#   selectObject: stereoId
+#   eggSoundId = Extract one channel: 2
+#
+#   # High-pass filter to remove baseline drift
+#   selectObject: eggSoundId
+#   Filter (pass Hann band): 20, 0, 10
+#
+#   # Compute DEGG
+#   selectObject: eggSoundId
+#   deggId = noprogress To Sound (derivative): 5000, 100, 0
+#
+#   # Detect closing instants (positive DEGG peaks)
+#   selectObject: deggId
+#   ppCloseId = noprogress To PointProcess (periodic, peaks):
+#       ... pitchFloor, pitchCeiling, "yes", "no"
+#
+#   # Detect opening instants (negative DEGG peaks)
+#   selectObject: deggId
+#   ppOpenId = noprogress To PointProcess (periodic, peaks):
+#       ... pitchFloor, pitchCeiling, "no", "yes"
+#
+# The "yes"/"no" parameters control which peaks are detected:
+#   "yes", "no" = maxima only (positive peaks = closing instants)
+#   "no", "yes" = minima only (negative peaks = opening instants)
+#   "yes", "yes" = both (not useful for EGG — ambiguous)
+#
+# Per-cycle metrics from the two PointProcesses:
+#   Period = GCI[i+1] - GCI[i]
+#   F0 = 1 / period
+#   CQ(dEGG) = (GOI - GCI) / period  [within same cycle]
+#
+# IMPORTANT: Use the PointProcess approach (periodic, peaks with
+# "no", "yes") for opening detection rather than Get minimum: with
+# search windows. Get minimum: is unreliable because the opening
+# trough is broader and shallower than the closing peak, making it
+# sensitive to search window boundaries.
+#
+# For the opening PointProcess, verify each detected point falls
+# between the closing instant and the next GCI:
+#
+#   selectObject: ppOpenId
+#   nearIdx = Get nearest index: cycleMidTime
+#   if nearIdx > 0
+#       openT = Get time from index: nearIdx
+#       if openT > closingTime and openT < nextGCI
+#           # valid opening instant
+#       endif
+#   endif
+#
+# See also: BEST_PRACTICES_DEMO_WINDOW.txt §16 for both GCI
+# detection approaches (DEGG peaks vs. pressure minima).
 #
 # 5. CONTACT QUOTIENT / OPEN QUOTIENT FROM TEXTGRID
 #
@@ -252,10 +350,10 @@
 #    The To TextGrid (closed glottis) and To AmplitudeTier (levels)
 #    commands use pitch floor/ceiling to guide cycle detection.
 #    Use the same pitch range you would for acoustic pitch analysis:
-#      - Adult male speech: 75–300 Hz
-#      - Adult female speech: 100–500 Hz
-#      - Singing (depends on range): may need 50–1000 Hz or wider
-#    Match these to the APPENDIX_D clinical defaults when applicable.
+#
+#    Use APPENDIX_D canonical pitch floor/ceiling values. Raise
+#    ceiling only when the expected F0 exceeds the canonical
+#    detection window (see APPENDIX_D §0).
 #
 # 7. RELATIONSHIP TO SOUND-BASED EGG ANALYSIS
 #

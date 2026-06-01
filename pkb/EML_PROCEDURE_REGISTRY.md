@@ -97,6 +97,26 @@ Generated: 8 April 2026 | Source: plugin_EMLTools v1.0 pre-release | 251 procedu
 | `@emlCSVInit` | Initialize CSV export accumulator arrays | — | public |
 | `@emlCSVAddRow` | Add one row to CSV accumulator | .table$, .dataCol$, .groupCol$, .g1$, .g2$, .test$, .stat, .df, .p, .es, .esType$, .esLabel$, .n1, .n2, .mean1, .sd1, .median1, .mean2, .sd2, .median2 | public |
 | `@emlExportStatsCSV` | Export accumulated CSV data to file | .filePath$ | public |
+| `@emlWrapperCommonFields` | Injects shared fields ("Clear Info window") into active beginPause dialog | (none) | public |
+| `@emlHandleCommonFields` | Post-endPause handler for shared fields (clears Info if toggled) | (none) | public |
+| `@emlWizardExplainP` | P-value interpretation (significance thresholds) | .p | public |
+| `@emlWizardExplainEffectD` | Cohen's d magnitude label | .d | public |
+| `@emlWizardExplainEffectR` | Rank-biserial r magnitude label | .r | public |
+| `@emlWizardExplainEffectEta2` | Eta-squared magnitude with % variance | .eta2 | public |
+| `@emlWizardExplainCorrelation` | Correlation strength + direction label | .r | public |
+| `@emlWizardExplainR2` | R-squared as % variance explained | .r2 | public |
+| `@emlWizardExplainT` | t-statistic as signal-to-noise ratio | .t | public |
+| `@emlWizardExplainF` | F-statistic as variance ratio | .f | public |
+| `@emlWizardExplainDfBetween` | ANOVA between-groups df explanation | .df, .nGroups | public |
+| `@emlWizardExplainDfWithin` | ANOVA within-groups df explanation | .df, .nTotal, .nGroups | public |
+| `@emlWizardExplainDfTTest` | t-test df explanation (Welch vs standard) | .df, .method$ | public |
+| `@emlWizardExplainDfPaired` | Paired t-test df explanation | .df, .nPairs | public |
+| `@emlWizardExplainDfCorrelation` | Correlation df explanation | .df, .n | public |
+| `@emlWizardExplainNormW` | Shapiro-Wilk W interpretation | .w | public |
+| `@emlWizardExplainSkewness` | Skewness direction and magnitude label | .skew | public |
+| `@emlWizardExplainKurtosis` | Kurtosis tail weight label | .kurt | public |
+
+All wizard helpers set `emlWizardExplain$` which is consumed by the next `@emlReportLine` or `@emlReportLineString` call. They are no-ops when `emlWizardMode = 0` (callers gate on the flag before calling).
 
 ## Stats: Inferential
 **File:** `stats/eml-inferential.praat` (v1.2) — 25 procedures (22 public, 3 internal)
@@ -128,6 +148,9 @@ Generated: 8 April 2026 | Source: plugin_EMLTools v1.0 pre-release | 251 procedu
 | `@emlPairwiseT` | All pairwise t-tests with p-value adjustment | .tableId, .dataCol$, .factorCol$, .method$, .type$ | public |
 | `@emlPairwiseWilcoxon` | All pairwise Wilcoxon tests with p-value adjustment | .tableId, .dataCol$, .factorCol$, .method$ | public |
 | `@emlScheffe` | Scheffe post-hoc test after ANOVA | .tableId, .dataCol$, .factorCol$ | public |
+| `@emlLinearRegression` | OLS simple linear regression (slope, intercept, R², SE, F, p) | .x#, .y# | public |
+| `@emlTheilSen` | Theil-Sen robust median-based regression (Conover intercept, scipy-verified) | .x#, .y# | public |
+
 
 ## Graphs: Core
 **File:** `graphs/eml-graph-procedures.praat` (v3.20) — 45 procedures
@@ -228,6 +251,8 @@ Generated: 8 April 2026 | Source: plugin_EMLTools v1.0 pre-release | 251 procedu
 | `@emlReportPairedComparison` | Shared reporter for paired t-test / Wilcoxon SR (Info + CSV) | .tableName$, .col1$, .col2$, .n, .mean1, .sd1, .median1, .mean2, .sd2, .median2, .testType$ | public |
 | `@emlReportCorrelationAnalysis` | Shared reporter for Pearson / Spearman correlation (Info + CSV) | .tableName$, .colX$, .colY$, .n, .testType$ | public |
 | `@emlReportTwoWayAnova` | Shared reporter for two-way ANOVA (Info + CSV) | .tableName$, .dataCol$, .factor1$, .factor2$ | public |
+| `@emlReportRegressionAnalysis` | Formatted Info window report for simple linear regression | .tableName$, .depCol$, .predCol$, .nValid, .nUndefined | public |
+| `@emlReportNormalityAnalysis` | Formatted Info window report for normality assessment (Shapiro-Wilk, skewness, kurtosis, recommendation) | .tableName$, .dataCol$, .nValid, .nUndefined | public |
 
 ## Scripts: Graphs Main
 **File:** `scripts/eml-graphs.praat` (v3.0) — 0 procedures (thin entry point; includes eml-graphs-form.praat)

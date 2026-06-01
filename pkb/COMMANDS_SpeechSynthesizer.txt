@@ -1,9 +1,9 @@
-# PRAAT COMMANDS: SpeechSynthesizer
+# PRAAT COMMANDS: SpeechSynthesizer + KlattGrid
 # Source: PRAAT_DEFINITIVE_CATALOGUE.txt (v6.4.62) + session-verified
 # Part of EML PraatGen (CC BY-NC-SA 4.0) — Ian Howell, Embodied Music Lab
 #
-# Version: 1.0
-# Date: 5 April 2026
+# Version: 1.1
+# Date: 23 April 2026
 #
 # eSpeak-NG text-to-speech integration in Praat. Used for:
 #   - Forced alignment (via cross-type Align interval command)
@@ -144,6 +144,26 @@
 # Failure to select both objects is the most common error source.
 #
 # Provenance: Paste Commands + empirical debugging, 25 March 2026.
+
+---
+
+# KlattGrid: Synthesis from vowel specification
+#
+# KlattGrid objects model a complete Klatt synthesizer with separate
+# control over voicing, aspiration, frication, and formant filtering.
+# The "from vowel" creation command provides a convenient shortcut for
+# sustained vowel synthesis with specified formant structure.
+
+  Create KlattGrid from vowel: name$, duration, f0, f1, b1, f2, b2, f3, b3, f4, bandwidthFraction, formantFreqInterval
+  # Verified: Create KlattGrid from vowel: "test_ah", 0.5, 120, 730, 80, 1090, 70, 2440, 100, 3300, 0.05, 1000
+  # 12 parameters. Returns: KlattGrid ID.
+  # Provenance: Showcase script, 21 Mar 2026
+
+  # On KlattGrid object:
+  To Sound
+  # Verified: To Sound (no parameters, on KlattGrid)
+  # Returns: Sound ID.
+  # Provenance: Showcase script, 21 Mar 2026
 
 ---
 

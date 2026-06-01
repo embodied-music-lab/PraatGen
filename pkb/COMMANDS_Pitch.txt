@@ -6,7 +6,14 @@
 ---
 
   # Query (API)
-  List values at times: unit$, interpolation$
+  List values at times: times#, unit$, interpolation$
+  # Verified: List values at times: 0.1 0.3 0.5 0.7 0.9, "Hertz", "linear"
+  # The first argument is a REALVECTOR of query times, written here as
+  # space-separated numbers so the autocomplete renderer wraps it to
+  # `{0.1, 0.3, 0.5, 0.7, 0.9}`. Earlier docs showed `unit$, interpolation$`
+  # only — that 2-arg form is wrong; Praat 6.4.65 raises an option-argument
+  # error.
+  # Provenance: Empirical verification, Praat 6.4.65 sandbox, 17 May 2026.
   Count differences
   Get all candidates in frame: frame number
 
