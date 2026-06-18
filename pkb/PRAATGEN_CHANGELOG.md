@@ -125,9 +125,52 @@
 - Failure modes surfaced in the 3 Jun 2026 RIP session (see HARNESS_CASE_G_RIP).
 - `README.md` (GitHub repo, not in the PKB) carries a model-recommendation line
   that should be synced to the 4.8 / 4.6-origin / 4.7-agentic framing.
-- NOTE: 13.9.2 (3 Jun 2026) is not logged in this file — the entry jumps from
-  13.9.1 to 13.9.3. 13.9.2 introduced the fetch-time install resolver and the
-  initial 4.8 STEP-1 wording; backfill its entry if a complete record matters.
+
+### 13.9.2 — 3 June 2026
+
+**MP edits (this pass):**
+- **Rule 5C (procedure parameter types):** Procedure parameters accept `##`
+  matrices and `$#` string vectors, not just numeric / string / numeric-vector.
+  The qualified-name output mechanism (`procName.var`, no leading dot) and its
+  persistence semantics (durable until the procedure is next called) documented.
+- **Rule 6 (procedures — rewrite):** Added positional binding (Praat has no
+  named arguments — the Nth value fills the Nth parameter), call-may-precede-
+  definition, the undotted-global read/write hazard (a procedure — even a
+  parameterless one — can read AND overwrite a main-script variable, and the
+  change persists; prefer dotted procedure-local parameters), and the `include`
+  preprocessor directive (no colon, unquoted non-variable path, resolved
+  relative to the script's location).
+- **Rules 18 / 20 (form-field corrections):** `naturalvector` is beginPause-only
+  (`form:` field set = 18 keywords, beginPause set = 19); `left` / `right` are
+  not field types but ARE valid label prefixes for the side-by-side range idiom;
+  the label → variable derivation algorithm and the referenceability gate
+  (`^[A-Za-z][A-Za-z0-9_]*$` before the type suffix) are spelled out. Verified
+  empirically against Praat 6.4.67.
+- **Dependency-currency house rule (new):** Never hardcode a version number,
+  release tag, or version-bearing download filename for an external dependency;
+  resolve the current identifier at fetch time (newest Linux filename from
+  `download_linux.html`; latest EML release tag via `git ls-remote`). NOTE: the
+  STEP 2B install resolver introduced here resolved the *version* at fetch time
+  but still pinned the architecture token `linux-intel64`; Praat renamed that
+  build to `linux-x64v3` in May 2026, and the residual arch pin is fixed in
+  13.9.3.
+- **Version/date:** 13.9.1 → 13.9.2 / 3 June 2026.
+
+**PKB edits (this pass):**
+- **APPENDIX_C_GUI.txt:** Form-field reference re-verified against 6.4.67 — the
+  18-vs-19 keyword distinction, the new "Side-by-side fields (ranges)" section
+  for the `left` / `right` prefix idiom, the `folder` height variant, and the
+  full label → variable derivation rule with the referenceability gate.
+- **COMMANDS_Universal.txt:** New "Procedure semantics" block (parameter types
+  incl. `##` / `$#`, positional binding, call-before-definition, undotted-global
+  read/write hazard, qualified-name outputs, the `include` directive).
+- **WHITELIST_CURRENT.txt:** 3 June redistribution targets logged; file stays
+  clean (findings written directly to their target files).
+
+**Provenance:**
+- EML Sublime Text Praat plugin session (beta.4 / .5), sandbox Praat 6.4.67,
+  3 June 2026. Backfilled into this changelog in 0.9.3-beta.02 — previously
+  recorded only in the WHITELIST_CURRENT.txt redistribution block.
 
 ### 13.9.1 — 17 May 2026
 
