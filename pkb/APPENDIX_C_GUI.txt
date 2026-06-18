@@ -96,10 +96,17 @@ New file path for writing. Native file browser.
 
 Directory path. Native folder browser.
 
-With height parameter:
+With height parameter (numberOfLines as a leading integer):
 
-    infile: numberOfLines, "Variable name", "default"
+    text:    numberOfLines, "Variable name", "default"
+    infile:  numberOfLines, "Variable name", "default"
     outfile: numberOfLines, "Variable name", "default"
+    folder:  numberOfLines, "Variable name", "default"
+    realvector: numberOfLines, "Variable name", "format", "default"
+
+Accepted by text/infile/outfile/folder and the vector types; rejected by
+word/sentence/comment/numeric/boolean/choice/optionmenu. The integer sizes
+the text area. Verified empirically, Praat 6.4.67.
 
 ### Vector fields
 
@@ -107,16 +114,59 @@ With height parameter:
     realvector: "Variable name", "(formula)", "randomUniform# (5, 0, 1)"
     realvector: numberOfLines, "Variable name", "format", "default"
 
-Also: positivevector, integervector, naturalvector — same patterns with validation.
+Also: positivevector, integervector — same patterns, both contexts.
+naturalvector — same pattern but **beginPause only**; the form: parser
+rejects it ("Unknown parameter type inside form"). Form field set = 18,
+beginPause field set = 19. Verified empirically, Praat 6.4.67.
 
-### Layout helpers
+### Display field
 
     comment: "Any text to display (not a variable)"
 
-    left: "Variable name", "default"
-    right: "Variable name", "default"
+NOTE: `left:` and `right:` are NOT valid field-declaration keywords.
+Verified empirically against Praat 6.4.67: in a form: block both colon
+and non-colon forms raise "Unknown parameter type inside form"; in a
+beginPause: block `left:` raises "Unknown function «left» in formula".
+A previous edition of this appendix documented them as layout helpers;
+that was incorrect and has been removed.
 
-Combine two short fields on one line.
+### Side-by-side fields (ranges)
+
+`left` / `right` are not field types, but they ARE meaningful as the
+FIRST WORD of a numeric field's label: they place two boxes on one row,
+sharing the remainder of the label. This is the idiom for a range
+(time range, frequency range). Works identically in form: and
+beginPause: — only the default-quoting differs (quoted in form:,
+bare in beginPause:). Verified empirically (parse, render, and variable
+binding), Praat 6.4.67.
+
+form:
+
+    real: "left Time range (s)", "0.0"
+    real: "right Time range (s)", "1.0"
+
+beginPause:
+
+    real: "left Time range (s)", 0.0
+    real: "right Time range (s)", 1.0
+
+Both render as one row labelled "Time range (s)" with two boxes. The
+`left`/`right` word is consumed as the layout cue and is NOT shown in the
+displayed label. Two variables are produced, by the normal C.3 algorithm
+applied to the FULL label (the `left`/`right` word is kept in the name):
+
+    left Time range (s)  -> left_Time_range
+    right Time range (s) -> right_Time_range
+
+They do NOT collapse to a shared `time_range`; each box binds its own
+variable (verified: 0.25 -> left_Time_range, 0.75 -> right_Time_range).
+Any numeric field type (real/positive/integer/natural) can take the
+left/right prefix.
+
+NOTE: bare `left` and `right` are PREDEFINED Praat constants (`left` = 1,
+`right` = 2), present in every script regardless of any form. A field
+whose label is exactly "left" or "right" therefore derives to a name that
+shadows a built-in constant — avoid it.
 
 ---
 
@@ -227,17 +277,58 @@ procedure will error.
 
 ## C.3 VARIABLE DERIVATION ALGORITHM
 
-Both form and beginPause derive variable names from field labels:
+Both form and beginPause derive variable names from field labels by the
+SAME algorithm. Verified empirically against Praat 6.4.67 (the earlier
+description of this algorithm was wrong on three points — see notes):
 
-1. Strip parenthetical content: "Pitch floor (Hz)" → "Pitch floor "
-2. Strip leading/trailing whitespace: "Pitch floor " → "Pitch floor"
-3. Replace spaces with underscores: "Pitch floor" → "Pitch_floor"
-4. Lowercase first character: "Pitch_floor" → "pitch_floor"
-5. Append $ for string types: word, sentence, text, infile, outfile, folder → pitch_floor$
-6. choice/optionmenu: Two variables — name (numeric) and name$ (string)
+1. Truncate the label at the FIRST "(". Everything from "(" onward is
+   discarded, INCLUDING any text after the closing paren.
+       "Pitch floor (Hz)"  → "Pitch floor"
+       "Floor (Hz) max"    → "Floor"        (NOT "Floor max")
+   [Correction: this is truncate-at-paren, not "strip the parenthetical
+   group". Text following the paren is lost.]
+2. Trim leading/trailing whitespace.
+3. Lowercase the FIRST character only; preserve the case of every other
+   character.
+       "Max F0" → "max_F0"      "ABC def" → "aBC_def"
+4. Replace EACH space with one underscore. Consecutive spaces are NOT
+   collapsed.
+       "Pitch  ceiling" → "pitch__ceiling"   (two spaces → two underscores)
+5. Keep every other character verbatim (hyphens, slashes, apostrophes,
+   digits, leading digits are all preserved in the created symbol).
+6. Type suffix:
+   - string types (word, sentence, text, infile, outfile, folder) → "$"
+   - vector types (realvector/positivevector/integervector/naturalvector) → "#"
+   - choice/optionmenu → TWO variables: name (numeric index) and name$
+     (selected option text)
+   - numeric (real/positive/integer/natural) and boolean → no suffix
+   - comment/option → no variable
 
 Height parameters do not affect derivation:
-infile: 2, "Sound file", "" → sound_file$
+    infile: 2, "Sound file", "" → sound_file$
+
+### REFERENCEABILITY GATE (hard)
+
+Praat CREATES a variable for ANY label (confirmed via variableExists),
+but a derived name containing an operator character or a leading digit
+EXISTS yet CANNOT be referenced in script code — the tokenizer splits it
+or rejects it:
+
+    Label                  Created symbol          Referenceable?
+    "Voiced-unvoiced cost" voiced-unvoiced_cost$    NO  (splits at "-")
+    "Input/output dir"     input/output_dir$        NO  (reads "/" as ÷)
+    "3rd formant"          3rd_formant$             NO  (leading digit)
+    "Singer's range"       singer's_range$          NO  ("'" delimiter)
+    "Pitch  ceiling"       pitch__ceiling$          YES (underscores ok)
+
+A name is referenceable only if (before the type suffix) it matches the
+Praat identifier grammar  ^[A-Za-z][A-Za-z0-9_]*$ . When designing forms,
+keep labels to letters, digits, and spaces (and a trailing parenthetical
+for units) so the derived variable is usable. Tooling that offers form
+variables as completions must apply this gate — a non-referenceable name
+is a broken completion.
+
+Verified empirically, Praat 6.4.67 (EML session 2 June 2026).
 
 ---
 

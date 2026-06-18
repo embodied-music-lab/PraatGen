@@ -7,6 +7,128 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 13.9.4 — 4 June 2026
+
+**MP edits (this pass):**
+- **SELF-AUDIT evidence rule (hard) — new block before the compressed template;
+  governs BOTH the compressed (SPARSE) and verbose templates.** For the
+  silent-failure items (Picture/drawing 28/34, clinical App D, viewport 28I,
+  file-output 26/27), "compliant"/"confirmed" is no longer an acceptable audit
+  value — each must cite the governing PKB source (file + sub-rule, or line)
+  and/or paste the exact script line that satisfies it. Rationale: "confirm"
+  constrains the claim, not the act, and is satisfiable from memory; a citation
+  cannot be generated without the lookup. Scoped to the silent-failure items by
+  design (blanket citation would bloat the audit and raise skip-pressure).
+- **Rule 28 sub-rule L — Picture-window font-state invariant (hard).** The
+  ambient font size sets the Picture-window margins, which set the world->page
+  mapping; every margin-dependent element (Draw inner box, Marks/One mark, axis
+  value numbers and name labels, gridlines, any Paint/Draw/Text placed in world
+  coordinates) must run at ONE ambient size or they misalign. Lead symptom (the
+  common case): inner box at one size, ticks/value labels at another, so they
+  no longer meet the box edges; the same mechanism misplaces filled shapes and
+  annotations. RULE: set `Font size:` once per panel, never change it
+  mid-sequence; use `Text special:` (own size, no global state change) for
+  differently-sized text. Promoted from BEST_PRACTICES_DRAWING into the MP as a
+  Rule-28 sub-rule (parity with the existing Demo-window font-state House Rule);
+  the "confirm all sub-rules" line now reads A-L.
+- **Audit Picture lines (both templates) now demand evidence:** cite the script
+  line for the single per-panel `Font size:` (L) and the viewport reset before
+  each save (I); list every variable-text call with its sanitization method (J).
+  The verbose template carries a cross-reference to the evidence rule.
+- **Re-grounding under context depth (hard) — Retrieval Protocol.** A reference
+  file loaded earlier in the conversation does not count as "loaded" for
+  audit/fix purposes once intervening turns accumulate; re-open the governing
+  PKB file in-turn before any drawing/clinical audit and before any Step 4 fix
+  touching drawing, clinical parameters, or GUI.
+- **Rule 24B — When-NOT-to-use + trip-wire (hard).** Added "how a documented
+  built-in command behaves" (world/font side effects of Paint/Draw tracks/
+  Speckle, margin/font interactions, what resets the world window) to the
+  not-for-the-sandbox list. Trip-wire: building an experiment to learn how a
+  built-in command behaves is the tell that the PKB was skipped — the sandbox
+  verifies your script, not engine behavior the PKB already records.
+- **Rule 34 anti-pattern:** drawing in-panel text (titles, axis labels, legend
+  keys, annotation bands) with `Font size:` + `Text:` instead of `Text special:`
+  now named explicitly (violates 28L).
+- **Version/date:** 13.9.3 -> 13.9.4 / 4 June 2026.
+
+**PKB edits (this pass):**
+- This file (`PRAATGEN_CHANGELOG.md`) updated with this entry — the mirror the
+  MP CHANGELOG section requires.
+- `BEST_PRACTICES_DRAWING.txt` unchanged: it already states the font-state
+  invariant ("Font state invariant (MANDATORY)"). The defect was that the MP
+  audit checklist did not enumerate it; sub-rule L closes that, no source-file
+  change needed.
+
+**Provenance / follow-through:**
+- Surfaced in the 4 June 2026 RIP figure-redesign debugging session: a
+  Picture-window font-state-invariant violation (ambient font size changed
+  mid-panel via `Font size:` + `Text:` for ribbon/legend labels) shipped
+  through three consecutive SELF-AUDITs that each attested "Picture compliant."
+- Two root causes, both addressed above: (1) coverage — the invariant lived
+  only in BEST_PRACTICES_DRAWING and was absent from the Rule-28 A-K checklist
+  the audit keys on (fixed by sub-rule L); (2) attestation vs evidence —
+  "confirm/compliant" is satisfiable from memory without re-reading the source
+  (fixed by the evidence rule). A secondary drift — treating the sandbox as the
+  primary reference and rediscovering documented engine behavior with probes —
+  is addressed by the Rule 24B trip-wire and the re-grounding rule.
+- README (GitHub repo, not in the PKB): no change this pass.
+
+### 13.9.3 — 3 June 2026
+
+**MP edits (this pass):**
+- **Sandbox install resolves by INTENT, not an architecture token (STEP 2B,
+  Rule 24C full + barren + manual fallback, version-management notes).** The
+  snippet pinned `linux-intel64`; Praat renamed the 64-bit x86 Linux build to
+  `linux-x64v3` (May 2026), so the pattern matched only a stale older-release
+  entry and 404'd on fetch. Now resolves the newest version + 64-bit x86 build
+  by exclusion (`grep -vE 'arm64|s390x|linux32'`; for full, also `-barren`).
+  Download stays on fon.hum — the GitHub release mirror it links to is
+  403-blocked by the egress proxy. Empirically verified 3 Jun 2026.
+- **Dependency-currency house rule:** extended to name "architecture token"
+  alongside version/tag/filename as something that must never be pinned.
+- **Rule 18 (form numeric defaults — hard):** `form:` numeric/vector field
+  defaults MUST be quoted strings (`natural: "Tier", "1"`); a bare number is a
+  parse error (`Only "choice"/"optionmenu"/"boolean" can take a number`).
+- **Rule 19 (beginPause numeric defaults — hard):** mirror note — in
+  `beginPause:` numeric defaults are BARE. The asymmetry is the trap.
+  (APPENDIX_C already documented this; the MP now audits it.)
+- **STEP 2B (form-driven verification — hard):** scripts with a
+  `form:`/`beginPause:` must be sandbox-verified by driving the real form via
+  `runScript:` with positional args, never by setting derived variables
+  directly — direct assignment bypasses the parser and Rule 20 derivation and
+  gives false-pass confidence.
+- **Context-budget rule + Debugging Invariant 9:** the handoff iteration
+  counter is now explicit — open each Step 4 turn with `📋 Debug iteration N`
+  and check the 3-offer/5-escalate thresholds against that surfaced tally
+  rather than relying on recall.
+- **SELF-AUDIT (compressed + full GUI lines):** added the default-type and
+  form-driven-verification checks.
+- **Model recommendation:** STEP 1 response and PRE-FLIGHT Item 1 now
+  recommend **Opus 4.8 with Thinking in high-effort mode, to start.**
+  PraatGen was originally developed/validated on **Opus 4.6 with Extended Thinking** (still a solid
+  baseline); **Opus 4.7** is more agentic than 4.6 or 4.8 and may excel at
+  AUTO SANDBOX refactoring. Removed the stale "4.7 in testing" framing.
+- **Terminology sweep (Thinking vs Extended Thinking):** generic gate/feature
+  references — Rule 31, the Phase 3B / Step 4 thinking gates, PRE-FLIGHT Item 1,
+  the SELF-AUDIT field, OUTPUT-COMPRESSION table, and the README — renamed from
+  "Extended Thinking" / "ET" to **"Thinking"**, the current feature name (Opus
+  4.8 exposes Thinking with effort levels). "Extended Thinking" is retained,
+  spelled out, ONLY where it refers specifically to Opus 4.6; the bare "ET"
+  abbreviation no longer appears in active text (changelog history untouched).
+
+**PKB edits (this pass):**
+- None required. The download snippet lives only in the MP; APPENDIX_C already
+  documents the form/beginPause default-quoting asymmetry; DEVELOPER_MODE_ADDON
+  and HANDOFF_TEMPLATE carry no model or install content needing sync.
+
+**Provenance / follow-through:**
+- Failure modes surfaced in the 3 Jun 2026 RIP session (see HARNESS_CASE_G_RIP).
+- `README.md` (GitHub repo, not in the PKB) carries a model-recommendation line
+  that should be synced to the 4.8 / 4.6-origin / 4.7-agentic framing.
+- NOTE: 13.9.2 (3 Jun 2026) is not logged in this file — the entry jumps from
+  13.9.1 to 13.9.3. 13.9.2 introduced the fetch-time install resolver and the
+  initial 4.8 STEP-1 wording; backfill its entry if a complete record matters.
+
 ### 13.9.1 — 17 May 2026
 
 **MP edits (this pass):**

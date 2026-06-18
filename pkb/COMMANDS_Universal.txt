@@ -157,6 +157,42 @@
   # Confirmed: diagnostic v2 (all nocheck) showed all queries failing;
   # diagnostic v5 (no nocheck, one command) showed same queries passing.
 
+  # PROCEDURE SEMANTICS (verified Praat 6.4.67, 3 Jun 2026)
+  #
+  # Parameter types: a procedure parameter accepts numeric, string ($),
+  # numeric vector (#), string vector ($#), and matrix (##) types. Each may
+  # be passed as a literal OR as a variable already holding that data:
+  #   procedure demo: .count, .name$, .samples#, .labels$#, .grid##
+  #   @demo: 3, "trial1", {1.2,3.4}, {"a","b"}, {{1,2},{3,4}}
+  # Matrix and string-vector parameters work — parameters are not limited
+  # to numeric/string.
+  #
+  # Positional binding: call values bind to parameters by position, in
+  # order. Praat has NO named arguments; the Nth value fills the Nth
+  # parameter. A value in the wrong position fills the wrong parameter.
+  #
+  # Call before definition: a procedure definition resolves regardless of
+  # its position in the file, so a call written above the definition still
+  # runs. Procedures may be placed anywhere; group at top or bottom rather
+  # than inline at the call site.
+  #
+  # Undotted variables are global inside procedures (read AND write): a
+  # procedure — even one with no parameters — can read an undotted
+  # main-script variable directly AND overwrite it; the change persists
+  # after the procedure returns. Hazard: a procedure can silently mutate a
+  # main-script variable. Prefer passing data in via dotted, procedure-local
+  # parameters. Dotted (.var) variables remain procedure-local.
+  #
+  # Outputs via qualified name: read a procedure's local result from the
+  # caller as procName.var (no leading dot). Outputs persist until the same
+  # procedure is next called, then overwrite — copy out immediately if the
+  # procedure will be called again.
+  #
+  # include is a preprocessor directive: `include path.praat` — no colon,
+  # unquoted path, the path cannot be a variable; resolves relative to the
+  # script's location and pulls the file's procedure definitions into scope.
+  # Provenance: EML Sublime session, sandbox Praat 6.4.67, 3 Jun 2026
+
 ---
 
 ## Save (common formats)
