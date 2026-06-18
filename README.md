@@ -1,4 +1,6 @@
-⚠️ Best practice: PraatGen was originally trained on Opus 4.6 with Extended Thinking. Opus 4.8 was recently released, and all signs indicate that it excels. Opus 4.7 really wants to behave agentically, which can be great for large-scale code refactors in AUTO SANDBOX mode. Always keep the model you are using in mind. It is a variable.
+# ⚠️ Best practice: PraatGen was originally trained on Opus 4.6 with Extended Thinking. Opus 4.8 was recently released, and all signs indicate that it excels. Opus 4.7 really wants to behave agentically, which can be great for large-scale code refactors in AUTO SANDBOX mode. Always keep the model you are using in mind. It is a variable.
+
+# NOTE: To start, all of the files you need are in the current zip folder.
 
 # EML PraatGen
 
@@ -43,18 +45,18 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 - **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees.
 - **Claude model:** Claude Opus 4.8 is recommended. Opus 4.7 and 4.6 (with Extended Thinking) are also fine. See "Choosing a model" below.
 - **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by changing the Master Prompt's references to the PKB files so they point at a local directory; you may also want to separate the Master Prompt from your `CLAUDE.md` file.
-- **Praat:** Version 6.4 or later (current stable release). Sandbox Mode pins Praat 6.4.65 for in-environment verification.
+- **Praat:** Version 6.4 or later (current stable release). Sandbox Mode installs the current stable Praat build, resolved at fetch time (no pinned version), for in-environment verification.
 
 ### Choosing a model
 
 The model is a variable — keep the one you're using in mind.
 
-- **Opus 4.8** is the current recommendation. It was recently released and, by all signs, excels at this work.
+- **Opus 4.8** is the current recommendation — start with Thinking in high-effort mode for non-trivial work. It was recently released and, by all signs, excels at this work.
 - **Opus 4.7** is also fine, but is more agentic by default — it wants to take initiative. That can be excellent for large-scale code refactors in AUTO SANDBOX mode; in close collaborative work, watch that it doesn't run ahead of your decisions.
 - **Opus 4.6 + Extended Thinking** is the original training baseline for PraatGen and remains a solid choice.
 - **Sonnet** may handle simpler scripts, but is not the default recommendation; command-verification reliability decreases with complexity, and silent failures are possible.
 
-Extended Thinking helps with complex command planning; PraatGen will tell you during pre-flight when you can safely turn it off.
+Thinking helps with complex command planning; PraatGen will tell you during pre-flight when you can safely turn it off.
 
 ---
 
@@ -90,7 +92,7 @@ Open a new conversation within the project. PraatGen will respond with its readi
 
 ### The Basic Workflow
 
-0. **Verify your model and settings:** Opus 4.8 recommended (4.7 and 4.6 + ET also fine — see "Choosing a model"), with Extended Thinking on for non-trivial work.
+0. **Verify your model and settings:** Opus 4.8 recommended (4.7 and 4.6 with Extended Thinking also fine — see "Choosing a model"), with Thinking on (high-effort mode) for non-trivial work.
 
 1. **Describe your task.** PraatGen asks for four things:
    - What should the script accomplish?
@@ -98,9 +100,9 @@ Open a new conversation within the project. PraatGen will respond with its readi
    - What information does the script need from the user?
    - What should remain when the script finishes?
 
-2. **Review the pre-flight.** PraatGen verifies it has the right references loaded and flags any ambiguities. It recommends a model tier and Extended Thinking settings. You approve this step or raise concerns.
+2. **Review the pre-flight.** PraatGen verifies it has the right references loaded and flags any ambiguities. It recommends a model tier and Thinking settings. You approve this step or raise concerns.
 
-3. **Reply EXECUTE (or GO).** PraatGen generates a command plan. There is an Extended Thinking gate after the plan — PraatGen tells you whether to keep ET on for code generation. Reply GO and it writes and delivers the script and a self-audit.
+3. **Reply EXECUTE (or GO).** PraatGen generates a command plan. There is a Thinking gate after the plan — PraatGen tells you whether to keep Thinking on for code generation. Reply GO and it writes and delivers the script and a self-audit.
 
 4. **Test in Praat.** Copy the script into Praat's script editor and run it. You can also ask PraatGen to present a downloadable `.praat` file in the chat. If it works, you're done.
 
@@ -116,7 +118,7 @@ Reply with any of these in place of (or alongside) your task. Modes compose free
 
 - **SCAFFOLD** — collaborative design review *before* any code. PraatGen walks through the proposed workflow, GUI design, object lifecycle, and edge cases for your approval. Best for batch pipelines, multi-panel figures, and clinical analysis chains.
 - **DEBUGGING** — strict targeted-fix mode. Requires your approval for any change, declares the scope of each fix as a binding contract, and avoids elective refactoring. Use this for errors and refactors.
-- **SANDBOX** — installs Praat (6.4.65) in Claude's own environment so it can verify commands and test scripts empirically before delivery, instead of asking you to paste verification snippets. Requires `www.fon.hum.uva.nl` in your account's allowed network domains (Settings → Capabilities → Allowed domains); this must be set *before* starting the conversation. PraatGen will tell you if the domain is missing and offer a manual-upload fallback.
+- **SANDBOX** — installs the current stable Praat build in Claude's own environment so it can verify commands and test scripts empirically before delivery, instead of asking you to paste verification snippets. Requires `www.fon.hum.uva.nl` in your account's allowed network domains (Settings → Capabilities → Allowed domains); this must be set *before* starting the conversation. PraatGen will tell you if the domain is missing and offer a manual-upload fallback.
 - **AUTO** (Autonomous) — suppresses the approval gates and intermediate status reports for batch work: task lists, multi-file refactors, or known sequences of changes. PraatGen executes the whole list and delivers once at the end, with a handoff document. Reply STANDARD or GATES ON to restore normal gating.
 
 **Composition examples:** `SANDBOX AUTO` (install Praat, work through a task list autonomously, test as it goes, deliver once), `SANDBOX DEBUGGING` (strict debugging with empirical verification on hand), `SCAFFOLD SANDBOX` (collaborative design with empirical checks). AUTO and DEBUGGING are mutually exclusive; if a bug surfaces mid-AUTO, PraatGen applies debugging discipline to that one item, then resumes.
@@ -261,9 +263,9 @@ PraatGen tracks three version numbers:
 
 **EML Tools integration.** PraatGen generates flat scripts inspired by the EML library procedures. The EML Tools plugin itself is in pre-release and distributed separately.
 
-**Extended Thinking management.** Complex scripts benefit significantly from Claude's Extended Thinking. The prompt includes gates that recommend when to enable or disable it, but the setting must be managed manually.
+**Thinking management.** Complex scripts benefit significantly from Claude's Thinking. The prompt includes gates that recommend when to enable or disable it, but the setting must be managed manually.
 
-**Model dependency.** Sonnet is not recommended for advanced scripts. Opus 4.8 is the current recommendation; Opus 4.7 and 4.6 + ET also work well. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
+**Model dependency.** Sonnet is not recommended for advanced scripts. Opus 4.8 is the current recommendation; Opus 4.7 and 4.6 with Extended Thinking also work well. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
 
 **Sandbox prerequisites.** Sandbox Mode requires `www.fon.hum.uva.nl` in your allowed network domains, set *before* the conversation starts (the list is frozen at conversation start). If it's missing, PraatGen offers a manual-upload fallback.
 
