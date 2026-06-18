@@ -1,4 +1,6 @@
-⚠️ Best practice: PraatGen was originally trained on Opus 4.6 with Extended Thinking. Opus 4.8 was recently released, and all signs indicate that it excels. Opus 4.7 really wants to behave agentically, which can be great for large-scale code refactors in AUTO SANDBOX mode. Always keep the model you are using in mind. It is a variable.
+# ⚠️ Best practice: PraatGen was originally trained on Opus 4.6 with Extended Thinking. Opus 4.8 was recently released, and all signs indicate that it excels. Opus 4.7 really wants to behave agentically, which can be great for large-scale code refactors in AUTO SANDBOX mode. Always keep the model you are using in mind. It is a variable.
+
+# NOTE: To start, all of the files you need are in the current zip folder.
 
 # EML PraatGen
 
@@ -12,8 +14,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 0.9.3-beta.01
-**Release:** 31 May 2026
+**Version:** 0.9.3-beta.02
+**Release:** 4 June 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -70,7 +72,7 @@ In Claude (claude.ai or the Claude app):
 ### 2. Set the System Prompt
 
 1. In your new project, click **instructions**
-2. Paste the entire contents of `MASTER_PROMPT_CORE_v13.9.1.md` into the instructions field
+2. Paste the entire contents of `MASTER_PROMPT_CORE_v13_9_4.md` into the instructions field
 3. Scroll to the bottom and edit the "Canary" text if you wish. PraatGen reports this value back to you in pre-flight as a confidence measure that it read the entire Master Prompt.
 4. Save
 
@@ -138,7 +140,7 @@ Reply with any of these in place of (or alongside) your task. Modes compose free
 
 | File | Purpose |
 |------|---------|
-| `MASTER_PROMPT_CORE_v13.9.1.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 13.9.1. |
+| `MASTER_PROMPT_CORE_v13_9_4.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 13.9.4. |
 | `README.md` | This file. |
 
 ### Project Knowledge Base (PKB)
@@ -244,9 +246,9 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 0.9.3-beta.01 | The combined package (prompt + PKB). This is the version that matters to users. |
-| **Master Prompt** | 13.9.1 | The system instructions. Bumped when rules, workflow, or protocols change. |
-| **PKB Snapshot** | 2026-05-31 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 0.9.3-beta.02 | The combined package (prompt + PKB). This is the version that matters to users. |
+| **Master Prompt** | 13.9.4 | The system instructions. Bumped when rules, workflow, or protocols change. |
+| **PKB Snapshot** | 2026-06-05 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **0.x.y** — Beta. Expect changes based on tester feedback.
