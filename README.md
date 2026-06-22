@@ -1,3 +1,5 @@
+-- Note several PKB files had been .praat files. Using the Chrome Claude Folder Uploader extension those upload fine. Manually they don't, so they have been changed to .txt files. You can do this locally if you're having problems or just download the current release. --
+
 ⚠️ Best practice: PraatGen was originally trained on Opus 4.6 with Extended Thinking. Opus 4.8 was recently released, and all signs indicate that it excels. Opus 4.7 really wants to behave agentically, which can be great for large-scale code refactors in AUTO SANDBOX mode. Always keep the model you are using in mind. It is a variable.
 
 # EML PraatGen
