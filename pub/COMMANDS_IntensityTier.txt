@@ -1,0 +1,31 @@
+# PRAAT COMMANDS: IntensityTier
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+
+---
+
+  # Create / Read
+  Create IntensityTier: name$, start time, end time
+  # Modify
+  Add point: time, intensity
+  Formula: formula$
+  # Convert / Analyze
+  To AmplitudeTier
+  Down to PointProcess
+  Down to RealTier
+  Down to TableOfReal
+  To TextGrid (silences): silence threshold, minimum silence duration, minimum sounding duration, silence label$, sounding label$, time step
+  To IntensityTier
+  # Other
+  View & Edit
+  View & Edit with Sound?
+
+---
+
+*End of IntensityTier commands.*

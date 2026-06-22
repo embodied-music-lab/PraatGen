@@ -1,0 +1,335 @@
+# PRAAT GUI INPUT SYNTAX REFERENCE
+# Source: Official Praat manual (Scripting 6.1, Scripting 6.6)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+
+# Authoritative syntax for form and beginPause/endPause constructs.
+
+---
+
+## C.1 FORM BLOCKS
+
+Structure:
+
+    form: "Window Title"
+        [field declarations]
+    endform
+
+Placement: Must appear before any executable code. Only one per script.
+
+### Numeric fields
+
+    real: "Variable name (unit)", "default"
+
+Any real number.
+
+    positive: "Variable name", "default"
+
+Positive real; form errors if user enters ≤ 0.
+
+    integer: "Variable name", "default"
+
+Whole number; truncates decimals.
+
+    natural: "Variable name", "default"
+
+Positive whole number; form errors if user enters ≤ 0.
+
+### String fields
+
+    word: "Variable name", "default"
+
+Single word; reads only to first space.
+
+    sentence: "Variable name", "default"
+
+Short string; single line.
+
+    text: "Variable name", "default"
+
+Long string; variable name appears above field.
+
+    text: numberOfLines, "Variable name", "default"
+
+Multi-line text field; numberOfLines = 1–33.
+
+### Boolean
+
+    boolean: "Variable name", 0
+    boolean: "Variable name", 1
+
+Checkbox; 0 = off, 1 = on.
+
+    boolean: "Variable name", "yes"
+    boolean: "Variable name", "no"
+
+Also accepts: "on", "off", "ON", "OFF", "Yes", "No", etc.
+
+### Choice (radio buttons)
+
+    choice: "Variable name", defaultIndex
+        option: "Option text 1"
+        option: "Option text 2"
+        option: "Option text 3"
+
+Derives both numeric variable (variable_name = selected index) and string variable (variable_name$ = selected option text).
+
+### Optionmenu (dropdown)
+
+    optionmenu: "Variable name", defaultIndex
+        option: "Option text 1"
+        option: "Option text 2"
+        option: "Option text 3"
+
+Same derivation as choice. Uses less screen space.
+
+### File and folder selectors
+
+    infile: "Variable name", "default"
+
+Existing file path for reading. Native file browser.
+
+    outfile: "Variable name", "default"
+
+New file path for writing. Native file browser.
+
+    folder: "Variable name", "default"
+
+Directory path. Native folder browser.
+
+With height parameter (numberOfLines as a leading integer):
+
+    text:    numberOfLines, "Variable name", "default"
+    infile:  numberOfLines, "Variable name", "default"
+    outfile: numberOfLines, "Variable name", "default"
+    folder:  numberOfLines, "Variable name", "default"
+    realvector: numberOfLines, "Variable name", "format", "default"
+
+Accepted by text/infile/outfile/folder and the vector types; rejected by
+word/sentence/comment/numeric/boolean/choice/optionmenu. The integer sizes
+the text area. Verified empirically, Praat 6.4.67.
+
+### Vector fields
+
+    realvector: "Variable name", "(whitespace-separated)", "1 2 3"
+    realvector: "Variable name", "(formula)", "randomUniform# (5, 0, 1)"
+    realvector: numberOfLines, "Variable name", "format", "default"
+
+Also: positivevector, integervector — same patterns, both contexts.
+naturalvector — same pattern but **beginPause only**; the form: parser
+rejects it ("Unknown parameter type inside form"). Form field set = 18,
+beginPause field set = 19. Verified empirically, Praat 6.4.67.
+
+### Display field
+
+    comment: "Any text to display (not a variable)"
+
+NOTE: `left:` and `right:` are NOT valid field-declaration keywords.
+Verified empirically against Praat 6.4.67: in a form: block both colon
+and non-colon forms raise "Unknown parameter type inside form"; in a
+beginPause: block `left:` raises "Unknown function «left» in formula".
+A previous edition of this appendix documented them as layout helpers;
+that was incorrect and has been removed.
+
+### Side-by-side fields (ranges)
+
+`left` / `right` are not field types, but they ARE meaningful as the
+FIRST WORD of a numeric field's label: they place two boxes on one row,
+sharing the remainder of the label. This is the idiom for a range
+(time range, frequency range). Works identically in form: and
+beginPause: — only the default-quoting differs (quoted in form:,
+bare in beginPause:). Verified empirically (parse, render, and variable
+binding), Praat 6.4.67.
+
+form:
+
+    real: "left Time range (s)", "0.0"
+    real: "right Time range (s)", "1.0"
+
+beginPause:
+
+    real: "left Time range (s)", 0.0
+    real: "right Time range (s)", 1.0
+
+Both render as one row labelled "Time range (s)" with two boxes. The
+`left`/`right` word is consumed as the layout cue and is NOT shown in the
+displayed label. Two variables are produced, by the normal C.3 algorithm
+applied to the FULL label (the `left`/`right` word is kept in the name):
+
+    left Time range (s)  -> left_Time_range
+    right Time range (s) -> right_Time_range
+
+They do NOT collapse to a shared `time_range`; each box binds its own
+variable (verified: 0.25 -> left_Time_range, 0.75 -> right_Time_range).
+Any numeric field type (real/positive/integer/natural) can take the
+left/right prefix.
+
+NOTE: bare `left` and `right` are PREDEFINED Praat constants (`left` = 1,
+`right` = 2), present in every script regardless of any form. A field
+whose label is exactly "left" or "right" therefore derives to a name that
+shadows a built-in constant — avoid it.
+
+---
+
+## C.2 beginPause/endPause BLOCKS
+
+Structure:
+
+    beginPause: "Window Title"
+        [field declarations — same types as form]
+        [conditional logic allowed here]
+    clicked = endPause: "Button1", "Button2", ..., defaultButton
+
+Placement: Anywhere in executable code. Multiple allowed per script.
+
+Key differences from form:
+- Can appear multiple times
+- Can contain conditional logic between fields
+- Must capture return value from endPause
+- Can suppress Stop button
+
+### endPause signatures
+
+Basic (with Stop button):
+
+    clicked = endPause: "Continue", 1
+
+Single button, index 1, is default. Stop button shown.
+
+    clicked = endPause: "Cancel", "OK", 2
+
+Two buttons; button 2 (OK) is default. Stop button shown.
+
+No Stop button:
+
+    clicked = endPause: "Cancel", "OK", 2, 1
+
+Two buttons; button 2 (OK) is default; button 1 (Cancel) is cancel button.
+No Stop button. Closing window = clicking Cancel.
+
+**Field-variable caveat:** When the cancel button is clicked (or the
+window is closed), field variables are NOT updated — they retain their
+prior values or remain undefined. Code after the cancel path must not
+use field variables without checking. The preferred pattern (see
+APPENDIX_F S0A) uses 0 instead of a cancel-button index, which ensures
+field variables are always updated regardless of which button is clicked.
+
+No default button:
+
+    clicked = endPause: "1", "2", "3", "4", "5", 0
+
+Five buttons; 0 means no default (Enter key does nothing).
+
+### Return value
+
+clicked receives the 1-based index of the button the user clicked.
+
+### Cancel handling pattern
+
+    beginPause: "Confirm operation"
+        comment: "This will modify your files."
+    clicked = endPause: "Cancel", "Proceed", 2, 1
+    if clicked = 1
+        exitScript: "User cancelled."
+    endif
+
+### Example with conditional fields
+
+    beginPause: "Formant settings"
+        positive: "Formant ceiling (Hz)", "5500"
+        natural: "Number of formants", "5"
+        if advancedMode
+            positive: "Window length (s)", "0.025"
+            positive: "Pre-emphasis from (Hz)", "50"
+        endif
+    clicked = endPause: "Quit", "Analyze", 2, 0
+
+### Procedure calls inside beginPause/endPause
+
+Procedure calls execute normally inside an open beginPause/endPause
+block. Field declarations (comment:, boolean:, optionmenu:, etc.)
+inside the called procedure are injected into the active dialog.
+
+Verified: 13 April 2026 (Praat 6.4.62, macOS).
+
+    procedure myFields
+        comment: "Test"
+    endproc
+
+    beginPause: ""
+        @myFields
+    endPause: "Continue", 1, 0
+
+Variable derivation follows Rule 20 as normal — field variables are
+available in the calling scope after endPause returns.
+
+### Application: shared wrapper fields
+
+    beginPause: "Compare k Groups"
+        # ... wrapper-specific fields ...
+        @emlWrapperCommonFields
+    clicked = endPause: "Quit", "Run", 2, 0
+
+The procedure body must contain only commands valid inside a beginPause
+block (field declarations, comment:). Nested beginPause inside the
+procedure will error.
+
+---
+
+## C.3 VARIABLE DERIVATION ALGORITHM
+
+Both form and beginPause derive variable names from field labels by the
+SAME algorithm. Verified empirically against Praat 6.4.67 (the earlier
+description of this algorithm was wrong on three points — see notes):
+
+1. Truncate the label at the FIRST "(". Everything from "(" onward is
+   discarded, INCLUDING any text after the closing paren.
+       "Pitch floor (Hz)"  → "Pitch floor"
+       "Floor (Hz) max"    → "Floor"        (NOT "Floor max")
+   [Correction: this is truncate-at-paren, not "strip the parenthetical
+   group". Text following the paren is lost.]
+2. Trim leading/trailing whitespace.
+3. Lowercase the FIRST character only; preserve the case of every other
+   character.
+       "Max F0" → "max_F0"      "ABC def" → "aBC_def"
+4. Replace EACH space with one underscore. Consecutive spaces are NOT
+   collapsed.
+       "Pitch  ceiling" → "pitch__ceiling"   (two spaces → two underscores)
+5. Keep every other character verbatim (hyphens, slashes, apostrophes,
+   digits, leading digits are all preserved in the created symbol).
+6. Type suffix:
+   - string types (word, sentence, text, infile, outfile, folder) → "$"
+   - vector types (realvector/positivevector/integervector/naturalvector) → "#"
+   - choice/optionmenu → TWO variables: name (numeric index) and name$
+     (selected option text)
+   - numeric (real/positive/integer/natural) and boolean → no suffix
+   - comment/option → no variable
+
+Height parameters do not affect derivation:
+    infile: 2, "Sound file", "" → sound_file$
+
+### REFERENCEABILITY GATE (hard)
+
+Praat CREATES a variable for ANY label (confirmed via variableExists),
+but a derived name containing an operator character or a leading digit
+EXISTS yet CANNOT be referenced in script code — the tokenizer splits it
+or rejects it:
+
+    Label                  Created symbol          Referenceable?
+    "Voiced-unvoiced cost" voiced-unvoiced_cost$    NO  (splits at "-")
+    "Input/output dir"     input/output_dir$        NO  (reads "/" as ÷)
+    "3rd formant"          3rd_formant$             NO  (leading digit)
+    "Singer's range"       singer's_range$          NO  ("'" delimiter)
+    "Pitch  ceiling"       pitch__ceiling$          YES (underscores ok)
+
+A name is referenceable only if (before the type suffix) it matches the
+Praat identifier grammar  ^[A-Za-z][A-Za-z0-9_]*$ . When designing forms,
+keep labels to letters, digits, and spaces (and a trailing parenthetical
+for units) so the derived variable is usable. Tooling that offers form
+variables as completions must apply this gate — a non-referenceable name
+is a broken completion.
+
+Verified empirically, Praat 6.4.67 (EML session 2 June 2026).
+
+---
+
+*End of Appendix C. This appendix is authoritative for GUI input syntax (Rules 18, 19, 20).*

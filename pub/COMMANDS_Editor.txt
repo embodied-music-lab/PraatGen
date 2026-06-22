@@ -1,0 +1,981 @@
+# PRAAT COMMANDS: Editor Scripting
+# Source: Praat source code (FunctionEditor.cpp, SoundArea.cpp,
+#         SoundAnalysisArea.cpp, TextGridArea.cpp) + empirical verification
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Version: 2.0 (fully verified — Praat 6.4.62 desktop + 6.4.65 xvfb)
+# Date: 9 May 2026
+#
+# Verification method:
+#   Phase 1: xvfb headless GUI (Praat 6.4.65, Ubuntu 24.04) — 60+ commands
+#   Phase 2: desktop macOS (Praat 6.4.62) — 127 commands via nocheck harness
+#   Phase 3: parameter probing (xvfb error-message extraction) — all settings
+#
+# Covers: SoundEditor, TextGridEditor, and their shared base classes.
+# Architecture: Praat uses an area-based system:
+#   FunctionEditor (base) → SoundArea + SoundAnalysisArea + TextGridArea
+#   SoundEditor = SoundArea + SoundAnalysisArea
+#   TextGridEditor = TextGridArea + SoundArea + SoundAnalysisArea
+#
+# IMPORTANT: All commands in this file are executed INSIDE an
+# editor:/endeditor block. They are NOT available in the Objects window.
+#
+# Verification key:
+#   [V]   = verified empirically (xvfb or desktop, command ran and
+#           produced expected output/side effect)
+#   [V-n] = verified with nocheck (command ran without script-stopping
+#           error; side effects confirmed where possible)
+#   [V-p] = parameters verified via error-message probing
+#   [S]   = from source code, not yet empirically verified
+
+# ============================================================================
+# SECTION 1: EDITOR SCRIPTING SYNTAX
+# ============================================================================
+#
+# To send commands to an open editor window from a script:
+#
+#   editor: objectId
+#       # editor commands here
+#   endeditor
+#
+# Or by name:
+#
+#   editor: "Sound mySound"
+#       # editor commands here
+#   endeditor
+#
+# The editor must already be open (via View & Edit).
+# Commands inside the block correspond to menu items in the editor.
+#
+# SCOPING:
+# - Inside editor:/endeditor, only editor commands are available
+# - Object window commands (selectObject:, Get mean:, etc.) are NOT available
+# - To return to the Objects window, use endeditor
+# - You can alternate between editor: and endeditor blocks
+# - Variable assignments (e.g., pitch = Get pitch) work inside editor blocks
+#   and the variable persists after endeditor
+#
+# EDITOR TARGETING (hard — empirically verified):
+#
+# The editor: command targets the EDITOR, not the object. Which object
+# ID to use depends on which editor type is open:
+#
+#   | Editor type     | Created by selecting     | Target with       |
+#   |-----------------|--------------------------|-------------------|
+#   | SoundEditor     | Sound → View & Edit      | editor: soundId   |
+#   | TextGridEditor  | Sound + TextGrid → V & E | editor: gridId    |
+#
+# In a TextGridEditor, the TextGrid is the PRIMARY object. The Sound
+# is secondary. Using editor: soundId will HANG — "Editor N does not
+# exist" — because the editor is registered under the TextGrid, not
+# the Sound.
+#
+#   # CORRECT (TextGridEditor):
+#   selectObject: soundId, gridId
+#   View & Edit
+#   editor: gridId                 # target the TextGrid
+#       Mute channels: "1 2 3"     # Sound command — works fine
+#   endeditor
+#
+#   # WRONG (TextGridEditor):
+#   editor: soundId                # HANGS — no editor under Sound
+#
+# Both Sound-area commands (Mute channels, Sound scaling) and
+# TextGrid-area commands work from the same editor: gridId block.
+#
+# Provenance: Empirical test, 7 May 2026. editor: soundId hung
+# indefinitely in TextGridEditor; editor: gridId succeeded for
+# both Mute channels and Sound scaling commands.
+#
+# AMBIGUITY WARNING: If two editors have the same object name,
+# Praat cannot distinguish them. Use numeric IDs to avoid this.
+#
+# EDITOR LIFECYCLE WARNING (empirical, 9 May 2026):
+# Extract commands inside an editor block (Extract visible pitch,
+# Extract selected sound for overlap, etc.) create new objects.
+# After endeditor, the new object may be selected in the Objects
+# window. If you removeObject: the extracted object, confirm you
+# are NOT removing the original editor object (check IDs). The
+# editor may also close after certain extract operations. Use
+# defensive re-opens: selectObject: originalId / View & Edit
+# before the next editor: block.
+#
+# ANALYSIS TOGGLE BEHAVIOR (empirical, 9 May 2026):
+# Show spectrogram / Show pitch / Show intensity / Show formants /
+# Show pulses are TOGGLES. Calling them when analysis is already
+# visible turns it OFF. In scripts, prefer the Settings commands
+# (which auto-enable the analysis) over Show toggles when you
+# need to ensure analysis is active. Alternatively, use
+# Show analyses: to set exact on/off state for all five analyses.
+#
+# Source: Praat manual Scripting 7.1/7.2 + empirical verification
+
+# ============================================================================
+# SECTION 2: FUNCTION EDITOR (base — all time-domain editors)
+# ============================================================================
+# Source: FunctionEditor.cpp
+# Available in: SoundEditor, TextGridEditor, and all other FunctionEditors
+
+## Play menu
+
+  Play: from_time, to_time                                          [V-n]
+  # Plays the specified time range.
+
+  Play or stop                                                      [V-n]
+  # Toggles playback. If playing, stops. If stopped, plays.
+
+  Play window                                                       [V-n]
+  # Plays the visible window.
+
+  Interrupt playing                                                 [V-n]
+  # Stops any current playback.
+
+## Editor lifecycle
+
+  Close                                                             [V]
+  # Closes the editor window. Use INSIDE an editor:/endeditor block.
+  # USAGE PATTERN: When closing an editor at the end of script processing,
+  # the editor may already be closed by user action (window dismissed) or
+  # by upstream code. Wrap with `nocheck` to tolerate the already-closed
+  # state:
+  #     editor: gridId
+  #         nocheck Close
+  #     endeditor
+  # This is one of the rare safe uses of `nocheck` — it guards against a
+  # specific known-recoverable state, not arbitrary failure. Standard
+  # `nocheck` cautions (House Rules, COMMANDS_Universal.txt errata) still
+  # apply: do not use `nocheck` for diagnostic branching, and do not chain
+  # multiple `nocheck` commands.
+  # Provenance: RespTrack annotation workflow, 13 March 2026.
+
+## Time / View menu — query visible part
+
+  Get start of visible part                                         [V]
+  # Returns start time of the visible window (seconds).
+
+  Get end of visible part                                           [V]
+  # Returns end time of the visible window (seconds).
+
+  Get length of visible part                                        [V]
+  # Returns duration of visible window (seconds).
+
+## Time / View menu — set visible part
+
+  Zoom and scroll settings: auto_scrolling$, synchronize$           [V-n]
+  # Controls auto-scrolling and synchronization behavior.
+  # auto_scrolling: "yes" / "no"
+  # synchronize: "yes" / "no"
+
+  Zoom: from_time, to_time                                          [V]
+  # Sets the visible time window.
+  # Example: Zoom: 0.02, 0.08
+
+  Show all                                                          [V]
+  # Zooms to show the entire time domain.
+
+  Zoom in                                                           [V]
+  # Zooms in by a factor of 2.
+
+  Zoom out                                                          [V]
+  # Zooms out by a factor of 2.
+
+  Zoom to selection                                                 [V]
+  # Zooms to fit the current selection.
+
+  Zoom back                                                         [V]
+  # Returns to the previous zoom level.
+
+  Scroll page back                                                  [V]
+  # Scrolls one page backward.
+
+  Scroll page forward                                               [V]
+  # Scrolls one page forward.
+
+## Time / View menu — query selection
+
+  Get start of selection                                            [V]
+  # Returns start of selected time range (seconds).
+  # Alias: Get begin of selection
+
+  Get cursor                                                        [V]
+  # Returns cursor position (seconds).
+
+  Get end of selection                                              [V]
+  # Returns end of selected time range (seconds).
+
+  Get length of selection                                           [V]
+  # Returns duration of the selection (seconds).
+  # Alias: Get selection length
+
+## Time / View menu — set selection
+
+  Select: from_time, to_time                                        [V]
+  # Sets the selection to the specified time range.
+  # Example: Select: 0.03, 0.06
+
+  Widen or shrink selection: new_start, new_end, mode$              [V-n]
+  # Adjusts the selection boundaries.
+  # NOTE: mode$ parameter values need Paste Commands verification.
+  # In testing, "Widen" was accepted but did not visibly change
+  # the selection. May require specific conditions.
+
+  Move cursor to start of selection                                 [V]
+  # Alias: Move cursor to begin of selection
+
+  Move cursor to end of selection                                   [V]
+
+  Move cursor to: time                                              [V]
+  # Moves cursor to an exact time position (seconds).
+  # Example: Move cursor to: 0.05
+
+  Move cursor by: delta_time                                        [V]
+  # Moves cursor by a relative amount (seconds).
+
+  Move start of selection by: delta_time                            [V]
+  # Alias: Move begin of selection by
+
+  Move end of selection by: delta_time                              [V]
+
+  Selection step settings: step                                     [V-n]
+  # Sets the step size for Select earlier / Select later.
+
+  Select earlier                                                    [V]
+  # Shifts the selection backward by one step.
+
+  Select later                                                      [V]
+  # Shifts the selection forward by one step.
+
+  Move start of selection left                                      [V]
+  # Alias: Move begin of selection left
+
+  Move start of selection right                                     [V]
+  # Alias: Move begin of selection right
+
+  Move end of selection left                                        [V]
+
+  Move end of selection right                                       [V]
+
+# ============================================================================
+# SECTION 3: SOUND AREA (Sound menu)
+# ============================================================================
+# Source: SoundArea.cpp
+# Available in: SoundEditor, TextGridEditor (when Sound is present)
+
+## Sound menu — Preferences
+
+  Sound scaling: scaling_strategy$, height, minimum, maximum        [V-n]
+  # Sets how the waveform display is scaled.                        [V-p]
+  # scaling_strategy$ MUST be a string (numeric index fails):
+  #   "by whole"                                                    [V-n]
+  #   "by window"                                                   [V-n]
+  #   "by window and channel"                                       [V-n]
+  #   "fixed height"                                                [V-n]
+  #   "fixed range"                                                 [V-n]
+  # height: used when strategy is "fixed height"
+  # minimum/maximum: used when strategy is "fixed range"
+  # Works in both SoundEditor and TextGridEditor.                   [V-n]
+  # Example: Sound scaling: "fixed range", 2.0, -2.0, 2.0
+  #
+  # NOTE: enum argument MUST be a string — passing a numeric index
+  # produces: "Option argument should be a string, not a number."
+  # Provenance: Empirical test, 7 May 2026
+
+  Mute channels: channels$                                          [V]
+  # channels: NATURALVECTOR (whitespace-separated channel numbers)
+  # Mutes the specified channels during playback.
+  # Channels are 1-based. Unmuted channels play normally.
+  # All channels NOT listed are automatically unmuted.
+  # Pass empty string "" to unmute all channels.                    [V-n]
+  #
+  # Works in both SoundEditor and TextGridEditor.                   [V-n]
+  # In TextGridEditor, target with editor: gridId (not soundId).
+  #
+  # Example: Mute channels 1-3 of a 4-channel Sound+TextGrid:
+  #   selectObject: soundId, gridId
+  #   View & Edit
+  #   editor: gridId
+  #       Mute channels: "1 2 3"
+  #   endeditor
+  #
+  # Provenance: SoundArea.cpp line 705; empirical tests 7+9 May 2026
+
+## Sound menu — Edit (Sound objects only, not LongSound)
+
+  Cut                                                               [V-n]
+  # Cuts the selected sound to the clipboard.
+  # Duration shrinks by the selection length.                       [V]
+
+  Copy                                                              [V-n]
+  # Copies the selected sound to the clipboard.
+
+  Paste before                                                      [V-n]
+  # Pastes clipboard before the selection.
+
+  Paste over                                                        [V-n]
+  # Pastes clipboard over the selection.
+
+  Paste after                                                       [V-n]
+  # Pastes clipboard after the selection.
+
+  Set selection to zero                                             [V]
+  # Sets all samples in the selection to zero.
+
+  Reverse selection                                                 [V]
+  # Reverses the samples in the selection.
+
+## Sound menu — Query
+
+  Sound info                                                        [V]
+  # Writes Sound object information to the Info window.
+
+  LongSound info                                                    [S]
+  # Writes LongSound object information to the Info window.
+  # Requires LongSound, not Sound.
+
+  Get amplitude(s)                                                  [V]
+  # At cursor: returns interpolated amplitude per channel.
+  # In selection: returns mean amplitude per channel.
+
+## Sound menu — Select
+
+  Move start of selection to nearest zero crossing                  [V]
+  Move cursor to nearest zero crossing                              [V]
+  Move end of selection to nearest zero crossing                    [V]
+
+## Sound menu — Draw
+
+  Draw visible sound: preserve_times$, bottom, top, garnish$       [V-n]
+  # Draws the visible sound portion to the Picture window.
+
+  Draw selected sound: preserve_times$, bottom, top, garnish$      [V-n]
+  # Draws the selected sound portion to the Picture window.
+
+## Sound menu — Extract
+
+  Extract selected sound (preserve times)                           [V]
+  # Extracts selection to Objects window, preserving original times.
+  # WARNING: after endeditor, the extracted Sound is selected.
+  # The editor may close. Use defensive re-open afterward.
+
+  Extract selected sound (time from 0)                              [V]
+  # Extracts selection to Objects window, starting from time 0.
+
+  Extract selected sound (windowed): name$, window_shape$, relative_width, preserve_times$  [V]
+  # Extracts with windowing applied.
+  # window_shape: "rectangular", "Hanning", "Hamming", "Gaussian1", etc.
+
+  Extract selected sound for overlap: overlap                       [V-n]
+  # Extracts with overlap for concatenation.
+  # WARNING: may close the editor. Defensive re-open required.
+
+## Sound menu — Save
+
+  Save selected sound as WAV file: file_path$                       [V]
+  Save selected sound as 24-bit WAV file: file_path$                [V]
+  Save selected sound as 32-bit WAV file: file_path$                [V]
+  Save selected sound as AIFF file: file_path$                      [V]
+  Save selected sound as AIFC file: file_path$                      [V]
+  Save selected sound as NeXT/Sun file: file_path$                  [V]
+  Save selected sound as NIST file: file_path$                      [V]
+  Save selected sound as FLAC file: file_path$                      [V]
+  # All save commands: file created on disk, verified via fileReadable.
+
+# ============================================================================
+# SECTION 4: SOUND ANALYSIS AREA (Analyses menus)
+# ============================================================================
+# Source: SoundAnalysisArea.cpp
+# Available in: SoundEditor, TextGridEditor (when Sound is present)
+
+## Analyses menu — master controls
+
+  Show analyses: show_spectrogram$, show_pitch$, show_intensity$, show_formants$, show_pulses$  [V-n]
+  # Master toggle for all analysis overlays.                        [V-p]
+  # Each parameter: "yes" / "no"
+  # Sets EXACT state (not a toggle) — use this to ensure
+  # specific analyses are on or off.
+  # Example: Show analyses: "yes", "yes", "no", "no", "no"
+
+  Time step settings: strategy$, fixed_time_step, steps_per_view   [V-n]
+  # Controls how analysis time steps are computed.                  [V-p]
+  # strategy: "automatic", "fixed", "view-dependent"
+  # fixed_time_step: seconds (used when strategy is "fixed")
+  # steps_per_view: integer (used when strategy is "view-dependent")
+  # NOTE: 3 parameters, not 2.
+
+  Log settings: log_file_1$, log_file_2$, log_format_1$, log_format_2$, log_script_3$, log_script_4$  [V-n]
+  # Configures log file paths and formats.
+
+  Delete log file 1                                                 [V-n]
+  Delete log file 2                                                 [V-n]
+
+  Log 1                                                             [V-n]
+  # Writes a log entry using format 1.
+
+  Log 2                                                             [V-n]
+  # Writes a log entry using format 2.
+
+  Log script 3 (...)                                                [S]
+  Log script 4 (...)                                                [S]
+
+## Spectrogram menu
+
+  Show spectrogram                                                  [V]
+  # TOGGLE: turns spectrogram display on or off.
+  # If already on, calling this turns it OFF.
+
+  Spectrogram settings: view_from, view_to, window_length, dynamic_range  [V]
+  # 4 parameters.                                                   [V-p]
+  #   view_from:      frequency range start (Hz)    default: 0
+  #   view_to:        frequency range end (Hz)      default: 5000
+  #   window_length:  analysis window (s)           default: 0.005
+  #   dynamic_range:  display range (dB)            default: 70
+  # Example: Spectrogram settings: 0, 5000, 0.005, 70
+
+  Advanced spectrogram settings: time_steps, freq_steps, method$, window_shape$, autoscaling$, maximum, pre_emphasis, dynamic_compression  [V-p]
+  # 8 parameters.
+  #   time_steps:         Number of time steps       default: 1000
+  #   freq_steps:         Number of frequency steps  default: 250
+  #   method:             "Fourier"
+  #   window_shape:       "Gaussian", "square (rectangular)", "Hamming",
+  #                       "Bartlett (triangular)", "Welch (parabolic)",
+  #                       "Hanning"
+  #   autoscaling:        "yes" / "no"               default: "yes"
+  #   maximum:            dB/Hz                      default: 100
+  #   pre_emphasis:       dB/oct                     default: 6
+  #   dynamic_compression: 0–1                       default: 0
+  # Example: Advanced spectrogram settings: 1000, 250, "Fourier",
+  #   ... "Gaussian", "yes", 100, 6, 0
+
+  Move frequency cursor to: frequency                              [V-n]
+  # Moves the frequency cursor to a specific Hz value.
+
+  Extract visible spectrogram                                       [V]
+  # Creates a Spectrogram object from the visible window.
+  # WARNING: defensive re-open may be needed after endeditor.
+
+  View spectral slice                                               [V-n]
+  # Creates a Spectrum object at the cursor or from the selection.
+
+  Paint visible spectrogram: preserve_times$, garnish$              [V-n]
+  # Paints the visible spectrogram to the Picture window.
+
+## Pitch menu — toggles and method selection
+
+  Show pitch                                                        [V]
+  # TOGGLE: turns pitch contour display on or off.
+  # If already on, calling this turns it OFF.
+  # Prefer Pitch settings (method): to ensure pitch is enabled.
+
+  # Pitch method selection:
+  # These are NOT scriptable commands — they return "Command not
+  # available" without nocheck. The method is selected through
+  # the method-specific Pitch settings commands below, or through
+  # the generic Pitch settings: compatibility command.
+  #
+  # Pitch method is filtered autocorrelation                        [NOT SCRIPTABLE]
+  # Pitch method is raw cross-correlation                           [NOT SCRIPTABLE]
+  # Pitch method is raw autocorrelation                             [NOT SCRIPTABLE]
+  # Pitch method is filtered cross-correlation                      [NOT SCRIPTABLE]
+  #
+  # Provenance: asserterror test returned "Command not available"
+  # (xvfb, 9 May 2026). nocheck suppresses the error silently.
+
+## Pitch menu — method-specific settings (NEW in Praat 6.4.x)
+
+  # Each pitch analysis method has its own settings command with
+  # a DIFFERENT parameter set. The filtered methods have 14 params
+  # (including "Attenuation at top"); the raw methods have 13 params.
+  #
+  # These are the REAL pitch settings commands. The generic 5-param
+  # "Pitch settings:" is a compatibility shim.
+
+  Pitch settings (filtered autocorrelation): floor, top, unit$, view_from, view_to, drawing_method$, max_candidates, very_accurate$, attenuation_at_top, silence_threshold, voicing_threshold, octave_cost, octave_jump_cost, voiced_unvoiced_cost  [V] [V-p]
+  # 14 parameters — for intonation / vocal-fold vibration.
+  #   floor:                Pitch floor (Hz)                default: 50
+  #   top:                  Pitch top (Hz)                  default: 800
+  #   unit:                 "Hertz", "semitones re 1 Hz",   [V-n]
+  #                         "mel", "logHertz",
+  #                         "semitones re 100 Hz", "ERB"
+  #   view_from:            View range low (units)          default: 0 (auto)
+  #   view_to:              View range high (units)         default: 0 (auto)
+  #   drawing_method:       "Automatic", "Curve", "Speckle" [V-n]
+  #   max_candidates:       integer                         default: 15
+  #   very_accurate:        "yes" / "no"                    default: "no"
+  #   attenuation_at_top:   0–1                             default: 0.03
+  #   silence_threshold:    0–1                             default: 0.09
+  #   voicing_threshold:    0–1                             default: 0.50
+  #   octave_cost:          per octave                      default: 0.055
+  #   octave_jump_cost:     0–1                             default: 0.35
+  #   voiced_unvoiced_cost: 0–1                             default: 0.14
+  #
+  # NOTE: "top" is NOT the same as "ceiling". The filtered methods
+  # use a Gaussian low-pass filter that attenuates candidates
+  # above top/2. Set top much higher than the expected F0 range.
+  # See APPENDIX_D §1A for singing voice considerations.
+  #
+  # Example:
+  #   Pitch settings (filtered autocorrelation): 50, 800, "Hertz",
+  #   ... 0, 0, "Automatic", 15, "no", 0.03, 0.09, 0.5, 0.055, 0.35, 0.14
+
+  Pitch settings (filtered cross-correlation): [same 14 parameters] [V-p]
+  # Identical parameter layout to filtered autocorrelation.
+  # Same defaults.
+
+  Pitch settings (raw cross-correlation): floor, ceiling, unit$, view_from, view_to, drawing_method$, max_candidates, very_accurate$, silence_threshold, voicing_threshold, octave_cost, octave_jump_cost, voiced_unvoiced_cost  [V-p]
+  # 13 parameters — for voice analysis (jitter, shimmer, HNR).
+  #   floor:                Pitch floor (Hz)                default: 75
+  #   ceiling:              Pitch ceiling (Hz)              default: 600
+  #   unit:                 (same options as filtered)
+  #   view_from/to:         View range                      default: 0, 0
+  #   drawing_method:       "Automatic", "Curve", "Speckle"
+  #   max_candidates:       integer                         default: 15
+  #   very_accurate:        "yes" / "no"                    default: "no"
+  #   silence_threshold:    0–1                             default: 0.03
+  #   voicing_threshold:    0–1                             default: 0.45
+  #   octave_cost:          per octave                      default: 0.01
+  #   octave_jump_cost:     0–1                             default: 0.35
+  #   voiced_unvoiced_cost: 0–1                             default: 0.14
+  #
+  # NO "Attenuation at top" parameter — raw methods do not filter.
+  # NOTE: "ceiling" is a hard cutoff, unlike "top" which is soft.
+  # Default path-finding parameters differ from filtered methods.
+  #
+  # Example:
+  #   Pitch settings (raw cross-correlation): 75, 600, "Hertz",
+  #   ... 0, 0, "Automatic", 15, "no", 0.03, 0.45, 0.01, 0.35, 0.14
+
+  Pitch settings (raw autocorrelation): [same 13 parameters]        [V-p]
+  # Identical parameter layout to raw cross-correlation.
+  # Same defaults.
+
+  # COMPATIBILITY COMMAND (generic):
+  Pitch settings: floor, ceiling, unit$, method$, drawing_method$   [V]
+  # 5 parameters — simplified interface.                            [V-p]
+  #   floor:           Pitch floor (Hz)               default: 75
+  #   ceiling:         Pitch ceiling/top (Hz)         default: 600
+  #   unit:            "Hertz" etc.
+  #   method:          "autocorrelation",              [V-n]
+  #                    "cross-correlation",
+  #                    "filtered autocorrelation",
+  #                    "raw autocorrelation",
+  #                    "filtered cross-correlation",
+  #                    "raw cross-correlation"
+  #   drawing_method:  "Automatic", "Curve", "Speckle"
+  # This is a compatibility shim. It sets floor, ceiling/top,
+  # unit, method, and drawing method, but NOT the advanced
+  # path-finding parameters (silence threshold, voicing threshold,
+  # etc.). Use the method-specific commands for full control.
+  # NOTE: Pitch settings: auto-enables pitch computation.
+  # Calling Show pitch is NOT required before Get pitch when
+  # Pitch settings: is used.
+
+  How to choose a pitch analysis method                             [S]
+  # Opens help page (not useful in scripting).
+
+## Pitch menu — queries
+
+  Pitch listing                                                     [V-n]
+  # Writes pitch values at all visible frames to the Info window.
+
+  Get pitch                                                         [V]
+  # Returns pitch at cursor/selection midpoint (Hz or current unit).
+  # Requires pitch analysis to be enabled (via Pitch settings or Show pitch).
+
+  Get minimum pitch                                                 [V]
+  # Returns minimum pitch in selection (or visible if no selection).
+
+  Get maximum pitch                                                 [V]
+  # Returns maximum pitch in selection (or visible if no selection).
+
+  Move cursor to minimum pitch                                      [V-n]
+  Move cursor to maximum pitch                                      [V-n]
+
+## Pitch menu — draw/extract
+
+  Draw visible pitch contour: preserve_times$, garnish$             [V-n]
+  # Draws pitch to the Picture window.
+
+  Extract visible pitch contour                                     [V]
+  # Creates a Pitch object from the visible analysis.
+
+## Intensity menu
+
+  Show intensity                                                    [V]
+  # TOGGLE: turns intensity contour display on or off.
+  # Must be ON before Get intensity queries will work.
+  # Unlike Pitch settings:, Intensity settings: does NOT
+  # auto-enable intensity. Call Show intensity first.
+
+  Intensity settings: view_from, view_to, averaging_method$, subtract_mean$  [V]
+  # 4 parameters.                                                   [V-p]
+  #   view_from:          View range low (dB)          default: 50
+  #   view_to:            View range high (dB)         default: 100
+  #   averaging_method:   "mean energy"                 [V-n]
+  #                       "mean sones"                  [V-n]
+  #                       "mean dB"                     [V-n]
+  #   subtract_mean:      "yes" / "no"                  default: "yes"
+  #
+  # NOTE: the parameter is "Subtract mean pressure", not "Subtract mean".
+  # NOTE: averaging_method comes BEFORE subtract_mean (not after).
+
+  Intensity listing                                                 [V-n]
+  # Writes intensity values to the Info window.
+
+  Get intensity                                                     [V]
+  # Returns intensity at cursor/selection (dB).
+  # Requires Show intensity to be ON.
+
+  Get minimum intensity                                             [V]
+  Get maximum intensity                                             [V]
+
+  Draw visible intensity contour: preserve_times$, garnish$         [V-n]
+  Extract visible intensity contour                                 [V]
+
+## Formants menu
+
+  Show formants                                                     [V]
+  # TOGGLE: turns formant contour display on or off.
+  # Must be ON before Get formant queries will work.
+  # Unlike Pitch settings:, Formant settings: does NOT
+  # auto-enable formants. Call Show formants first.
+  # NOTE: command is "Show formants" (plural), NOT "Show formant".
+
+  Formant settings: max_formant, num_formants, window_length, dynamic_range, dot_size  [V]
+  # 5 parameters.                                                   [V-p]
+  #   max_formant:      Maximum formant (Hz)           default: 5500
+  #   num_formants:     Number of formants             default: 5
+  #   window_length:    Analysis window (s)            default: 0.025
+  #   dynamic_range:    Display range (dB)             default: 30
+  #   dot_size:         Dot size (mm)                  default: 1
+  #
+  # NOTE: The editor uses Formant (burg) internally, not FormantPath.
+  # The max_formant here is the analysis ceiling, not just display.
+
+  Advanced formant settings: method$, pre_emphasis_from             [V-p]
+  # 2 parameters.
+  #   method:            "Burg"                        default: "Burg"
+  #   pre_emphasis_from: Hz                            default: 50
+
+  Formant listing                                                   [V-n]
+  # Writes formant values to the Info window.
+
+  Get first formant                                                 [V]
+  Get second formant                                                [V]
+  Get third formant                                                 [V]
+  Get fourth formant                                                [V]
+  Get formant: formant_number                                       [V]
+  # Returns formant frequency at cursor/selection.
+  # Requires Show formants to be ON.
+
+  Get first bandwidth                                               [V]
+  Get second bandwidth                                              [V]
+  Get third bandwidth                                               [V]
+  Get fourth bandwidth                                              [V]
+  Get bandwidth: formant_number                                     [V]
+
+  Draw visible formant contour: preserve_times$, garnish$           [V-n]
+  Extract visible formant contour                                   [V]
+
+## Pulses menu
+
+  Show pulses                                                       [V]
+  # TOGGLE: turns pulse marks display on or off.
+
+  Advanced pulses settings: max_period_factor, max_amplitude_factor [V-p]
+  # 2 parameters.
+  #   max_period_factor:     default: 1.3
+  #   max_amplitude_factor:  default: 1.6
+
+  Voice report                                                      [V-n]
+  # Writes comprehensive voice quality report (jitter, shimmer, HNR)
+  # for the selection to the Info window.
+  # Requires pitch and pulses to be visible.
+
+  Pulse listing                                                     [V-n]
+  # Writes pulse times to the Info window.
+
+  Get jitter (local)                                                [V-n]
+  Get jitter (local, absolute)                                      [V-n]
+  Get jitter (rap)                                                  [V-n]
+  Get jitter (ppq5)                                                 [V-n]
+  Get jitter (ddp)                                                  [V-n]
+  # All jitter queries require pitch + pulses to be visible.
+  # Returns a numeric value or undefined.
+
+  Get shimmer (local)                                               [V-n]
+  Get shimmer (local_dB)                                             [V-n]
+  Get shimmer (apq3)                                                [V-n]
+  Get shimmer (apq5)                                                [V-n]
+  Get shimmer (apq11)                                               [V-n]
+  Get shimmer (dda)                                                 [V-n]
+  # All shimmer queries require pitch + pulses to be visible.
+
+  Draw visible pulses: preserve_times$, garnish$                    [V-n]
+  Extract visible pulses                                            [V]
+  # Creates a PointProcess object from the visible analysis.
+
+# ============================================================================
+# SECTION 5: TEXTGRID AREA
+# ============================================================================
+# Source: TextGridArea.cpp
+# Available in: TextGridEditor only
+
+## TextGrid menu — Settings
+
+  TextGrid settings: font_size, text_alignment$, use_text_styles$, shift_drag_multiple$, show_number_of$, paint_intervals_green$, the_text$  [V-n]
+  # Complex multi-parameter dialog. Parameter values need
+  # Paste Commands verification for exact enum values.
+  # Example: TextGrid settings: 12, "Left", "no", "no",
+  #   ... "numbers first", "never", ""
+
+## TextGrid menu — Edit (text operations)
+
+  Cut text                                                          [V-n]
+  Copy text                                                         [V-n]
+  Paste text                                                        [V-n]
+  Erase text                                                        [V-n]
+  Convert to backslash trigraphs                                    [V-n]
+  Convert to Unicode                                                [V-n]
+
+## TextGrid menu — Search
+
+  Find: text$                                                       [V-n]
+  # Finds the next interval/point containing the specified text.
+
+  Find again                                                        [V-n]
+  # Repeats the last Find operation.
+
+## TextGrid menu — Navigate
+
+  Select previous tier                                              [V]
+  Select next tier                                                  [V]
+  Select previous interval                                          [V-n]
+  Select next interval                                              [V-n]
+  Extend-select previous interval                                   [V-n]
+  Extend-select next interval                                       [V-n]
+
+## TextGrid menu — Draw
+
+  Draw visible TextGrid: show_boundaries$, use_text_styles$, garnish$  [V-n]
+  Draw visible sound and TextGrid: show_boundaries$, use_text_styles$, garnish$  [V-n]
+  Draw TextGrid and Pitch separately: show_boundaries$, use_text_styles$, garnish$  [V-n]
+  # For the Pitch variant, pitch must be enabled first.
+
+## TextGrid menu — Extract
+
+  Extract selected TextGrid (preserve times)                        [V]
+  # Extracts TextGrid selection to Objects window.
+  # WARNING: defensive re-open may be needed after endeditor.
+
+  Extract selected TextGrid (time from 0)                           [V]
+
+## TextGrid menu — Alignment (requires Sound)
+
+  Align interval                                                    [V-n]
+  # Performs forced alignment on the selected interval.
+  # Uses settings from Alignment settings.
+  # Requires eSpeak to be installed.
+
+  Alignment settings: language$, include_words$, include_phonemes$, allow_silences$  [V-n]
+  # Configures the alignment engine (eSpeak-based).
+  # Example: Alignment settings: "English (Great Britain)",
+  #   ... "yes", "yes", "yes"
+
+  Transcribe interval                                               [V-n]
+  # Performs ASR transcription on the selected interval.
+  # Requires a SpeechRecognizer (Whisper) to be configured.
+
+  Transcription settings: language$                                 [V-n]
+  # Configures the transcription engine.
+
+## TextGrid menu — Boundary/Point operations
+
+  # Insert boundary/point on specific tiers (1-8):
+  Insert on selected tier                                           [V]
+  Insert on tier 1                                                  [V]
+  Insert on tier 2                                                  [V-n]
+  Insert on tier 3                                                  [V-n]
+  Insert on tier 4                                                  [V-n]
+  Insert on tier 5                                                  [V-n]
+  Insert on tier 6                                                  [V-n]
+  Insert on tier 7                                                  [V-n]
+  Insert on tier 8                                                  [V-n]
+  # Tiers 4-8 silently fail if the tier does not exist (nocheck).
+  # Insert on tier N at cursor position: creates a boundary
+  # (interval tier) or point (point tier).
+
+  Insert on all tiers                                               [V-n]
+
+  # Insert interval (boundary pair) on specific tiers:
+  Insert interval on tier 1                                         [V-n]
+  Insert interval on tier 2                                         [V-n]
+  # ... through tier 8 (same pattern)
+
+  Remove point or boundary                                          [V-n]
+  # Removes the point or boundary at/near the cursor.
+
+  Move to zero                                                      [V-n]
+  # Moves the selected boundary to the nearest zero crossing.
+
+## TextGrid menu — Tier operations
+
+  Add interval tier: position, name$                                [V]
+  # Adds a new interval tier at the specified position.
+  # position: 1 = top, n+1 = bottom
+
+  Add point tier: position, name$                                   [V]
+  # Adds a new point tier at the specified position.
+
+  Duplicate tier: position, name$                                   [V-n]
+  # Duplicates the selected tier at the specified position.
+
+  Rename tier: new_name$                                            [V]
+  # Renames the selected tier.
+
+  Remove all text from tier                                         [V-n]
+  # Clears all labels from the selected tier.
+
+  Remove tier                                                       [V]
+  # Removes the selected tier entirely.
+
+  Publish tier                                                      [V-n]
+  # Extracts the selected tier to the Objects window.
+  # WARNING: the new TextGrid object may have the same ID confusion
+  # as other extract commands. Use defensive re-open.
+
+## TextGrid menu — Save
+
+  Save whole TextGrid as text file: file_path$                      [V]
+  # Saves the entire TextGrid to disk. File creation verified.
+
+## TextGrid menu — Spelling
+
+  Check spelling                                                    [V-n]
+  Check spelling in interval                                        [V-n]
+  Add to user dictionary                                            [V-n]
+
+# ============================================================================
+# SECTION 6: ANALYSIS PREREQUISITE TABLE
+# ============================================================================
+#
+# This table documents which commands require which analysis to be
+# enabled, and how to enable it. Based on empirical testing.
+#
+#   | Query command       | Requires                  | How to enable              |
+#   |---------------------|---------------------------|----------------------------|
+#   | Get pitch           | Pitch enabled             | Pitch settings: (any)      |
+#   | Get minimum pitch   | Pitch enabled + selection | Pitch settings: + Select:  |
+#   | Get maximum pitch   | Pitch enabled + selection | Pitch settings: + Select:  |
+#   | Get intensity       | Intensity visible         | Show intensity + settings  |
+#   | Get min/max intens  | Intensity visible + sel   | Show intensity + settings  |
+#   | Get Nth formant     | Formants visible          | Show formants + settings   |
+#   | Get Nth bandwidth   | Formants visible          | Show formants + settings   |
+#   | Get jitter (*)      | Pitch + Pulses visible    | Pitch settings + Show pulses |
+#   | Get shimmer (*)     | Pitch + Pulses visible    | Pitch settings + Show pulses |
+#   | Voice report        | Pitch + Pulses visible    | Pitch settings + Show pulses |
+#
+# KEY BEHAVIORAL FINDING:
+# - Pitch settings: auto-enables pitch (no Show pitch needed)
+# - Intensity settings: does NOT auto-enable intensity (Show intensity needed first)
+# - Formant settings: does NOT auto-enable formants (Show formants needed first)
+# - Show X commands are TOGGLES — calling when already on turns it OFF
+#
+# RECOMMENDED PATTERN for scripting:
+#   editor: soundId
+#       Show analyses: "no", "yes", "no", "no", "no"   # exact state
+#       Pitch settings (filtered autocorrelation): ...  # set params
+#       Move cursor to: 0.5
+#       pitch = Get pitch
+#   endeditor
+
+# ============================================================================
+# SECTION 7: USAGE NOTES
+# ============================================================================
+#
+# MUTING CHANNELS (the RIP use case):
+#
+# To open a multi-channel Sound + TextGrid, mute respiratory channels,
+# and let the user annotate while hearing only the audio channel:
+#
+#   selectObject: editorSoundId, gridId
+#   View & Edit
+#   editor: gridId
+#       Mute channels: "1 2 3"
+#   endeditor
+#   beginPause: "Annotate phases"
+#       comment: "Channel 1: Abdomen | Channel 2: Sum | Channel 3: Rib cage"
+#       comment: "Channel 4: Audio (unmuted)"
+#       comment: ""
+#       comment: "Use labels: inh, susp, phon"
+#   clicked = endPause: "Stop", "Continue", 2, 0
+#   if clicked = 1
+#       exitScript: "User stopped."
+#   endif
+#
+# NOTE: editor: gridId (not soundId) — TextGridEditor registers under
+# the TextGrid. Using soundId hangs.
+# NOTE: beginPause with comment: lines replaces pauseScript for
+# multi-line instructions — pauseScript truncates after the first line.
+#
+# SOUND SCALING (set display range):
+#
+#   editor: soundId    # or gridId in TextGridEditor
+#       Sound scaling: "fixed range", 2.0, -5.0, 5.0
+#   endeditor
+#
+# Scaling strategy must be a string, not a number.
+# Valid values: "by whole", "by window", "by window and channel",
+#   "fixed height", "fixed range"
+#
+# QUERY PATTERN:
+#
+# To query values from the editor (e.g., pitch at cursor):
+#
+#   editor: soundId
+#       Pitch settings (filtered autocorrelation): 50, 800, "Hertz",
+#       ... 0, 0, "Automatic", 15, "no", 0.03, 0.09, 0.5, 0.055, 0.35, 0.14
+#       Move cursor to: 0.5
+#       pitch = Get pitch
+#   endeditor
+#   appendInfoLine: "Pitch at cursor: ", pitch, " Hz"
+#
+# DEFENSIVE RE-OPEN PATTERN:
+#
+# After any Extract command inside an editor block:
+#
+#   editor: soundId
+#       Select: 0.2, 0.8
+#       Extract selected sound (preserve times)
+#   endeditor
+#   extractId = selected ("Sound")
+#   # ... process extractId ...
+#   removeObject: extractId
+#   # Defensive re-open before next editor: block
+#   selectObject: soundId
+#   View & Edit
+#
+# VERIFICATION STATUS (Praat 6.4.62 + 6.4.65, May 2026):
+#
+# Phase 1 (xvfb, 6.4.65): 60+ commands verified. Navigation,
+# selection, zoom, cursor, acoustic queries (individually),
+# extract, settings, toggles all confirmed.
+#
+# Phase 2 (desktop, 6.4.62): 127 commands via nocheck harness.
+# Play, Cut/Copy/Paste, all 8 Save formats, all 7 Draw commands,
+# Show analyses, Sound scaling (all 5 strategies), jitter/shimmer
+# (11 queries), Voice report, all TextGrid operations, alignment,
+# spelling — all ran without error.
+#
+# Phase 3 (xvfb, 6.4.65): Parameter probing via error messages.
+# Complete parameter lists extracted for all settings commands
+# including the 4 method-specific Pitch settings dialogs.
+#
+# Headless limitations discovered:
+# - Multiple simultaneous analyses cause computation hangs in xvfb
+# - Play commands complete but produce no audio in xvfb
+# - Editor may close after Extract operations (requires re-open)
+# - Show toggles persist across editor close/reopen cycles
+
+---
+
+*End of Editor Scripting commands.*

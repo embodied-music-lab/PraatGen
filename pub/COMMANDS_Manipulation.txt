@@ -1,0 +1,38 @@
+# PRAAT COMMANDS: Manipulation
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+
+---
+
+  # Query
+  Get resynthesis (overlap-add)
+  Get resynthesis (LPC)
+  # Modify
+  Replace duration tier
+  Replace pitch tier?
+  Replace duration tier?
+  Replace pitch tier
+  Replace pulses
+  Replace original sound
+  # Convert / Analyze
+  To Manipulation
+  # Extract / Combine
+  Extract original sound
+  Extract pulses
+  Extract pitch tier
+  Extract duration tier
+  # Other
+  Play (overlap-add)
+  Play (LPC)
+  Save as text file without Sound: file name$
+  Save as binary file without Sound: file name$
+
+---
+
+*End of Manipulation commands.*
