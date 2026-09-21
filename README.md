@@ -78,7 +78,7 @@ In Claude (claude.ai or the Claude app):
 ### 2. Set the System Prompt
 
 1. In your new project, click **instructions**
-2. Paste the entire contents of `MASTER_PROMPT_CORE_v14_18_0.md` into the instructions field
+2. Paste the entire contents of `MASTER_PROMPT_CORE_v14_19_0.md` into the instructions field
 3. Scroll to the bottom and edit the "Canary" text if you wish. PraatGen reports this value back to you in pre-flight as a confidence measure that it read the entire Master Prompt.
 4. Save
 
@@ -177,7 +177,7 @@ PraatGen cannot reliably tell from the inside that anything happened.
 
 | File | Purpose |
 |------|---------|
-| `MASTER_PROMPT_CORE_v14_18_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 14.18.0. |
+| `MASTER_PROMPT_CORE_v14_19_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 14.19.0. |
 | `README.md` | This file. |
 | `RELEASE_NOTES_1.0.5.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.0.5 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
@@ -293,7 +293,7 @@ PraatGen tracks three version numbers:
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
 | **Release** | 1.0.5 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 14.18.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
+| **Master Prompt** | 14.19.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
 | **PKB Snapshot** | 2026-08-05 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
