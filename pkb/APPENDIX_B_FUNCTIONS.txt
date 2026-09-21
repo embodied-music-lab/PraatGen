@@ -693,12 +693,21 @@
 # Use these patterns instead:
 #
 # Column j of M (n×p) as a vector:
-#     col# = rowSums# (part## (M##, 1, n, j, j))
-# Empirical speedup vs interpreted loop: 68× at N=600.
+#     v# = col# (M##, j)
+# One native call. See Section 1 for the entry.
 #
 # Row i of M (n×p) as a vector:
-#     row# = columnSums# (part## (M##, i, i, 1, p))
-# Empirical speedup vs interpreted loop: 16× at N=600.
+#     v# = row# (M##, i)
+# One native call. See Section 1 for the entry.
+#
+# Both verified on Praat 6.6.30, 21 September 2026.
+# Do not name the receiving variable row# or col#; that shadows the
+# function you are calling.
+#
+# The older composed forms below also work and appear in existing scripts.
+# They are two calls where one does the job, so prefer the native form:
+#     col# = rowSums# (part## (M##, 1, n, j, j))       68× vs a loop at N=600
+#     row# = columnSums# (part## (M##, i, i, 1, p))    16× vs a loop at N=600
 #
 # Submatrix (rows r1..r2 inclusive, cols c1..c2 inclusive):
 #     sub## = part## (M##, r1, r2, c1, c2)
@@ -887,6 +896,48 @@
 #    Wrapping each scalar op in a vector function adds call overhead
 #    without algorithmic savings. Example: per-frame Pitch query
 #    accumulation does not benefit from vectorization.
+#
+# ----------------------------------------------------------------------------
+# §4.8  DIVISION AND COMPARISON — NEGATIVE RESULTS AND COMPOSED FORMS
+# ----------------------------------------------------------------------------
+#
+# Verified on Praat 6.6.30, 21 September 2026. Error text quoted as Praat
+# prints it.
+#
+# The / operator refuses matrix operands. Both of these fail:
+#     m## / x       ✗ "Cannot divide (/) a numeric matrix by a number"
+#     a## / b##     ✗ "Cannot divide (/) a numeric matrix by a numeric matrix"
+#
+# Division is available by composition. Elementwise power composes with
+# elementwise multiplication, and that is what unlocks the reciprocal:
+#     m## * (1 / x)        scalar division
+#     a## * (b## ^ -1)     elementwise division
+# Checked numerically: {{2,4},{8,16}} over {{1,2},{3,4}} gives
+# {{2,2},{2.667,4}}.
+#
+# Vectors are unaffected. v# / w# and v# / x are true elementwise division.
+#
+# Two capabilities are absent as operators and present through an object.
+# The distinction matters: script-level operators and object Formula/query
+# commands are separate surfaces, and absence on one is not absence of the
+# capability.
+#     min (m##), max (m##)   ✗ "Cannot compute the minimum of a numeric matrix"
+#     v# < 5, m## < 5        ✗ "Cannot compare (<) a numeric vector to a number"
+#
+# The object route covers both:
+#     obj = Create simple Matrix from values: "t", m##
+#     Formula: ~ self < 5
+#     n = Get sum                  # elementwise comparison, then count
+#     m = Get minimum              # min/max reduction
+#     removeObject: obj
+# Cost: object creation and removal plus selection churn. For a one-shot
+# reduction that is cheap. Inside a hot loop, weigh it against a small
+# row loop, since row# (m##, i) plus min () over the vector composes without
+# touching any object.
+#
+# Real and confirmed on 6.6.30: abs##, sqrt##, outer##, row#, col#,
+# m## ^ p, and Create simple Matrix from values. None of these is a
+# catalogue ghost.
 #
 # 4. MIXED: if a loop has both scalar bookkeeping and a per-iteration
 #    bulk operation, the bulk operation gets vectorized; the

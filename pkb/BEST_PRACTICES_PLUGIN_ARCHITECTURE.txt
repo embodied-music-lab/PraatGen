@@ -4,7 +4,8 @@
 #
 # Covers: Plugin directory structure, setup.praat registration,
 # Add menu command / Add action command syntax, submenu cascades,
-# include path behavior, plugin-conflict guards, preferences directory.
+# include path behavior, plugin-conflict guards, preferences directory,
+# naming registers, packaging and the install folder name.
 
 # ============================================================================
 # §1  PLUGIN DIRECTORY STRUCTURE
@@ -48,18 +49,9 @@
 #
 # In scripts: preferencesDirectory$ — correct on both major versions.
 #
-# RESERVED PREFIX: emlPG
-# A plugin must never define a procedure whose name begins with emlPG.
-# PraatGen renames every library procedure it copies into a generated
-# script to that prefix (Retrieval protocol 12), so the two name sets stay
-# disjoint. The collision this prevents: a script that includes plugin
-# files and also carries a copied body puts both definitions in one parse
-# unit, and Praat warns
-#   Duplicate procedure "..." ... The script will run, but it is
-#   unpredictable which of the two procedure definitions will be chosen.
-# Measured on 6.6.30: the included copy won and the script's own definition
-# was ignored. A text check over the plugin sources rejecting emlPG makes
-# the reservation hold; a convention alone does not.
+# Naming, including the reserved emlPG prefix, is §8. Packaging and the
+# install folder name are §9.
+#
 # NOTE: preferencesDirectory$ cannot be used inside include directives.
 # include is a preprocessor directive — it resolves at parse time,
 # before any variables exist. Include paths are always relative to the
@@ -230,3 +222,79 @@
 ---
 
 *End of Plugin Architecture best practices.*
+
+# ============================================================================
+# §8  NAMING REGISTERS
+# ============================================================================
+#
+# Praat has no access modifier. A procedure's visibility is whatever its
+# name implies, so the name is the only signal available. Declare the
+# plugin's prefix once, then keep these registers apart:
+#
+#   Register              Convention            Meaning
+#   --------------------  --------------------  ---------------------------
+#   File names            kebab-case            eml-draw-procedures.praat
+#   Public procedures     <prefix>CamelCase     @emlDrawViolinPlot
+#   Internal helpers      <prefix>_lowerCamel   @eml_fixed
+#   Persisted settings    config_snake_case     config_showAdvanced
+#   Working globals       camelCase             valueMin
+#
+# The split that carries meaning is public against internal. A public name
+# may be called from a recorded script, a wrapper or user code, so renaming
+# one breaks a file already on someone's disk, silently, until they run it.
+# An internal name carries no such promise and may change freely.
+#
+# CHECK: scan every emitted artefact — recorded scripts, generated wrappers —
+# for a call to a <prefix>_ name that the same file does not define. A call
+# to an internal helper that resolves only through the plugin is the defect.
+# A file that both calls and defines the helper is correct, since copying a
+# procedure brings its helpers with it.
+#
+# RESERVED PREFIX: emlPG
+# A plugin must never define a procedure whose name begins with emlPG.
+# PraatGen renames every library procedure it copies into a generated script
+# to that prefix, so the two name sets stay disjoint. The collision this
+# prevents: a script that includes plugin files and also carries a copied
+# body puts both definitions in one parse unit, and Praat warns
+#   Duplicate procedure "..." ... The script will run, but it is
+#   unpredictable which of the two procedure definitions will be chosen.
+# Measured on 6.6.30: the included copy won and the script's own definition
+# was ignored. A text check over the plugin sources rejecting emlPG makes
+# the reservation hold; a convention alone does not.
+
+# ============================================================================
+# §9  PACKAGING AND THE INSTALL FOLDER NAME
+# ============================================================================
+#
+# A plugin installs as plugin_<name> in the preferences folder. The name is
+# the author's choice and cannot be derived from the source tree, whose
+# folder is called something else. It is a convention with no anchor, which
+# is why it drifts.
+#
+# THE RULE: never check a name against another literal. Check it against
+# something that breaks if the name is wrong.
+#
+# A generated plugin ships a build target that produces the installable
+# artefact, and the artefact is what gets checked. The target must:
+#
+#   1. Emit a folder literally named plugin_<name>, with the name taken from
+#      the same single declaration that every include line is taken from, so
+#      the two cannot disagree.
+#   2. Normalize modes — 0644 files, 0755 directories. Git records only the
+#      executable bit and cannot represent a file shipped at 0600, which is
+#      unreadable for any account but the one that installed it.
+#   3. Verify by installing it: copy into a scratch home, start Praat, and
+#      confirm the menu entry appears. Anything less compares one literal
+#      against another.
+#
+# The verification step is version-sensitive. Praat 6 finds plugins through
+# --pref-dir; Praat 7 ignores --pref-dir for plugins and reads the home
+# folder. Redirect HOME and place the artefact at the version-correct path
+# (§1). Assert the plugin loaded rather than assuming it: absence must fail
+# loudly, because a rig that loads no plugin looks exactly like a rig whose
+# clicks are missing.
+#
+# A validation suite that passes thousands of checks against a clone says
+# nothing about the artefact. Defects in file modes and in the install name
+# live in the built package, and the correct unit of enumeration for them is
+# the package on a machine that did not build it.
