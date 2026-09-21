@@ -13,8 +13,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 1.0.5
-**Release:** 5 August 2026
+**Version:** 1.0.6
+**Release:** 21 September 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -78,7 +78,7 @@ In Claude (claude.ai or the Claude app):
 ### 2. Set the System Prompt
 
 1. In your new project, click **instructions**
-2. Paste the entire contents of `MASTER_PROMPT_CORE_v14_19_0.md` into the instructions field
+2. Paste the entire contents of `MASTER_PROMPT_CORE_v14_20_0.md` into the instructions field
 3. Scroll to the bottom and edit the "Canary" text if you wish. PraatGen reports this value back to you in pre-flight as a confidence measure that it read the entire Master Prompt.
 4. Save
 
@@ -177,9 +177,9 @@ PraatGen cannot reliably tell from the inside that anything happened.
 
 | File | Purpose |
 |------|---------|
-| `MASTER_PROMPT_CORE_v14_19_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 14.19.0. |
+| `MASTER_PROMPT_CORE_v14_20_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 14.20.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_1.0.5.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.0.5 GitHub Release. |
+| `RELEASE_NOTES_1.0.6.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.0.6 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -245,7 +245,7 @@ The `pkb/` folder contains the verified reference files. These are PraatGen's so
 | `BEST_PRACTICES_DEMO_WINDOW.md` | Demo window layout, font-state, viewport, and animation best practices |
 | `BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md` | Contact quotient from EGG: the three CQ methods and when each is valid, EGG signal-to-noise measurement, method selection by phonation task, and the mandatory segfault guard. Co-loads with `COMMANDS_Electroglottogram.txt` |
 | `BEST_PRACTICES_AUTO_TEXTGRID_ANNOTATION.md` | Automatic TextGrid annotation, VAD-based segmentation, speech-to-text pipelines |
-| `BEST_PRACTICES_PLUGIN_ARCHITECTURE.txt` | Plugin setup, menu/action registration, include-path resolution, conflict guards |
+| `BEST_PRACTICES_PLUGIN_ARCHITECTURE.txt` | Plugin setup, menu/action registration, include-path resolution, conflict guards, naming registers, packaging and the install folder name |
 | `EML_PROCEDURE_GUIDE.md` | Methodology rules, test-selection logic, graph-type routing, script-generation/flattening model |
 | `EML_PROCEDURE_REGISTRY.md` | Master index of the EML library procedures and which source file contains each |
 
@@ -292,14 +292,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 1.0.5 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 14.19.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
-| **PKB Snapshot** | 2026-08-05 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 1.0.6 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 14.20.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
+| **PKB Snapshot** | 2026-09-21 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **1.0.5 (5 August 2026)** is the current stable release. It ships Master Prompt 14.17.0. The Praat version floor is 6.4.39; the version check emitted into a script names the specific calls that will stop it or return different numbers on the user's build; spectrum, Ltas and PowerCepstrum patterns place ticks with the nice-number procedures.
+- **1.0.6 (21 September 2026)** is the current stable release. It ships Master Prompt 14.20.0. Library procedures copied into a generated script are renamed to the `emlPG` prefix so they cannot collide with the plugin; the sandbox Praat version is pinned to 6.6.30; the function reference gains the matrix division and comparison forms; the plugin reference gains naming registers, packaging rules and corrected install paths.
+- **1.0.5 (5 August 2026)** shipped Master Prompt 14.17.0. The Praat version floor moved to 6.4.39; the version check emitted into a script names the specific calls that will stop it or return different numbers on the user's build; spectrum, Ltas and PowerCepstrum patterns place ticks with the nice-number procedures.
 - **1.0.4 (31 July 2026)** shipped Master Prompt 14.12.0, folded in the 30 July benchmark dry-run fixes, and added the Praat 6.4.15 version floor with a non-blocking update prompt. The PKB was reconciled against the EML plugin source, the procedure registry updated from that source, and every library file syntax-checked against Praat 6.6.30.
 - Changes landing on `main` after a release are described in `pkb/PRAATGEN_CHANGELOG.md`; the release notes describe cut releases only.
 
