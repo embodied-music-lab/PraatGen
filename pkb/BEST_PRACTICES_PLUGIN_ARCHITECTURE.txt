@@ -47,6 +47,19 @@
 # HOME instead.
 #
 # In scripts: preferencesDirectory$ — correct on both major versions.
+#
+# RESERVED PREFIX: emlPG
+# A plugin must never define a procedure whose name begins with emlPG.
+# PraatGen renames every library procedure it copies into a generated
+# script to that prefix (Retrieval protocol 12), so the two name sets stay
+# disjoint. The collision this prevents: a script that includes plugin
+# files and also carries a copied body puts both definitions in one parse
+# unit, and Praat warns
+#   Duplicate procedure "..." ... The script will run, but it is
+#   unpredictable which of the two procedure definitions will be chosen.
+# Measured on 6.6.30: the included copy won and the script's own definition
+# was ignored. A text check over the plugin sources rejecting emlPG makes
+# the reservation hold; a convention alone does not.
 # NOTE: preferencesDirectory$ cannot be used inside include directives.
 # include is a preprocessor directive — it resolves at parse time,
 # before any variables exist. Include paths are always relative to the

@@ -7,6 +7,24 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 14.19.0 — 21 September 2026
+
+**Copied library procedures are renamed to the `emlPG` prefix.** A generated
+script that pastes in `@emlDrawViolinPlot` now defines and calls
+`@emlPGDrawViolinPlot`. This is the only exception to copying a procedure
+verbatim; the body, parameters and local names are untouched.
+
+The collision it prevents: a user who owns the EML plugin can write a script
+that `include`s library files and paste generated code beside it, which puts
+two definitions of one name in the same parse unit. Praat warns that the
+script will run and that the winner is unpredictable. On 6.6.30 the included
+copy won and the script's own definition was ignored. `emlPG` is reserved on
+the plugin side, so the two name sets cannot overlap.
+
+Each copied procedure also carries a comment naming its library original.
+The three self-audit checklists now confirm the prefix at every definition
+and call site.
+
 ### 14.18.0 — 17 August 2026
 
 **The sandbox Praat version is pinned to 6.6.30.** Praat 7.0 requires the
