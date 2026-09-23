@@ -7,6 +7,84 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 1.1.0 — 23 September 2026 (ships Master Prompt 14.21.0)
+
+Cuts the 14.21.0 entry below into a release. Upgrade notes are in
+`RELEASE_NOTES_1.1.0.md`. The three corrections it carries come from a bug
+report by Eric Armstrong (https://voiceguy.ca/about).
+
+### 14.21.0 — 23 September 2026
+
+**Extract Formant on a FormantPath no longer appears in generated scripts.**
+It reads the middle candidate ceiling, not the optimal one Get optimal
+ceiling reports, on a fresh FormantPath as much as one that has had Set
+path: or Set optimal path: applied. `APPENDIX_D_CLINICAL_DEFAULTS.txt` §4A's
+query workflow and `COMMANDS_Formant.txt` now query Get optimal ceiling and
+run a plain To Formant (burg) at that ceiling instead. F1 and F2 from a
+FormantPath-based script change accordingly.
+
+**The Extract Formant segfault range is corrected to 6.4.30–7.0.02**, from
+the previously documented 6.4.60–6.4.62, and its root cause is now recorded:
+Set path: and Set optimal path: both overwrite the FormantPath's stored
+candidate index with the candidate's ceiling frequency, and the corrupted
+value persists to disk. Down to Table (optimal interval) recomputes the
+optimum rather than reading the stored path, so it is unaffected;
+`COMMANDS_Formant.txt` now flags its field list as unresolved between 14 and
+15 arguments and withholds a "Verified" line until a call is pasted from the
+Praat GUI.
+
+**§4A's query workflow carries a plausibility check.** The selected ceiling is
+a search result and can land on a value that breaks tracking: on a synthesized
+/i/ at F0 210 Hz the search chose 6718 Hz and the analysis returned F1
+2362 Hz, where every ceiling from 4300 to 6300 Hz measured the same token at
+F1 ~340 Hz. The check warns against the §7 formant bands. It substitutes
+nothing and does not exitScript:, which is §7 practice for every other
+measure.
+
+**`BEST_PRACTICES_DRAWING.txt` gains a mandatory rule for circles on a
+reversed axis.** Paint circle: and Draw circle: compute radius in world
+x-coordinates, which goes negative when an axis is reversed — the normal
+case for a vowel chart — and Praat then draws nothing without an error.
+Paint circle (mm): and Draw circle (mm): are required instead;
+`COMMANDS_PictureWindow.txt` notes the same failure mode at both commands.
+
+**`APPENDIX_B_FUNCTIONS.txt`'s upperCase$ (string$) entry is corrected.** It
+was reported as broken in procedure context; it is instead absent from Praat
+builds through 6.4.39 and present from 6.4.46 onward, the same boundary
+`PRAAT_VERSION_FLOOR.txt` §2 already documents for related case and
+app-info functions.
+
+### Release 1.0.6 — 21 September 2026 (ships Master Prompt 14.20.0)
+
+Cuts the 14.18.0 through 14.20.0 entries below into a release. Upgrade notes
+are in `RELEASE_NOTES_1.0.6.md`.
+
+### 14.20.0 — 21 September 2026
+
+**`APPENDIX_B_FUNCTIONS.txt` §4.8 — new.** The operators that refuse matrix
+and vector operands, with the error text each produces. `/` is one: division
+is available by composition, as `m## * (1 / x)` and `a## * (b## ^ -1)`.
+`min ()`, `max ()` and `<` work through a Matrix object's `Formula:` and
+`Get` commands. §4.1's row and column idioms use `row#` and `col#`, one call
+where the documented pattern took two.
+
+**`BEST_PRACTICES_PLUGIN_ARCHITECTURE.txt` §§8–9 — new.** §8 sets out the
+naming registers — public `<prefix>CamelCase`, internal `<prefix>_lowerCamel`,
+`config_snake_case`, kebab-case file names — and reserves the `emlPG` prefix
+on the plugin side. §9 covers packaging: a generated plugin ships a build
+target that emits `plugin_<name>` from the same declaration the include lines
+read, normalizes file modes to 0644 and 0755, and verifies itself by
+installing into a scratch home and confirming the menu entry appears.
+
+**The capability-verification rule gained an absence test.** Before reporting
+a function missing: try the `x`, `x#` and `x##` spellings, probe the
+catalogue's spelling rather than a guess, and check both the script surface
+and `Formula:`.
+
+**`APPENDIX_D_CLINICAL_DEFAULTS.txt` §10 — heading supplied.** Subsections
+10A through 10J existed with no `## 10.` heading, and two cross-references
+pointed at nothing.
+
 ### 14.19.0 — 21 September 2026
 
 **Copied library procedures are renamed to the `emlPG` prefix.** A generated

@@ -136,6 +136,21 @@
 # Provenance: BUG-007/008 tick displacement (26 March 2026). Verified
 # empirically and confirmed against Praat manual.
 
+## Circles with reversed axes (MANDATORY)
+
+# Paint circle: and Draw circle: compute radius in world x-coordinates. When
+# either axis is reversed (x-axis running high-to-low), the radius becomes negative.
+# Praat renders nothing without raising an error.
+#
+# RULE: When either axis is reversed, use Paint circle (mm): and Draw circle (mm):
+# instead. A vowel chart reverses both axes by convention, making this the normal
+# case for those diagrams rather than an edge case.
+#
+# Verified evidence: With normal axes, Paint circle: produces 5750 dark pixels
+# (406 for Draw circle:); with reversed x-axis, both produce 0 pixels. Paint circle (mm):
+# produces 7070 dark pixels in the same reversed panel.
+# Verified Praat 6.6.30 and 7.0.02, 23 September 2026.
+
 ## Procedure-informed drawing (MANDATORY)
 
 # The EML library (eml-graph-procedures.praat, eml-draw-procedures.praat,

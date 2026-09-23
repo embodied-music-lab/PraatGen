@@ -142,10 +142,14 @@
   Paint circle: colour$, centreX, centreY, radius
   # Verified: Paint circle: "Blue", 1.5, 200, 0.03
   # Note: radius is in world x-coordinates. Visual size varies with axis range.
+  # When either axis is reversed, radius becomes negative; circle renders nothing
+  # (no error is raised). Use Paint circle (mm): instead.
   # Provenance: Paste Commands equivalent (dialog screenshot), 4 Mar 2026
   Draw circle: centreX, centreY, radius
   # Verified: Draw circle: 0.5, 0.5, 1.0
   # Note: radius is in world x-coordinates (same as Paint circle).
+  # When either axis is reversed, radius becomes negative; circle renders nothing
+  # (no error is raised). Use Draw circle (mm): instead.
   # Provenance: Praat manual (sendpraat example), 4 Mar 2026
   #   Insert picture from file: filePath$, fromX, toX, fromY, toY
   # Verified: Insert picture from file: "dot_blue_a50_40.png",

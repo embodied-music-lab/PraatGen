@@ -565,28 +565,55 @@ To FormantPath (burg): 0.005, 5.0, 5500, 0.025, 50, 0.05, 4
 #   or increase nSteps.
 #
 # QUERY WORKFLOW:
-#   After creating the FormantPath, extract the Formant object and
-#   query it using standard Formant commands:
+#   Extract Formant on a FormantPath returns the analysis at the
+#   MIDDLE ceiling, not the optimal one. A FormantPath stores its path
+#   as an interval tier whose interval text holds a candidate index,
+#   and that index starts at 5 — the middle of the nine candidates —
+#   when the FormantPath is created. Extract Formant takes no
+#   arguments, so the stored path is the only thing it can read.
+#   Query the optimal ceiling, then run a plain Formant (burg)
+#   analysis at that ceiling:
 #
 #     selectObject: soundId
 #     fpId = noprogress To FormantPath (burg): 0.005, 5.0, 5500,
 #         ... 0.025, 50, 0.05, 4
 #     selectObject: fpId
-#     formantId = Extract Formant
+#     optCeiling = Get optimal ceiling: 0.0, 0.0, "3 3 3", 1.25
+#     removeObject: fpId
+#     selectObject: soundId
+#     formantId = noprogress To Formant (burg): 0.005, 5, optCeiling,
+#         ... 0.025, 50
 #     selectObject: formantId
 #     meanF1 = Get mean: 1, 0, 0, "Hertz"
 #     meanF2 = Get mean: 2, 0, 0, "Hertz"
 #
-# ⚠️ BUG (Praat 6.4.60–6.4.62):
+# ⚠️ BUG (Praat 6.4.30–7.0.02):
 #   Extract Formant segfaults after Set path: or Set optimal path:.
-#   WORKAROUND: Call Extract Formant IMMEDIATELY after FormantPath
-#   creation, before any Set command. See COMMANDS_Formant.txt for
-#   details.
+#   See COMMANDS_Formant.txt for the root cause.
 #
+# PLAUSIBILITY (§7 applies here as it does to any measure):
+#   The selected ceiling is a search result and can land on a value
+#   that breaks formant tracking. Measured on a synthesized /i/ at
+#   F0 210 Hz with a 300 Hz F1: the search chose 6718 Hz and the
+#   analysis returned F1 2362 Hz. Every ceiling from 4300 to 6300 Hz
+#   measured the same token at F1 ~340 Hz. The failure is narrow and
+#   sits at the top of the search range, and it is most likely on
+#   close vowels at a high F0, where F1 falls between low harmonics.
+#
+#   Check the result against the §7 formant bands and warn. Do not
+#   substitute another value and do not exitScript:
+#
+#     if meanF1 < 150 or meanF1 > 1200
+#         appendInfoLine: "F1 outside typical range (",
+#             ... fixed$ (meanF1, 0), " Hz) at the selected ceiling of ",
+#             ... fixed$ (optCeiling, 0), " Hz -- check the analysis"
+#     endif
+#
+#   The §7 bands catch this case: F1 2362 Hz is outside 150-1200 Hz.
+
 # OPTIMAL CEILING QUERY (optional, for reporting):
-#   To report which ceiling was selected:
-#     selectObject: fpId
-#     optCeiling = Get optimal ceiling: 0.0, 0.0, "3 3 3", 1.25
+#   optCeiling was already computed above; to report which ceiling
+#   was selected:
 #     appendInfoLine: "Optimal formant ceiling: ",
 #         ... fixed$ (optCeiling, 0), " Hz"
 

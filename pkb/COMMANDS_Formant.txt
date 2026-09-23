@@ -48,10 +48,19 @@
 #   fpId = noprogress To FormantPath (burg): 0.005, 5.0, 5500, 0.025,
 #       ... 50, 0.05, 4
 #   selectObject: fpId
-#   formantId = Extract Formant
+#   optCeiling = Get optimal ceiling: 0.0, 0.0, "3 3 3", 1.25
+#   removeObject: fpId
+#   selectObject: soundId
+#   formantId = noprogress To Formant (burg): 0.005, 5, optCeiling,
+#       ... 0.025, 50
 #   # Query the Formant object using standard Formant queries below
 #   selectObject: formantId
 #   meanF1 = Get mean: 1, 0, 0, "Hertz"
+#
+#   Do not call Extract Formant on the FormantPath. It returns the
+#   middle-ceiling candidate rather than the selected one; see the
+#   Extract Formant entry below. Check meanF1 against the §7
+#   plausibility bands in APPENDIX_D_CLINICAL_DEFAULTS.txt §4A.
 #
 # WORKFLOW (Formant (burg), override):
 #   soundId = Read from file: filePath$
@@ -123,34 +132,79 @@
   # Extract
   Extract Formant
   # Verified: Extract Formant
-  #   Valid on a fresh FormantPath only — see the segfault note above.
+  #   Runs without error on a fresh FormantPath and segfaults after a
+  #   Set command. It returns the wrong candidate either way — see the
+  #   DO NOT EMIT note below.
   # Returns: Formant object ID
   #
-  # ⚠️ BUG (Praat 6.4.60–6.4.62, confirmed macOS):
+  # ⚠️ DO NOT EMIT. Extract Formant on a FormantPath reads the
+  # MIDDLE-ceiling candidate, not the optimal one, even on a fresh
+  # FormantPath with no Set command yet applied. It takes no
+  # arguments, so the stored path is the only thing it can read, and
+  # that path is an interval tier whose interval text holds a
+  # candidate index that reads "5" — the middle of the nine
+  # candidates — on creation. Measured: reported optimal ceiling
+  # 4733.9 Hz; Extract Formant gave F1 502.3 / F2 1502.9, matching
+  # To Formant (burg) at the 5500 Hz middle ceiling to within
+  # 0.005 Hz, against F1 501.4 / F2 1497.4 at the actual 4733.9 Hz
+  # optimum. Use the QUERY WORKFLOW in
+  # APPENDIX_D_CLINICAL_DEFAULTS.txt §4A instead: Get optimal
+  # ceiling, then To Formant (burg) at that ceiling.
+  #
+  # ⚠️ BUG (Praat 6.4.30–7.0.02):
   # Segfaults (null pointer dereference at 0x48) if called AFTER
   # Set path: or Set optimal path: on the same FormantPath object.
-  # WORKAROUND: Call Extract Formant IMMEDIATELY after creation,
-  # before any Set command. For per-candidate analysis, use
-  # To Formant (burg): directly at each computed ceiling.
-  # Provenance: Diagnostic script series v1-v7, 21 Mar 2026
+  # Reproduced on 6.4.30, 6.6.30 and 7.0.02 — the previously
+  # documented range of 6.4.60–6.4.62 was wrong at both ends.
+  #
+  # ROOT CAUSE: both Set commands write the candidate's CEILING
+  # FREQUENCY into the field that holds the candidate INDEX. After
+  # Set optimal path: the interval text reads
+  # "4733.893870337818"; after Set path: 0.2, 3, 1 it reads
+  # "4503.0191419289". The bad value persists to disk — a path saved
+  # afterward and reloaded in a fresh Praat still crashes on
+  # Extract Formant.
+  #
+  # For per-candidate analysis, use To Formant (burg): directly at
+  # each computed ceiling, or use Down to Table (optimal interval)
+  # below, which survives both Set commands.
+  # Provenance: Diagnostic script series v1-v7, 21 Mar 2026. The
+  # middle-ceiling behaviour was reported by Eric Armstrong
+  # (https://voiceguy.ca/about), 22 Sep 2026; the root cause and the
+  # corrected version range were established in the sandbox on
+  # 6.4.30, 6.6.30 and 7.0.02, 23 Sep 2026.
 
   # Modify
   Set path: from time, to time, candidate number
   # Verified: Set path: 0.0, 0.0, 1
-  # ⚠️ BUG: Extract Formant segfaults after this command.
+  # ⚠️ BUG: Extract Formant segfaults after this command — see the
+  # root cause above.
 
   Set optimal path: from time, to time, coefficients$, power
   # Verified: Set optimal path: 0.0, 0.0, "3 3 3", 1.25
-  # ⚠️ BUG: Extract Formant segfaults after this command.
+  # ⚠️ BUG: Extract Formant segfaults after this command — see the
+  # root cause above.
 
   # Convert
-  Down to Table (optimal interval): from time, to time, coefficients$, power, include frame number?, include time?, number of time decimals, include intensity?, number of intensity decimals, include number of formants?, number of frequency decimals, include bandwidths?, include optimal ceiling?, include bandwidth of each candidate?
-  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt (14 parameters)
-  # ⚠️ NOT SANDBOX-VERIFIED. Field order above is from the catalogue
-  #   registration layer only; the catalogue is pinned to 6.4.62 and has
-  #   known under-specification in query blocks. Verify against the dialog
-  #   (Paste history) before emitting this call, and flag the uncertainty
-  #   in SELF-AUDIT rather than asserting verified syntax.
+  Down to Table (optimal interval): from time, to time, coefficients$, power, include frame number?, include time?, number of time decimals, include intensity?, number of intensity decimals, include number of formants?, number of frequency decimals, include bandwidths?, include optimal ceiling?, include minimum stress?
+  # Survives Set path: and Set optimal path: — it recomputes the
+  # optimum rather than reading the stored path, so it is unaffected
+  # by the index/ceiling-frequency corruption described under Extract
+  # Formant above. Returns optimal-ceiling values (the 4733.9 Hz case
+  # above: F1 501.4 / F2 1497.4).
+  #
+  # ⚠️ NOT SANDBOX-VERIFIED, ARITY UNRESOLVED — DO NOT MARK VERIFIED.
+  #   The field list above has 14 names; the same source material also
+  #   states this command's arity as 15 arguments, and no 15th field
+  #   name has been supplied. The two do not agree, and this note does
+  #   not resolve which is right. Do not add a "# Verified:" line for
+  #   this command — that would assert an argument count that has not
+  #   been confirmed — until an actual call is pasted from the Praat
+  #   GUI (Paste history) and the field count checked against it.
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt (14 parameters); the
+  #   survives-Set-commands / optimal-ceiling-value behavior above is
+  #   sandbox-verified (root-cause session, Praat 6.4.30, 6.6.30,
+  #   7.0.02) — only the argument list and count remain unverified.
 
   # Draw
   Draw as grid: from time, to time, max frequency, left formant, right formant, show bandwidths$, colour f1 f3 f5$, colour f2 f4$, n rows, n cols, x space fraction, y space fraction, h line every, x cursor, y cursor, coefficients$, mark candidates$, mark colour$, show stress$, power, show estimated$, garnish$

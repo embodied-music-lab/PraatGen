@@ -32,13 +32,9 @@
 # Used extensively in EML Graphs column auto-detection.
 # Provenance: Confirmed working in procedural code 18 Feb 2026
 #
-# upperCase$ (string$) — BROKEN IN PROCEDURES (Praat 6.4.x)
-# Listed in canonical list below but throws "Unknown function" when called
-# in procedure context. May work in Formula: commands or main script body
-# — not confirmed.
-# Workaround: unicode() / unicode$() character code arithmetic
-# (ASCII 97-122 → 65-90)
-# Provenance: Confirmed broken in procedures 18 Feb 2026
+# upperCase$ (string$) — ABSENT BELOW 6.4.46
+# Not available on Praat 6.4.39 and earlier.
+# Refer to PRAAT_VERSION_FLOOR.txt §2 for version boundaries.
 #
 # chooseFolder$ vs chooseDirectory$
 # The official Functions page lists chooseFolder$ (title$).
