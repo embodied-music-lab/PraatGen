@@ -81,11 +81,14 @@
 
   # Query
   Get Whisper model name
-  # Verified: returns the model filename string
+  # Returns: the model filename string
+  # Not executable in the sandbox: Create SpeechRecognizer: needs a
+  #   Whisper model file that is not shipped.
   # Provenance: Catalogue + session use, 25 March 2026.
 
   Get language name
-  # Verified: returns the language string
+  # Returns: the language string
+  # Not executable in the sandbox, as above.
   # Provenance: Catalogue, 25 March 2026.
 
   # Help

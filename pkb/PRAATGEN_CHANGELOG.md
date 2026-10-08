@@ -7,11 +7,78 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 1.1.1 — 29 September 2026 (ships Master Prompt 14.21.0)
+
+Corrects reference errors in 1.1.0 and reversed-axis defects in the library's
+drawing procedures. The Master Prompt is unchanged. Upgrade
+notes are in `RELEASE_NOTES_1.1.1.md`; every release is also published at
+https://github.com/embodied-music-lab/PraatGen/releases.
+
+**The reversed-axis circle rule applies to the x-axis only.** 1.1.0 stated it
+for either axis. `Paint circle:` and `Draw circle:` take a radius measured
+along x, so a reversed y-axis does not affect them: an audiogram or any chart
+that inverts y while leaving x ascending draws correctly with the
+world-coordinate forms. Measured, y reversed and x normal: 66062 dark pixels,
+identical to a normal panel.
+
+**`COMMANDS_PictureWindow.txt` gains entries for `Paint circle (mm):` and
+`Draw circle (mm):`.** 1.1.0 made a mandatory rule out of two commands the
+reference did not document. Both now carry a verified signature. `Paint
+circle (mm):` takes four arguments, `Draw circle (mm):` takes three and no
+color.
+
+**The millimeter forms take a diameter, not a radius.** Substituting the
+command name alone resizes every circle; the direction depends on the axis
+range, and on a frequency axis the circle grows. Both files now state the change at
+each call site and give the conversion,
+`diameter_mm = 2 * radius_world * innerViewportWidth_mm / xRange`. The size is the fourth argument in the Paint forms and the third in the
+Draw forms. Diameter is POSITIVE, so zero or less stops the script.
+
+**The drawing evidence is reproducible.** The pixel counts in
+`BEST_PRACTICES_DRAWING.txt` now carry the settings they depend on — font
+size, viewport, axes, color, line width, center, size argument and
+resolution — and note which of the four commands take the size as the third
+argument rather than the fourth. Measured identical on 6.6.30 and 7.0.02.
+
+**`Down to Table (optimal interval)` is verified at 14 arguments.** 1.1.0
+carried a note calling the arity unresolved between 14 and 15 and withholding
+a `# Verified:` line. Praat settles it: a 15-argument call returns "Command
+requires only 14 arguments, not the 15 given", and the 14-argument call
+returns rows.
+
+**`Extract Formant` measurements name their fixture.** The figures are stated
+against a specified synthesized /a/, with the middle and optimal ceiling
+analyses beside them. `Down to Table (optimal interval)` notes that it differs
+from a fresh To Formant (burg) at the same ceiling by under 1 Hz.
+
+**The segfault range is open-ended.** 6.4.30 and 7.0.02 are the oldest and
+newest builds testable here, so the entry now reads as every version tested
+with no upper bound established, rather than a closed interval implying a fix
+after 7.0.02.
+
+**The candidate ceiling figures are exact.** The default search runs 4503.0 to
+6717.7 Hz. `APPENDIX_D_CLINICAL_DEFAULTS.txt` and `COMMANDS_Formant.txt` both
+carried 4510 and 6722. The §4A plausibility example is scoped to the token it
+was measured on rather than asserting a general plateau.
+
+**The aligned tick procedures draw on a reversed axis.** `@emlDrawAlignedMarksBottom`,
+`@emlDrawAlignedMarksLeft` and `@emlDrawAlignedMarksRight` accept their bounds
+in either order. A descending range previously drew no ticks and no values.
+
+**`@emlDrawScatterPlot` draws on reversed axes.** Markers use
+`Paint circle (mm):` at the same size as before, so a reversed x-axis no longer
+stops the script, and the gridline procedures accept either bound order. On
+Linux, sprites are off and dots draw natively, since Praat on Linux draws
+nothing for `Insert picture from file:`.
+
+**`lowerCase$` is documented beside `upperCase$`.** Both are absent below
+6.4.46 and work in procedures, the main script body and object `Formula:`.
+
 ### Release 1.1.0 — 23 September 2026 (ships Master Prompt 14.21.0)
 
-Cuts the 14.21.0 entry below into a release. Upgrade notes are in
-`RELEASE_NOTES_1.1.0.md`. The three corrections it carries come from a bug
-report by Eric Armstrong (https://voiceguy.ca/about).
+Cuts the 14.21.0 entry below into a release. Upgrade notes are on the v1.1.0
+release page: https://github.com/embodied-music-lab/PraatGen/releases/tag/v1.1.0 The three corrections it carries
+come from a bug report by Eric Armstrong (https://voiceguy.ca/about).
 
 ### 14.21.0 — 23 September 2026
 
@@ -23,30 +90,31 @@ query workflow and `COMMANDS_Formant.txt` now query Get optimal ceiling and
 run a plain To Formant (burg) at that ceiling instead. F1 and F2 from a
 FormantPath-based script change accordingly.
 
-**The Extract Formant segfault range is corrected to 6.4.30–7.0.02**, from
-the previously documented 6.4.60–6.4.62, and its root cause is now recorded:
+**The Extract Formant segfault was reproduced on 6.4.30, 6.6.30 and 7.0.02**,
+against the previously documented 6.4.60–6.4.62, and its root cause recorded:
 Set path: and Set optimal path: both overwrite the FormantPath's stored
 candidate index with the candidate's ceiling frequency, and the corrupted
 value persists to disk. Down to Table (optimal interval) recomputes the
-optimum rather than reading the stored path, so it is unaffected;
-`COMMANDS_Formant.txt` now flags its field list as unresolved between 14 and
-15 arguments and withholds a "Verified" line until a call is pasted from the
-Praat GUI.
+optimum rather than reading the stored path, so it is unaffected. (1.1.1
+restates the version range as open-ended and verifies that command's arity
+at 14 arguments.)
 
 **§4A's query workflow carries a plausibility check.** The selected ceiling is
 a search result and can land on a value that breaks tracking: on a synthesized
-/i/ at F0 210 Hz the search chose 6718 Hz and the analysis returned F1
-2362 Hz, where every ceiling from 4300 to 6300 Hz measured the same token at
-F1 ~340 Hz. The check warns against the §7 formant bands. It substitutes
-nothing and does not exitScript:, which is §7 practice for every other
-measure.
+/i/ at F0 210 Hz the search chose the top candidate, 6717.7 Hz, and the
+analysis returned F1 2371.4 Hz where candidates 1 through 6 read between
+335.8 and 346.1 Hz. (1.1.1 corrects these figures and scopes the selection to
+6.6.30 and 7.0.02; 6.4.30 selects a lower candidate.)
+The check warns against the §7 formant bands. It substitutes nothing and does
+not exitScript:, which is §7 practice for every other measure. The fixture and
+the full candidate sweep are in `APPENDIX_D_CLINICAL_DEFAULTS.txt` §4A.
 
 **`BEST_PRACTICES_DRAWING.txt` gains a mandatory rule for circles on a
-reversed axis.** Paint circle: and Draw circle: compute radius in world
-x-coordinates, which goes negative when an axis is reversed — the normal
-case for a vowel chart — and Praat then draws nothing without an error.
-Paint circle (mm): and Draw circle (mm): are required instead;
-`COMMANDS_PictureWindow.txt` notes the same failure mode at both commands.
+reversed axis.** Paint circle: and Draw circle: take a radius in world
+x-coordinates, and on a reversed axis Praat draws nothing and raises no error. Paint circle (mm):
+and Draw circle (mm): are required instead; `COMMANDS_PictureWindow.txt` notes
+the same failure mode at both commands. (1.1.1 narrows the trigger to the
+x-axis and documents the two millimeter commands.)
 
 **`APPENDIX_B_FUNCTIONS.txt`'s upperCase$ (string$) entry is corrected.** It
 was reported as broken in procedure context; it is instead absent from Praat
@@ -57,7 +125,8 @@ app-info functions.
 ### Release 1.0.6 — 21 September 2026 (ships Master Prompt 14.20.0)
 
 Cuts the 14.18.0 through 14.20.0 entries below into a release. Upgrade notes
-are in `RELEASE_NOTES_1.0.6.md`.
+are on the v1.0.6 release page:
+https://github.com/embodied-music-lab/PraatGen/releases/tag/v1.0.6
 
 ### 14.20.0 — 21 September 2026
 
@@ -134,8 +203,9 @@ harness that isolates by `--pref-dir` alone loads no plugin and says nothing.
 
 ### Release 1.0.5 — 5 August 2026 (ships Master Prompt 14.17.0)
 
-Cuts the 14.13.0 through 14.17.0 entries below into a release. Upgrade notes are
-in `RELEASE_NOTES_1.0.5.md`.
+Cuts the 14.13.0 through 14.17.0 entries below into a release. Upgrade notes
+are on the v1.0.5 release page:
+https://github.com/embodied-music-lab/PraatGen/releases/tag/v1.0.5
 
 ### 14.17.0 — 3 August 2026
 

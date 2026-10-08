@@ -141,19 +141,53 @@
   # Note: horizontal alignment = "left", "centre", "right"; vertical = "top", "half", "bottom"
   Paint circle: colour$, centreX, centreY, radius
   # Verified: Paint circle: "Blue", 1.5, 200, 0.03
-  # Note: radius is in world x-coordinates. Visual size varies with axis range.
-  # When either axis is reversed, radius becomes negative; circle renders nothing
-  # (no error is raised). Use Paint circle (mm): instead.
-  # Provenance: Paste Commands equivalent (dialog screenshot), 4 Mar 2026
+  # Note: the fourth argument is a RADIUS in world x-coordinates. Visual size
+  # varies with axis range.
+  # Requires a left-to-right x-axis. On an x-axis running high-to-low nothing
+  # is drawn and no error is raised, with the positive radius you passed. A
+  # reversed y-axis does not affect it, because the radius is measured along x.
+  # A radius of 0 or less is a separate case and a hard error on either axis
+  # direction: Argument "Radius" must be greater than 0.0.
+  # Use Paint circle (mm): on a reversed x-axis — note that its fourth
+  # argument is a DIAMETER IN MILLIMETERS, not a radius in world units.
+  # Provenance: Paste Commands equivalent (dialog screenshot), 4 Mar 2026;
+  # axis behavior verified 6.6.30 and 7.0.02, 23 Sep 2026
   Draw circle: centreX, centreY, radius
   # Verified: Draw circle: 0.5, 0.5, 1.0
-  # Note: radius is in world x-coordinates (same as Paint circle).
-  # When either axis is reversed, radius becomes negative; circle renders nothing
-  # (no error is raised). Use Draw circle (mm): instead.
-  # Provenance: Praat manual (sendpraat example), 4 Mar 2026
-  #   Insert picture from file: filePath$, fromX, toX, fromY, toY
-  # Verified: Insert picture from file: "dot_blue_a50_40.png",
-  #   100, 120, 300, 500
+  # Note: takes 3 arguments and NO color; set the color with a preceding
+  # Colour: command. The THIRD argument is a RADIUS in world x-coordinates,
+  # the same quantity Paint circle: takes as its fourth.
+  # Requires a left-to-right x-axis, on the same terms as Paint circle:
+  # above. Use Draw circle (mm): on a reversed x-axis — its third argument
+  # is a DIAMETER IN MILLIMETERS.
+  # Provenance: Praat manual (sendpraat example), 4 Mar 2026; axis behavior
+  # verified 6.6.30 and 7.0.02, 23 Sep 2026
+
+  Paint circle (mm): colour$, centreX, centreY, diameter
+  # Verified: Paint circle (mm): "Blue", 1.5, 200, 3
+  # Note: the center is in world coordinates; the fourth argument is a
+  # DIAMETER IN MILLIMETERS. Size is independent of axis range and of axis
+  # direction, so this form draws correctly on a reversed x-axis.
+  # Takes exactly 4 arguments: a 5th returns "Command requires only 4
+  # arguments, not the 5 given."
+  # Diameter is POSITIVE — a value of 0 or less is a hard error, not a
+  # silent no-draw.
+  # To match a circle specified as a world radius:
+  #     diameter_mm = 2 * radius_world * innerViewportWidth_mm / xRange
+  #     innerViewportWidth_mm = (right - left, in inches) * 25.4
+  # Prefer choosing the size in millimeters outright; this is what
+  # @emlDrawSpaghettiPlot does.
+  # Provenance: Sandbox-verified 6.6.30 and 7.0.02, 23 Sep 2026
+  Draw circle (mm): centreX, centreY, diameter
+  # Verified: Draw circle (mm): 0.5, 0.5, 3
+  # Note: outline form of Paint circle (mm):. Takes exactly 3 arguments and
+  # NO color — passing one returns "Argument 'Centre x' should be a number,
+  # not a string." Set the color with a preceding Colour: command. The size
+  # is the THIRD argument here and the fourth in the Paint form.
+  # Diameter is POSITIVE, on the same terms as Paint circle (mm):.
+  # Provenance: Sandbox-verified 6.6.30 and 7.0.02, 23 Sep 2026
+  Insert picture from file: filePath$, fromX, toX, fromY, toY
+  # Verified: Insert picture from file: "dot_blue_a50_40.png", 100, 120, 300, 500
   # NOTE: Supports PNG alpha channel compositing.
   # Performance: 0.15–0.18ms per call for 40×40 PNG.
   # Stretches PNG to fill the specified world-coordinate rectangle.

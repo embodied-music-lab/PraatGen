@@ -136,20 +136,78 @@
 # Provenance: BUG-007/008 tick displacement (26 March 2026). Verified
 # empirically and confirmed against Praat manual.
 
-## Circles with reversed axes (MANDATORY)
+## Circles on a reversed x-axis (MANDATORY)
 
-# Paint circle: and Draw circle: compute radius in world x-coordinates. When
-# either axis is reversed (x-axis running high-to-low), the radius becomes negative.
-# Praat renders nothing without raising an error.
+# Paint circle: and Draw circle: take a radius in world x-coordinates. On an
+# x-axis running high-to-low, Praat draws nothing and raises no error. The
+# radius you pass is still positive; the reversed axis is what suppresses the
+# circle.
 #
-# RULE: When either axis is reversed, use Paint circle (mm): and Draw circle (mm):
-# instead. A vowel chart reverses both axes by convention, making this the normal
-# case for those diagrams rather than an edge case.
+# Do not confuse this with passing a negative radius. Both commands reject a
+# radius of 0 or less outright, on either axis direction, with
+#   Error: Argument "Radius" must be greater than 0.0.
+# A negative radius stops the script. A reversed x-axis loses the circle in
+# silence. Verified 6.6.30 and 7.0.02, 23 Sep 2026.
 #
-# Verified evidence: With normal axes, Paint circle: produces 5750 dark pixels
-# (406 for Draw circle:); with reversed x-axis, both produce 0 pixels. Paint circle (mm):
-# produces 7070 dark pixels in the same reversed panel.
-# Verified Praat 6.6.30 and 7.0.02, 23 September 2026.
+# The trigger is the X-AXIS ONLY. A reversed y-axis does not affect these
+# commands, because the radius is measured along x. An audiogram or any other
+# chart that inverts y while leaving x ascending draws correctly with the
+# world-coordinate forms, and must keep using them.
+#
+# RULE: On a reversed x-axis, use Paint circle (mm): and Draw circle (mm):.
+#
+# THE ARGUMENT CHANGES MEANING. Substituting the command name alone is a
+# defect:
+#     Paint circle:      colour$, centreX, centreY, radius     (world units)
+#     Paint circle (mm): colour$, centreX, centreY, diameter   (millimeters)
+#     Draw circle:       centreX, centreY, radius              (world units)
+#     Draw circle (mm):  centreX, centreY, diameter            (millimeters)
+# Draw circle (mm): takes no color argument; set the color with a preceding
+# Colour: command. Diameter is POSITIVE: a value of 0 or less stops the script
+# with Error: Argument "Diameter" must be greater than 0.0. The world-
+# coordinate forms reject a non-positive radius the same way. Axis direction
+# is the only difference in how the two families handle a reversed axis; they
+# also differ in whether size tracks the axis range.
+#
+# Choose the size in millimeters outright. @emlDrawSpaghettiPlot does this,
+# passing .dotSize to Paint circle (mm):.
+#
+# To match a size already expressed as a world radius:
+#     diameter_mm = 2 * radius_world * innerViewportWidth_mm / xRange
+#     innerViewportWidth_mm = (right - left, in inches) * 25.4
+# The width is the INNER viewport. Select outer viewport: leaves margins, so
+# the inner width is smaller than the outer one — under
+# Select outer viewport: 0, 6, 0, 4 the inner width is about 4.83 inches, not
+# 6. Set the inner viewport explicitly when you need this conversion.
+#
+# EVIDENCE. Setup, all of which affects the counts:
+#     Font size: 10               (Praat's default)
+#     Select outer viewport: 0, 6, 0, 4
+#     Axes: 0, 100, 0, 100        (or 100, 0 for a reversed x-axis)
+#     Black
+#     Line width: 1
+#     center at 50, 50; size argument 10
+#     Save as 300-dpi PNG file:
+# Counting pixels below mid-gray. The size argument is the fourth for the
+# Paint forms and the third for the Draw forms:
+#     Paint circle:        66062 on a normal x-axis,  0 on a reversed x-axis
+#     Draw circle:           898 on a normal x-axis,  0 on a reversed x-axis
+#     Paint circle (mm):   10957 on a reversed x-axis
+#     Draw circle (mm):      364 on a reversed x-axis
+# A y-reversed, x-normal panel gives 66062 for Paint circle:, identical to the
+# normal panel.
+# Identical counts on Praat 6.6.30 and 7.0.02, 23 September 2026.
+# Font size matters because Select outer viewport: derives the inner panel
+# from font-dependent margins: the same circle counts 72578 at font size 8,
+# 66062 at 10, 62861 at 11 and 43021 at 18.
+#
+# The counts move if any of the setup above changes: "Blue" gives 65997 and
+# "Grey" gives 0 where "Black" gives 66062, because the threshold is mid-gray;
+# Line width: 3 turns the 898 into 2762. Moving the center changes the count
+# by a few pixels of rasterization phase, and clips only once the circle
+# reaches the page edge — a circle centered outside the inner panel still draws
+# at full size into the margin.
+# Signatures: COMMANDS_PictureWindow.txt.
 
 ## Procedure-informed drawing (MANDATORY)
 

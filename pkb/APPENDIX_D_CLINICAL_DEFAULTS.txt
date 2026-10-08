@@ -556,8 +556,8 @@ To FormantPath (burg): 0.005, 5.0, 5500, 0.025, 50, 0.05, 4
 #
 # CEILING SEARCH RANGE:
 #   The algorithm evaluates 2 * nSteps + 1 = 9 candidate ceilings:
-#     min ceiling = 5500 * exp(-0.05 * 4) ≈ 4510 Hz
-#     max ceiling = 5500 * exp(+0.05 * 4) ≈ 6722 Hz
+#     min ceiling = 5500 * exp(-0.05 * 4) ≈ 4503.0 Hz
+#     max ceiling = 5500 * exp(+0.05 * 4) ≈ 6717.7 Hz
 #
 #   This range covers the typical adult male vocal tract (5000 Hz)
 #   through adult female (5500 Hz) and somewhat beyond. For children
@@ -587,18 +587,43 @@ To FormantPath (burg): 0.005, 5.0, 5500, 0.025, 50, 0.05, 4
 #     meanF1 = Get mean: 1, 0, 0, "Hertz"
 #     meanF2 = Get mean: 2, 0, 0, "Hertz"
 #
-# ⚠️ BUG (Praat 6.4.30–7.0.02):
+# ⚠️ BUG (reproduced on 6.4.30, 6.6.30 and 7.0.02; no upper bound
+#   established):
 #   Extract Formant segfaults after Set path: or Set optimal path:.
 #   See COMMANDS_Formant.txt for the root cause.
 #
 # PLAUSIBILITY (§7 applies here as it does to any measure):
 #   The selected ceiling is a search result and can land on a value
-#   that breaks formant tracking. Measured on a synthesized /i/ at
-#   F0 210 Hz with a 300 Hz F1: the search chose 6718 Hz and the
-#   analysis returned F1 2362 Hz. Every ceiling from 4300 to 6300 Hz
-#   measured the same token at F1 ~340 Hz. The failure is narrow and
-#   sits at the top of the search range, and it is most likely on
-#   close vowels at a high F0, where F1 falls between low harmonics.
+#   that breaks formant tracking.
+#
+#   Fixture, analyzed in memory — do not round-trip it through a
+#   16-bit WAV, which shifts the eighth candidate by 0.04 Hz:
+#     Create KlattGrid from vowel: "v", 0.5, 210, 300, 50, 2300,
+#         ... 100, 2900, 120, 3500, 0.1, 1000
+#     To Sound
+#   On 6.6.30 and 7.0.02, FormantPath at the §4A defaults selects
+#   6717.7 Hz — the top candidate, where tracking has broken. The
+#   selection is build-dependent: 6.4.30 picks 6078.4 Hz on the same
+#   fixture and returns F1 315.5, inside the §7 band. Only 6.6.30 and
+#   7.0.02 were tested above the 6.4.39 floor, so treat the failure as
+#   possible on any build and keep the check. Each row below
+#   is Get mean: 1, 0, 0, "Hertz" on
+#   To Formant (burg): 0.005, 5, <ceiling>, 0.025, 50.
+#   Mean F1 in Hz at each of the nine candidate ceilings:
+#     1  4503.0   346.1
+#     2  4733.9   341.6
+#     3  4976.6   338.1
+#     4  5231.8   338.4
+#     5  5500.0   339.3
+#     6  5782.0   335.8
+#     7  6078.4   315.5
+#     8  6390.1   220.7
+#     9  6717.7  2371.4   <- selected
+#   Identical on 6.6.30 and 7.0.02.
+#
+#   The tracking degrades over the top three candidates and breaks at
+#   the ninth, which is the one the stress metric selects. This is one
+#   token; do not read the shape as general.
 #
 #   Check the result against the §7 formant bands and warn. Do not
 #   substitute another value and do not exitScript:
@@ -609,7 +634,7 @@ To FormantPath (burg): 0.005, 5.0, 5500, 0.025, 50, 0.05, 4
 #             ... fixed$ (optCeiling, 0), " Hz -- check the analysis"
 #     endif
 #
-#   The §7 bands catch this case: F1 2362 Hz is outside 150-1200 Hz.
+#   The §7 bands catch this case: F1 2371 Hz is outside 150-1200 Hz.
 
 # OPTIMAL CEILING QUERY (optional, for reporting):
 #   optCeiling was already computed above; to report which ceiling

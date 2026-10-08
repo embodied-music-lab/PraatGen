@@ -795,6 +795,19 @@ endproc
 # Call after Axes command, before data drawing
 # ----------------------------------------------------------------------------
 procedure emlDrawGridlines: .xMin, .xMax, .yMin, .yMax, .targetTicksX, .targetTicksY, .useMinor
+    # Accepts either bound order on both axes; a descending pair is normalized
+    # at entry. Draw line: takes coordinate pairs and is direction-agnostic.
+    # Provenance: PraatGen-only edit, 28 September 2026; not yet in the plugin source.
+    if .xMax < .xMin
+        .swap = .xMin
+        .xMin = .xMax
+        .xMax = .swap
+    endif
+    if .yMax < .yMin
+        .swap = .yMin
+        .yMin = .yMax
+        .yMax = .swap
+    endif
     # Compute nice step for each axis
     @emlComputeNiceStep: .yMax - .yMin, .targetTicksY
     .yStep = emlComputeNiceStep.step
@@ -868,6 +881,13 @@ endproc
 # Arguments: xMin, xMax, yMin, yMax, targetTicksY, useMinor
 # ----------------------------------------------------------------------------
 procedure emlDrawHorizontalGridlines: .xMin, .xMax, .yMin, .yMax, .targetTicksY, .useMinor
+    # Accepts either bound order; a descending y pair is normalized at entry.
+    # Provenance: PraatGen-only edit, 28 September 2026; not yet in the plugin source.
+    if .yMax < .yMin
+        .swap = .yMin
+        .yMin = .yMax
+        .yMax = .swap
+    endif
     @emlComputeNiceStep: .yMax - .yMin, .targetTicksY
     .yStep = emlComputeNiceStep.step
     .yTol = .yStep * 0.01
@@ -913,6 +933,13 @@ endproc
 # Arguments: xMin, xMax, yMin, yMax, targetTicksX, useMinor
 # ----------------------------------------------------------------------------
 procedure emlDrawVerticalGridlines: .xMin, .xMax, .yMin, .yMax, .targetTicksX, .useMinor
+    # Accepts either bound order; a descending x pair is normalized at entry.
+    # Provenance: PraatGen-only edit, 28 September 2026; not yet in the plugin source.
+    if .xMax < .xMin
+        .swap = .xMin
+        .xMin = .xMax
+        .xMax = .swap
+    endif
     @emlComputeNiceStep: .xMax - .xMin, .targetTicksX
     .xStep = emlComputeNiceStep.step
     .xTol = .xStep * 0.01
@@ -993,8 +1020,17 @@ endproc
 # Arguments: yMin, yMax, targetTicks, useMinor
 # Draws major ticks with numbers + optional minor ticks without numbers
 # Call after Draw inner box, before axis labels
+# Accepts the bounds in either order; a descending pair is normalized at entry.
+# Provenance: PraatGen-only edit, 23 September 2026; not yet in the plugin source.
 # ----------------------------------------------------------------------------
 procedure emlDrawAlignedMarksLeft: .yMin, .yMax, .targetTicks, .useMinor
+    # Normalize a descending range. One mark left: places by world coordinate
+    # and is direction-agnostic, so only the loop bounds need ordering.
+    if .yMax < .yMin
+        .swap = .yMin
+        .yMin = .yMax
+        .yMax = .swap
+    endif
     if emlShowTicksY = 0 and emlShowAxisValuesY = 0
         goto ALIGNED_LEFT_END
     endif
@@ -1056,8 +1092,17 @@ endproc
 # Draws major ticks with numbers + optional minor ticks without numbers
 # Call after Draw inner box, before axis labels
 # Mirrors @emlDrawAlignedMarksLeft for the right margin
+# Accepts the bounds in either order; a descending pair is normalized at entry.
+# Provenance: PraatGen-only edit, 23 September 2026; not yet in the plugin source.
 # ----------------------------------------------------------------------------
 procedure emlDrawAlignedMarksRight: .yMin, .yMax, .targetTicks, .useMinor
+    # Normalize a descending range. One mark right: places by world coordinate
+    # and is direction-agnostic, so only the loop bounds need ordering.
+    if .yMax < .yMin
+        .swap = .yMin
+        .yMin = .yMax
+        .yMax = .swap
+    endif
     if emlShowTicksY = 0 and emlShowAxisValuesY = 0
         goto ALIGNED_RIGHT_END
     endif
@@ -1120,8 +1165,17 @@ endproc
 # Call after Draw inner box, before axis labels
 # Mirrors @emlDrawAlignedMarksLeft for the bottom margin
 # Respects globals: emlShowTicksX (tick marks), emlShowAxisValuesX (numbers)
+# Accepts the bounds in either order; a descending pair is normalized at entry.
+# Provenance: PraatGen-only edit, 23 September 2026; not yet in the plugin source.
 # ----------------------------------------------------------------------------
 procedure emlDrawAlignedMarksBottom: .xMin, .xMax, .targetTicks, .useMinor
+    # Normalize a descending range. One mark bottom: places by world coordinate
+    # and is direction-agnostic, so only the loop bounds need ordering.
+    if .xMax < .xMin
+        .swap = .xMin
+        .xMin = .xMax
+        .xMax = .swap
+    endif
     if emlShowTicksX = 0 and emlShowAxisValuesX = 0
         goto ALIGNED_BOTTOM_END
     endif
@@ -2102,6 +2156,16 @@ procedure emlInitAlphaSprites
     .available = 0
     .dir$ = ""
 
+    # Linux builds of Praat draw nothing for Insert picture from file:, with
+    # no error, so sprites stay unavailable there and dots use the native
+    # fallback. Ported from the plugin's platform gate.
+    # Provenance: PraatGen-only edit, 28 September 2026; matches EMLPraatTools
+    # b4f2db98. Verified on 6.6.30: the command drew nothing on Linux.
+    if not (macintosh or windows)
+        emlAlphaSpritesInitialized = 1
+        goto SPRITES_INIT_DONE
+    endif
+
     # Strategy 1: installed plugin in preferences directory
     .tryPath$ = preferencesDirectory$ + "/plugin_EML_Praat_Tools/sprites/"
     .testFile$ = .tryPath$ + "dot_blue_a50_40.png"
@@ -2154,7 +2218,15 @@ procedure emlSetAlphaDotGeometry: .axisXMin, .axisXMax, .axisYMin, .axisYMax, .i
     .vpWidth = .innerRight - .innerLeft
     .vpHeight = .innerBottom - .innerTop
 
-    # Guard against zero ranges
+    # .dotDiamMM is the native dot's diameter in mm for Paint circle (mm):,
+    # the same physical size the world radius .dotHalf gives on an ascending
+    # x-axis. It is positive on either axis direction; the world-coordinate
+    # Paint circle: draws nothing on a descending x-axis.
+    # Provenance: PraatGen-only edit, 28 September 2026; not yet in the plugin source.
+
+    # Guard against zero ranges. A zero diameter stops Paint circle (mm):
+    # with an error rather than drawing nothing.
+    .dotDiamMM = 0
     if .xRange = 0 or .yRange = 0 or .vpWidth = 0 or .vpHeight = 0
         .stampHalfX = .dotHalf
         .stampHalfY = .dotHalf
@@ -2166,6 +2238,7 @@ procedure emlSetAlphaDotGeometry: .axisXMin, .axisXMax, .axisYMin, .axisYMax, .i
         .stampHalfX = .dotHalf
         # Scale y so the dot is circular in physical (inch) space
         .stampHalfY = .dotHalf * (.wuPerInchY / .wuPerInchX)
+        .dotDiamMM = 2 * abs (.dotHalf / .wuPerInchX) * 25.4
     endif
 endproc
 
@@ -2173,7 +2246,8 @@ endproc
 # @emlDrawAlphaDot
 # Draws a single alpha-composited dot at the given world coordinates.
 # Uses pre-rendered PNG sprites stamped via Insert picture from file:.
-# Falls back to native Paint circle: if sprites are unavailable.
+# Falls back to native Paint circle (mm): if sprites are unavailable.
+# Provenance: PraatGen-only edit, 28 September 2026; not yet in the plugin source.
 #
 # Requires: @emlInitAlphaSprites called first (checks .available)
 #           @emlSetAlphaDotGeometry called first (provides stamp dims)
@@ -2190,7 +2264,7 @@ endproc
 procedure emlDrawAlphaDot: .x, .y, .groupIndex, .colorMode$, .alphaLevel$, .fallbackColor$
     if emlInitAlphaSprites.available = 0
         # Fallback: native opaque dot
-        Paint circle: .fallbackColor$, .x, .y, emlSetAlphaDotGeometry.stampHalfX
+        Paint circle (mm): .fallbackColor$, .x, .y, emlSetAlphaDotGeometry.dotDiamMM
     else
         # Clamp group index to valid range
         .idx = ((.groupIndex - 1) mod 10) + 1
@@ -2208,7 +2282,7 @@ procedure emlDrawAlphaDot: .x, .y, .groupIndex, .colorMode$, .alphaLevel$, .fall
 
         # Guard: fall back to native if specific sprite file is missing
         if not fileReadable (.file$)
-            Paint circle: .fallbackColor$, .x, .y, emlSetAlphaDotGeometry.stampHalfX
+            Paint circle (mm): .fallbackColor$, .x, .y, emlSetAlphaDotGeometry.dotDiamMM
         else
             # Stamp with aspect-corrected dimensions
             .hx = emlSetAlphaDotGeometry.stampHalfX

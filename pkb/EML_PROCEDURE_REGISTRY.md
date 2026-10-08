@@ -258,7 +258,7 @@ All `@emlWizardExplain*` helpers set `emlWizardExplain$`, consumed by the next `
 | `@emlCheckNumericColumn` | Validate Table column contains numeric data by sampling | .tableId, .colName$ | public |
 | `@emlInitAlphaSprites` | Locate sprites/ directory; set .available and .dir$ | if variableExists ("emlAlphaSpritesInitialized") | public |
 | `@emlSetAlphaDotGeometry` | Compute aspect-corrected stamp dimensions for alpha dots | .axisXMin, .axisXMax, .axisYMin, .axisYMax, .innerLeft, .innerRight, .innerTop, .innerBottom, .dotHalf | public |
-| `@emlDrawAlphaDot` | Stamp alpha-composited PNG dot or fall back to Paint circle | .x, .y, .groupIndex, .colorMode$, .alphaLevel$, .fallbackColor$ | public |
+| `@emlDrawAlphaDot` | Stamp alpha-composited PNG dot or fall back to Paint circle (mm) | .x, .y, .groupIndex, .colorMode$, .alphaLevel$, .fallbackColor$ | public |
 | `@emlDrawAlphaRect` | Stamp alpha-composited PNG rectangle (bar fills) | .x1, .x2, .y1, .y2, .groupIndex, .colorMode$, .alphaLevel$, .fallbackColor$ | public |
 | `@emlLightenColor` | Blend an RGB color toward white by a given fraction | .rgb$, .amount | public |
 | `@emlFitCategoricalLabels` | Binary search for font size that fits all category labels | .nLabels, .xMin, .xMax | public |

@@ -62,7 +62,7 @@
   # Returns: IPA string with no separators
 
   Get phonemes from text (space-separated): text$
-  # Verified: returns IPA string with spaces between phonemes
+  # Behavior: returns an IPA string with spaces between phonemes
   # Provenance: Catalogue + session use, 25 March 2026.
 
   # Modify
@@ -105,7 +105,7 @@
 # Cross-type: SpeechSynthesizer & TextGrid (1 command)
 
   To Sound: tier_number, interval_number, create_TextGrid_with_annotations$
-  # Verified: synthesizes the text in the specified interval
+  # Behavior: synthesizes the text in the specified interval
   # Provenance: Catalogue, 5 April 2026.
 
 ---

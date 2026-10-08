@@ -32,9 +32,14 @@
 # Used extensively in EML Graphs column auto-detection.
 # Provenance: Confirmed working in procedural code 18 Feb 2026
 #
-# upperCase$ (string$) — ABSENT BELOW 6.4.46
-# Not available on Praat 6.4.39 and earlier.
+# lowerCase$ (string$) / upperCase$ (string$) — ABSENT BELOW 6.4.46
+# Not available on Praat 6.4.39 and earlier («Unknown function»).
+# Once present, both work in every calling context: procedure body,
+# main script body, and object Formula:.
 # Refer to PRAAT_VERSION_FLOOR.txt §2 for version boundaries.
+# Provenance: procedure-context use reported by Eric Armstrong
+# (https://voiceguy.ca/about), 22 Sep 2026. Verified absent on 6.4.30
+# and working in all three contexts on 6.6.30 and 7.0.02, 23 Sep 2026.
 #
 # chooseFolder$ vs chooseDirectory$
 # The official Functions page lists chooseFolder$ (title$).

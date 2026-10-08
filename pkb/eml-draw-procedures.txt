@@ -2000,7 +2000,7 @@ procedure emlDrawScatterPlot: .objectId, .title$, .xLabel$, .yLabel$, .vpW, .vpH
                 if .useAlpha = 1 and emlInitAlphaSprites.available = 1
                     @emlDrawAlphaDot: .xData#[.i], .yData#[.i], 1, .colorMode$, .alphaLevel$, .pointColor$[1]
                 else
-                    Paint circle: .pointColor$[1], .xData#[.i], .yData#[.i], .radiusWorld
+                    Paint circle (mm): .pointColor$[1], .xData#[.i], .yData#[.i], emlSetAlphaDotGeometry.dotDiamMM
                 endif
             endfor
         endif
@@ -2204,7 +2204,7 @@ procedure emlDrawScatterPlot: .objectId, .title$, .xLabel$, .yLabel$, .vpW, .vpH
                     if .useAlpha = 1 and emlInitAlphaSprites.available = 1
                         @emlDrawAlphaDot: .xVal, .yVal, .gIdx, .colorMode$, .alphaLevel$, .pointColor$[.colorIdx]
                     else
-                        Paint circle: .pointColor$[.colorIdx], .xVal, .yVal, .radiusWorld
+                        Paint circle (mm): .pointColor$[.colorIdx], .xVal, .yVal, emlSetAlphaDotGeometry.dotDiamMM
                     endif
                 endif
             endfor
