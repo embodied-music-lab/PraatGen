@@ -38,9 +38,9 @@ check is deliberately noisy and false positives are expected:
 - A command reference legitimately lists prohibited commands; the entry needs
   a DO-NOT-EMIT note, not deletion. See `COMMANDS_PictureWindow.txt`.
 - A worked example demonstrating what the prohibited form produces is correct.
-- Hits in `eml-*.txt` are **plugin source, carried verbatim**. Do not edit them
-  here. Report them to the plugin maintainer and resync after the fix lands
-  upstream, or the PKB copy silently diverges from the plugin.
+- Hits in `eml-*.txt` are **plugin source**. Fix a verified defect in the PKB
+  copy, mark the edit with a `# Provenance: PraatGen-only edit` line, and log
+  it in `UPSTREAM_CORRECTIONS.md` so the reconcile with the plugin picks it up.
 
 **Extending it.** `BANNED` in the script maps a regex to the rule it violates.
 Add an entry whenever a new hard prohibition enters the PKB. A prohibition
@@ -89,3 +89,16 @@ noise at the point of use and it invites a reader to weigh a superseded form.
 
 The changelog carries the history. Corrections, reversals and the reasoning
 behind them go there, in full.
+
+## 5. Corrections found in the EML library copies
+
+The PKB ships flattened copies of the EML Praat Tools sources.
+
+When PraatGen work turns up a defect in one of those procedures, fix it in the
+PKB copy and record it in `UPSTREAM_CORRECTIONS.md`: procedure, source line,
+defect, verified fix, and the evidence. Mark the edit in the PKB file with a
+`# Provenance: PraatGen-only edit` line. The ledger is the handoff to the
+plugin maintainer and the checklist for reconciling the two trees.
+
+Keep Praat-level behavior out of it. A constraint that holds with no library
+code involved belongs in the PraatGen reference files.

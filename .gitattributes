@@ -1,6 +1,7 @@
 # Maintainer-only. Versioned here, excluded from release archives built with
 # `git archive`, so they never reach users.
 MAINTENANCE.md      export-ignore
+UPSTREAM_CORRECTIONS.md  export-ignore
 tools/              export-ignore
 tools/**            export-ignore
 .gitattributes      export-ignore
@@ -10,4 +11,5 @@ tools/**            export-ignore
 # .txt extension so that they upload to a Claude Project.
 tools/**            linguist-vendored
 MAINTENANCE.md      linguist-vendored
+UPSTREAM_CORRECTIONS.md  linguist-vendored
 pkb/eml-*.txt       linguist-language=Praat linguist-detectable=true
