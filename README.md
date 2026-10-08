@@ -13,8 +13,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 1.1.1
-**Release:** 29 September 2026
+**Version:** 1.2.0
+**Release:** 8 October 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -32,7 +32,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 
 ### What It Does Not Do
 
-- By default, PraatGen does not run your scripts on your machine — you copy the generated script into Praat's script editor and run it there. (In Sandbox Mode, Claude can install and run Praat in *its own* environment for verification, but it still has no access to your files or your Praat installation.)
+- PraatGen does not run your scripts on your machine — you copy the generated script into Praat's script editor and run it there. Claude can install and run Praat in *its own* workspace in any session to check commands, and in Sandbox Mode it tests every script there before delivery. It never touches your Praat installation, and it writes to your computer only into a folder you have connected to the session.
 - PraatGen does not have access to your audio files or your local Praat installation. It generates code based on your description.
 - PraatGen is not infallible. It follows a rigorous verification protocol, but novel edge cases can still produce errors. Always test generated scripts on your data before using them in research.
 
@@ -44,7 +44,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 - **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees.
 - **Claude model:** Claude Opus 5 is the current recommendation; Opus 4.8 also performs well. Opus 4.6 (with Extended Thinking) remains a solid token-conscious choice. Sonnet and Haiku are not supported. See "Choosing a model" below.
 - **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by changing the Master Prompt's references to the PKB files so they point at a local directory; you may also want to separate the Master Prompt from your `CLAUDE.md` file.
-- **Praat:** Version 6.4 or later (current stable release). Sandbox Mode installs the current stable Praat build, resolved at fetch time (no pinned version), for in-environment verification.
+- **Praat:** Version 6.4.39 or later. **Prefer 6.6.30** when installing Praat for writing and testing scripts; Sandbox Mode installs 6.6.30 (pinned) in Claude's own workspace. No PraatGen feature requires 7.0.02 or later. Praat 7.0.02 and later add a security feature that slows development: a script that writes a file or runs a system command stops to ask your permission, each run. Anything that runs on 6.6.30 also runs on the current version. Direct downloads for 6.6.30: [Mac](https://www.fon.hum.uva.nl/praat/praat6630_mac.dmg), [Windows](https://www.fon.hum.uva.nl/praat/praat6630_win-x64v3.zip) ([ARM](https://www.fon.hum.uva.nl/praat/praat6630_win-arm64.zip)), [Linux](https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz).
 
 ### Choosing a model
 
@@ -78,7 +78,7 @@ In Claude (claude.ai or the Claude app):
 ### 2. Set the System Prompt
 
 1. In your new project, click **instructions**
-2. Paste the entire contents of `MASTER_PROMPT_CORE_v14_21_0.md` into the instructions field
+2. Paste the entire contents of `MASTER_PROMPT_CORE_v15_0_0.md` into the instructions field
 3. Scroll to the bottom and edit the "Canary" text if you wish. PraatGen reports this value back to you in pre-flight as a confidence measure that it read the entire Master Prompt.
 4. Save
 
@@ -124,7 +124,7 @@ Reply with any of these in place of (or alongside) your task. Modes compose free
 
 - **SCAFFOLD** — collaborative design review *before* any code. PraatGen walks through the proposed workflow, GUI design, object lifecycle, and edge cases for your approval. Best for batch pipelines, multi-panel figures, and clinical analysis chains.
 - **DEBUGGING** — strict targeted-fix mode. Requires your approval for any change, declares the scope of each fix as a binding contract, and avoids elective refactoring. Use this for errors and refactors.
-- **SANDBOX** — installs the current stable Praat build in Claude's own environment so it can verify commands and test scripts empirically before delivery, instead of asking you to paste verification snippets. It downloads Praat from `www.fon.hum.uva.nl`. Whether a session can reach that site depends on your plan and settings and isn't settled yet, so if PraatGen reports it unavailable, ask it to try the download once. If the download is refused, PraatGen offers a manual-upload fallback.
+- **SANDBOX** — makes PraatGen test every script in its own copy of Praat before delivering it, including running the script through its real dialogs. PraatGen can install Praat in any session when it needs to check something; SANDBOX makes testing required. It downloads Praat from `www.fon.hum.uva.nl`. Whether a session can reach that site depends on your plan and settings and isn't settled yet, so if PraatGen reports it unavailable, ask it to try the download once. If the download is refused, PraatGen offers a manual-upload fallback.
 - **AUTO** (Autonomous) — suppresses the approval gates and intermediate status reports for batch work: task lists, multi-file refactors, or known sequences of changes. PraatGen executes the whole list and delivers once at the end, with a handoff document. Reply STANDARD or GATES ON to restore normal gating.
 - **NOINTRO** — put this in your *first* message to skip the opening menu. PraatGen goes straight to PRE-FLIGHT if you have supplied the four items (task, starting state, inputs, outputs), and otherwise asks only for what is missing. It suppresses the greeting and nothing else — every rule still applies.
 
@@ -177,9 +177,9 @@ PraatGen cannot reliably tell from the inside that anything happened.
 
 | File | Purpose |
 |------|---------|
-| `MASTER_PROMPT_CORE_v14_21_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 14.21.0. |
+| `MASTER_PROMPT_CORE_v15_0_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 15.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_1.1.1.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.1.1 GitHub Release. |
+| `RELEASE_NOTES_1.2.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.2.0 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -292,14 +292,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 1.1.1 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 14.21.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
-| **PKB Snapshot** | 2026-09-29 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 1.2.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 15.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
+| **PKB Snapshot** | 2026-10-08 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **1.1.1 (29 September 2026)** is the current stable release. It ships Master Prompt 14.21.0, unchanged from 1.1.0. It is a correction release: the reversed-axis circle rule now applies to the x-axis only, since a reversed y-axis does not affect these commands; `Paint circle (mm):` and `Draw circle (mm):` gain verified reference entries, with the change from a world radius to a millimeter diameter stated at every call site; `Down to Table (optimal interval)` is verified at 14 arguments; the library's scatter plot, tick and gridline procedures draw on reversed axes; and `lowerCase$` is documented beside `upperCase$`.
+- **1.2.0 (8 October 2026)** is the current stable release. It ships Master Prompt 15.0.0, which adapts PraatGen to the Claude app now that chat and Cowork are one environment: PraatGen tries the Praat download instead of reading a settings list, SANDBOX means every script is tested before delivery, commands use the working folder the shell reports, the install commands apply the 6.6.30 pin, files count as delivered only when sent, test results name their platform, re-checks of a rule read the whole file, the pre-flight report ends the turn, and subagents may take bounded tasks under an Opus session. The Table `Formula:` entry now takes the column name first.
+- **1.1.1 (29 September 2026)** shipped Master Prompt 14.21.0, unchanged from 1.1.0. It was a correction release: the reversed-axis circle rule now applies to the x-axis only, since a reversed y-axis does not affect these commands; `Paint circle (mm):` and `Draw circle (mm):` gain verified reference entries, with the change from a world radius to a millimeter diameter stated at every call site; `Down to Table (optimal interval)` is verified at 14 arguments; the library's scatter plot, tick and gridline procedures draw on reversed axes; and `lowerCase$` is documented beside `upperCase$`.
 - **1.1.0 (23 September 2026)** shipped Master Prompt 14.21.0. FormantPath analysis reads the selected candidate by querying Get optimal ceiling and applying it with a fresh To Formant (burg); Extract Formant on a FormantPath returned the middle-ceiling candidate rather than the optimal one, and generated scripts no longer call it. Circle drawing on a chart with a reversed axis uses Paint circle (mm): / Draw circle (mm):, since the world-coordinate forms render nothing and raise no error there. (1.1.1 narrows that to the x-axis only.) The function reference entry for upperCase$ (string$) states its real boundary: absent on Praat 6.4.39 and earlier, available from 6.4.46.
 - **1.0.6 (21 September 2026)** shipped Master Prompt 14.20.0. Library procedures copied into a generated script are renamed to the `emlPG` prefix so they cannot collide with the plugin; the sandbox Praat version is pinned to 6.6.30; the function reference gains the matrix division and comparison forms; the plugin reference gains naming registers, packaging rules and corrected install paths.
 - **1.0.5 (5 August 2026)** shipped Master Prompt 14.17.0. The Praat version floor moved to 6.4.39; the version check emitted into a script names the specific calls that will stop it or return different numbers on the user's build; spectrum, Ltas and PowerCepstrum patterns place ticks with the nice-number procedures.
@@ -316,13 +317,13 @@ PraatGen tracks three version numbers:
 
 **Thinking / effort management.** Complex scripts benefit from deliberation, and the prompt includes gates that assess it — but the setting is yours to manage manually, and on 4.8+ the guidance is provisional (see "Choosing a model").
 
-**Model dependency.** Sonnet and Haiku are not supported for advanced scripts. Opus 5 is the current recommendation; Opus 4.8 also performs well, and 4.6 with Extended Thinking remains solid. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
+**Model dependency.** PraatGen runs on Opus; on Sonnet or Haiku it stops and asks you to switch. Opus 5 is the current recommendation; Opus 4.8 also performs well, and 4.6 with Extended Thinking remains solid. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
 
 **Sandbox prerequisites.** Sandbox Mode downloads Praat from `www.fon.hum.uva.nl`. Access to that site varies by Claude plan and isn't settled yet: an individual Max account reached it by default when tested on 8 October 2026, other plans are untested, and on Team and Enterprise plans the organization owner controls which domains are allowed. If PraatGen reports the site unavailable, ask it to try the download once before accepting that. If the download is refused, PraatGen offers a manual-upload fallback.
 
 **Context window limits.** Very long debugging sessions can exhaust the context window. PraatGen monitors this and offers handoff documents at the 3rd and 5th debugging iterations, but prevention (careful testing, exact error messages) is better than cure.
 
-**No access to your environment.** Outside Sandbox Mode, PraatGen does not execute scripts; even in Sandbox Mode it runs Praat only in its own environment and never touches your files or installation. All scripts should be tested on representative data before use in research.
+**No access to your Praat installation.** PraatGen runs Praat only in its own workspace, never in your installation. It writes to your computer only into a folder you have connected to the session. All scripts should be tested on representative data before use in research.
 
 ---
 
