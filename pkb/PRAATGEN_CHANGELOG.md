@@ -7,11 +7,23 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 1.2.1 — 8 October 2026 (Master Prompt 15.0.0, unchanged)
+
+A correction release. Upgrade notes are in `RELEASE_NOTES_1.2.1.md`; every
+release is also published at
+https://github.com/embodied-music-lab/PraatGen/releases.
+
+**`@emlDrawLTAS` draws on reversed axes.** All four methods (curve, bars, poles
+and speckles) now draw when the frequency or level axis is reversed. Before, a
+reversed frequency axis left the curve, poles and speckles blank, and a
+reversed level axis left the poles and speckles blank, with no error. Plots on
+ascending axes are unchanged.
+
 ### Release 1.2.0 — 8 October 2026 (ships Master Prompt 15.0.0)
 
 Adapts PraatGen to the Claude app now that chat and Cowork are one
-environment. Upgrade notes are in `RELEASE_NOTES_1.2.0.md`; every release is
-also published at https://github.com/embodied-music-lab/PraatGen/releases.
+environment. Release notes and upgrade notes are on the v1.2.0 release page:
+https://github.com/embodied-music-lab/PraatGen/releases/tag/v1.2.0
 
 **Table `Formula:` takes the column name first.** `COMMANDS_Table.txt` listed it
 with one argument, which Praat refuses on a Table.

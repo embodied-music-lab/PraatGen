@@ -443,6 +443,14 @@ procedure emlDrawLTAS: .objectId, .title$, .xLabel$, .yLabel$, .vpW, .vpH, .colo
     @emlSetPanelViewport
     Axes: .freqMin, .freqMax, .powerMin, .powerMax
 
+    # Range tests and clamps use the ordered bounds, so a reversed axis
+    # (.freqMin > .freqMax or .powerMin > .powerMax) draws the same data.
+    # Provenance: PraatGen-only edit, 8 October 2026; not yet in the plugin source.
+    .fLo = min (.freqMin, .freqMax)
+    .fHi = max (.freqMin, .freqMax)
+    .pLo = min (.powerMin, .powerMax)
+    .pHi = max (.powerMin, .powerMax)
+
     # Draw gridlines if requested
     # gridMode: 1=Both, 2=Horizontal only, 3=Vertical only, 4=Off
     if .gridMode = 1
@@ -475,27 +483,15 @@ procedure emlDrawLTAS: .objectId, .title$, .xLabel$, .yLabel$, .vpW, .vpH, .colo
         Colour: emlSetColorPalette.line$[.colorIdx]
         Line width: emlSetAdaptiveTheme.dataLineWidth
         # Origin at 0, clamped to axis bounds
-        .poleOrigin = 0
-        if .poleOrigin < .powerMin
-            .poleOrigin = .powerMin
-        endif
-        if .poleOrigin > .powerMax
-            .poleOrigin = .powerMax
-        endif
+        .poleOrigin = min (max (0, .pLo), .pHi)
         for .iBin from 1 to .nBins
             selectObject: .objectId
             .binFreq = Get frequency from bin number: .iBin
             .binVal = Get value in bin: .iBin
             if .binVal <> undefined
-                if .binFreq >= .freqMin and .binFreq <= .freqMax
+                if .binFreq >= .fLo and .binFreq <= .fHi
                     # Clamp value to axis bounds (don't skip — draw visible portion)
-                    .clampedVal = .binVal
-                    if .clampedVal < .powerMin
-                        .clampedVal = .powerMin
-                    endif
-                    if .clampedVal > .powerMax
-                        .clampedVal = .powerMax
-                    endif
+                    .clampedVal = min (max (.binVal, .pLo), .pHi)
                     Draw line: .binFreq, .poleOrigin, .binFreq, .clampedVal
                 endif
             endif
@@ -508,7 +504,31 @@ procedure emlDrawLTAS: .objectId, .title$, .xLabel$, .yLabel$, .vpW, .vpH, .colo
         selectObject: .objectId
         Colour: emlSetColorPalette.line$[.colorIdx]
         Line width: emlSetAdaptiveTheme.dataLineWidth
-        Draw: .freqMin, .freqMax, .powerMin, .powerMax, "no", "Curve"
+        if .freqMin <= .freqMax
+            Draw: .freqMin, .freqMax, .powerMin, .powerMax, "no", "Curve"
+        else
+            # Draw: ... "Curve" draws nothing when .freqMin > .freqMax. Draw the
+            # same line by hand: bin centers in range, values clamped to the
+            # power axis, joined in bin order.
+            .nBins = Get number of bins
+            .havePrev = 0
+            for .iBin from 1 to .nBins
+                selectObject: .objectId
+                .binFreq = Get frequency from bin number: .iBin
+                .binVal = Get value in bin: .iBin
+                if .binVal <> undefined and .binFreq >= .fLo and .binFreq <= .fHi
+                    .curveVal = min (max (.binVal, .pLo), .pHi)
+                    if .havePrev
+                        Draw line: .prevFreq, .prevVal, .binFreq, .curveVal
+                    endif
+                    .prevFreq = .binFreq
+                    .prevVal = .curveVal
+                    .havePrev = 1
+                else
+                    .havePrev = 0
+                endif
+            endfor
+        endif
     endif
 
     # --- Speckles (custom — dots at data values, drawn last to cap poles) ---
@@ -517,16 +537,19 @@ procedure emlDrawLTAS: .objectId, .title$, .xLabel$, .yLabel$, .vpW, .vpH, .colo
         selectObject: .objectId
         .nBins = Get number of bins
         Colour: emlSetColorPalette.line$[.colorIdx]
-        # Dot radius in world x-coordinates (frequency)
-        .dotRadius = (.freqMax - .freqMin) * 0.006
+        # Dot diameter in mm: a radius of 0.6% of the inner viewport width,
+        # the size the world radius (.freqMax - .freqMin) * 0.006 gives on an
+        # ascending axis. The world-coordinate Paint circle: draws nothing on
+        # a descending x-axis.
+        .dotDiamMM = 2 * 0.006 * (emlSetAdaptiveTheme.innerRight - emlSetAdaptiveTheme.innerLeft) * 25.4
         for .iBin from 1 to .nBins
             selectObject: .objectId
             .binFreq = Get frequency from bin number: .iBin
             .binVal = Get value in bin: .iBin
             if .binVal <> undefined
-                if .binFreq >= .freqMin and .binFreq <= .freqMax
-                    if .binVal >= .powerMin and .binVal <= .powerMax
-                        Paint circle: emlSetColorPalette.line$[.colorIdx], .binFreq, .binVal, .dotRadius
+                if .binFreq >= .fLo and .binFreq <= .fHi
+                    if .binVal >= .pLo and .binVal <= .pHi
+                        Paint circle (mm): emlSetColorPalette.line$[.colorIdx], .binFreq, .binVal, .dotDiamMM
                     endif
                 endif
             endif
