@@ -83,7 +83,7 @@ def main():
         return 0
     print(f'{len(hits)} hit(s) to triage:\n')
     for path, line, text, rule in hits:
-        lib = '  [plugin source — report upstream, do not edit here]' \
+        lib = '  [plugin source — fix only a verified defect; mark it PraatGen-only and log it in UPSTREAM_CORRECTIONS.md]' \
               if os.path.basename(path).startswith('eml-') else ''
         print(f'{path}:{line}\n    {text}\n    violates: {rule}{lib}\n')
     return 1
