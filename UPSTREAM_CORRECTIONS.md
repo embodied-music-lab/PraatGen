@@ -87,8 +87,9 @@ only when both are zero. A descending range makes `.radiusWorld` negative, and
 the outcome then depends on the marker branch at line 2000:
 
 - **Alpha sprites present** — `@emlDrawAlphaDot` draws through
-  `Insert picture from file:`, which accepts inverted bounds and raises
-  nothing. A figure is produced with wrong markers, silently.
+  `Insert picture from file:`, which accepts inverted bounds. On macOS the
+  sprites draw at the correct position and size on every axis direction
+  (probe result below), so this branch is correct.
 - **Sprites absent** — `Paint circle:` receives the negative value and the
   script stops with `Argument "Radius" must be greater than 0.0.`
 
@@ -130,8 +131,8 @@ meaning. The PKB copy now does this:
   .wuPerInchX) * 25.4`, the one source for the native dot size.
 - The two native branches of the scatter loop and both fallbacks in
   `@emlDrawAlphaDot` draw with `Paint circle (mm):` at that diameter.
-- The sprite geometry is unchanged. Its behavior on a reversed axis is
-  untested (macOS probe pending).
+- The sprite geometry is unchanged. It draws correctly on reversed axes
+  on macOS (see the probe result below).
 
 Rendered through the full `@emlDrawScatterPlot` on 6.6.30 and 7.0.02: the
 ascending chart is pixel-identical before and after the patch (27489 dark
@@ -172,8 +173,11 @@ has moved on from the PKB copy, and the defect has changed shape there:
 - The sprite path cannot be tested on Linux. The plugin's own platform gate
   (`@emlInitAlphaSprites`, 6589-6653) records that `Insert picture from file:`
   draws nothing on Linux builds, and disables sprites there. The PKB copy
-  predates that gate. A macOS probe is at `eml_sprite_probe.praat`; result
-  pending.
+  predates that gate.
+- Sprite path on macOS: correct on all four axis directions. Each sprite sat
+  on its data point at the size of a `Paint circle (mm):` reference, with
+  `.stampHalfX` and `.stampHalfY` negative on the reversed axes. Provenance:
+  `eml_sprite_probe.praat`, Ian Howell's Mac, 8 Oct 2026.
 - The tick procedures (entry 1) are unpatched upstream.
 
 ---
