@@ -7,6 +7,11 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Unreleased (on main after 1.1.1)
+
+**Table `Formula:` takes the column name first.** `COMMANDS_Table.txt` listed it
+with one argument, which Praat refuses on a Table.
+
 ### Release 1.1.1 — 29 September 2026 (ships Master Prompt 14.21.0)
 
 Corrects reference errors in 1.1.0 and reversed-axis defects in the library's

@@ -182,8 +182,13 @@
   Sort rows
   Randomize rows
   Reflect rows
-  Formula: formula$
-  # Provenance: Praat manual Table.html fetched 26 Feb 2026
+  Formula: column$, formula$
+  # Verified: Formula: "a", "row * 2"
+  # Takes the column name first, then the formula, which fills that column
+  # row by row. A one-argument call returns "Command requires more than the
+  # given 1 arguments: argument "Formula" not given." Formula: on a Sound or
+  # a Matrix takes the formula alone; on a Table it does not.
+  # Provenance: Sandbox-verified 6.6.30 and 7.0.02, 8 Oct 2026
   Formula (column range): from column$, to column$, formula$
   # Provenance: Praat manual Table.html fetched 26 Feb 2026
   Rename column: old name$, new name$
