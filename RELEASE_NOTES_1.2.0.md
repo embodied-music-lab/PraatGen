@@ -18,11 +18,27 @@
 | Rules          | 37           | 37               |
 | EML procedures | 263 across 15 files | 263 across 15 files |
 
-Claude's chat and Cowork are now one app. A PraatGen session runs in a
-workspace with a shell, file tools and, sometimes, a link to your computer.
-Anthropic is rolling the change out in stages, so this release works in the
-older setup and the newer one alike: PraatGen checks what the session can do
-instead of assuming. Full version history is in `pkb/PRAATGEN_CHANGELOG.md`.
+This release adapts PraatGen to Claude's merger of chat and Cowork into one
+app. Anthropic is rolling the change out in stages, so PraatGen checks what
+each session can do and works in the older setup and the newer one alike.
+Full version history is in `pkb/PRAATGEN_CHANGELOG.md`.
+
+## What the merged app gives you
+
+In the merged app, a PraatGen session runs in its own workspace with a shell,
+file tools and, if you connect one, a folder on your computer.
+
+- **Larger projects with less supervision.** An Opus session can work through
+  a long task list on its own, such as refactoring a plugin or building a set
+  of related scripts, in SANDBOX AUTO mode, testing each change in Praat as it
+  goes. It can hand bounded pieces, such as searching the reference files or
+  running a test, to subagents, and it checks their work before it reaches you.
+- **Tested scripts in any session.** PraatGen can install Praat in its
+  workspace and run your script before delivering it, whenever your plan
+  allows the download (see the next section).
+- **Files where you work.** If you connect a folder on your computer to the
+  session, PraatGen writes scripts and their library folders there with the
+  folder structure intact.
 
 ---
 
