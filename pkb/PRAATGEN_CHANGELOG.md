@@ -7,17 +7,103 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
-### Unreleased (on main after 1.1.1)
+### Release 1.2.0 — 8 October 2026 (ships Master Prompt 15.0.0)
+
+Adapts PraatGen to the Claude app now that chat and Cowork are one
+environment. Upgrade notes are in `RELEASE_NOTES_1.2.0.md`; every release is
+also published at https://github.com/embodied-music-lab/PraatGen/releases.
 
 **Table `Formula:` takes the column name first.** `COMMANDS_Table.txt` listed it
 with one argument, which Praat refuses on a Table.
+
+### 15.0.0 — 8 October 2026
+
+**PraatGen checks whether it can install Praat instead of reading a settings
+list.** At the first verification need it requests the Praat download page
+once; if the request is refused, it quotes the refusal and offers the manual
+upload. It no longer tells the user that installation is unavailable without
+having tried, and it no longer states that allowed domains are fixed at the
+start of a conversation, which was verified only in the earlier environment.
+
+**Access to the Praat site depends on the Claude plan.** The prompt states
+what is known: an individual Max account reached the site by default when
+tested on 8 October 2026, other plans are untested, and on Team and
+Enterprise plans the organization owner controls the allowed domains.
+
+**SANDBOX now means testing before delivery is required.** Every script is run
+in Praat, through its real dialogs where it has them, before it is delivered.
+Installing Praat on demand is available in every session, with or without
+SANDBOX.
+
+**Shell commands use the working directory the shell reports.** No command
+assumes a fixed home or upload folder. A manually uploaded Praat archive is
+found by file name, taking the newest match.
+
+**PraatGen checks the platform before installing the GUI stack.** It checks the
+OS version and root access, then tries the package install; the install's
+result decides. Warnings from third-party package sources during
+`apt-get update` are harmless. If a check fails, it installs the barren
+edition and says which check failed and what that leaves untested.
+
+**The install commands apply the 6.6.30 version pin.** The pin was already the
+stated policy, but the commands fetched the newest build. They now install
+6.6.30 and fall back to the newest build, with a message, only if 6.6.30 can't
+be downloaded.
+
+**Prefer 6.6.30 whenever Praat is installed.** Rule 24C now says so for the
+sandbox and for advice to users. No feature PraatGen uses requires 7.0.02 or
+later: the newest version-gated feature in `PRAAT_VERSION_FLOOR.txt` is present
+in 6.6.30, and the 7.0.01 and 7.0.02 additions (the CPP object,
+`Sound: To CPP...`, Corpus and CGN extraction) appear nowhere in the PKB or the
+eml procedures. 7.0.02 and later carry a security feature that slows
+development: scripts that write files or run system commands stop for
+permission, and `--run` needs `--FULL-TRUST`. Anything that runs on 6.6.30 also
+runs on the current version. The 6.4.39 floor is unchanged.
+
+**A file counts as delivered only when it is sent to the user.** Writing a file
+to the working or output folder saves it.
+
+**A script with a library folder goes to a connected folder when one exists.**
+If a folder on the user's computer is connected to the session, the script and
+its library folder are written there with the structure intact. Otherwise the
+user gets one self-contained script, with a single archive as the fallback.
+
+**Test results name the platform and the Praat version.** The Linux sandbox is
+the reference for a pass, and a run on the user's machine is additional
+evidence. Behavior that depends on the platform, such as file dialogs, fonts,
+`Insert picture from file:` and Demo window size, counts as verified only where
+it ran; `Insert picture from file:` draws nothing on Linux builds of Praat.
+
+**Re-grounding reads read the whole file.** A search result only locates the
+governing file; it no longer counts as re-reading it, including in the AUTO and
+DEBUGGING compliance check.
+
+**The PRE-FLIGHT report ends the turn.** No tool calls follow it, it goes
+through a word-for-word message tool where the session has one, and the
+execution gate always appears in full text.
+
+**The persona override names account preferences and memory.** Both load into
+project sessions, and account preferences load even when memory is switched off
+for a chat. Where either conflicts with the prompt on format, length, gate
+structure or how questions are asked, the prompt wins, and a preference never
+removes a gate, question or SELF-AUDIT step.
+
+**Opus 4.8 is treated as an effort model.** Thinking-toggle guidance now
+applies to Opus 4.6 and 4.7 only, consistently throughout the prompt.
+PraatGen no longer names the session model from a configuration line alone.
+
+**Sessions run on Opus or higher; subagents may take bounded tasks.** Sonnet
+and Haiku never manage a session; on either, PraatGen stops and asks for an
+Opus model instead of warning and continuing. An Opus session may hand specific tasks to a
+subagent on a weaker model, and everything a subagent produces, Praat code
+included, passes the main session's checks before it reaches the user.
 
 ### Release 1.1.1 — 29 September 2026 (ships Master Prompt 14.21.0)
 
 Corrects reference errors in 1.1.0 and reversed-axis defects in the library's
 drawing procedures. The Master Prompt is unchanged. Upgrade
-notes are in `RELEASE_NOTES_1.1.1.md`; every release is also published at
-https://github.com/embodied-music-lab/PraatGen/releases.
+notes are on the v1.1.1 release page:
+https://github.com/embodied-music-lab/PraatGen/releases/tag/v1.1.1
 
 **The reversed-axis circle rule applies to the x-axis only.** 1.1.0 stated it
 for either axis. `Paint circle:` and `Draw circle:` take a radius measured
