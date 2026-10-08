@@ -13,7 +13,7 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 1.2.0
+**Version:** 1.2.1
 **Release:** 8 October 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
@@ -179,7 +179,7 @@ PraatGen cannot reliably tell from the inside that anything happened.
 |------|---------|
 | `MASTER_PROMPT_CORE_v15_0_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 15.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_1.2.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.2.0 GitHub Release. |
+| `RELEASE_NOTES_1.2.1.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.2.1 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -292,14 +292,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 1.2.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Release** | 1.2.1 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
 | **Master Prompt** | 15.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
 | **PKB Snapshot** | 2026-10-08 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **1.2.0 (8 October 2026)** is the current stable release. It ships Master Prompt 15.0.0, which adapts PraatGen to the Claude app now that chat and Cowork are one environment: PraatGen tries the Praat download instead of reading a settings list, SANDBOX means every script is tested before delivery, commands use the working folder the shell reports, the install commands apply the 6.6.30 pin, files count as delivered only when sent, test results name their platform, re-checks of a rule read the whole file, the pre-flight report ends the turn, and subagents may take bounded tasks under an Opus session. The Table `Formula:` entry now takes the column name first.
+- **1.2.1 (8 October 2026)** is the current stable release. It keeps Master Prompt 15.0.0 and fixes `@emlDrawLTAS`, which left its curve, poles and speckles blank on a reversed frequency or level axis.
+- **1.2.0 (8 October 2026)** shipped Master Prompt 15.0.0, which adapts PraatGen to the Claude app now that chat and Cowork are one environment: PraatGen tries the Praat download instead of reading a settings list, SANDBOX means every script is tested before delivery, commands use the working folder the shell reports, the install commands apply the 6.6.30 pin, files count as delivered only when sent, test results name their platform, re-checks of a rule read the whole file, the pre-flight report ends the turn, and subagents may take bounded tasks under an Opus session. The Table `Formula:` entry now takes the column name first.
 - **1.1.1 (29 September 2026)** shipped Master Prompt 14.21.0, unchanged from 1.1.0. It was a correction release: the reversed-axis circle rule now applies to the x-axis only, since a reversed y-axis does not affect these commands; `Paint circle (mm):` and `Draw circle (mm):` gain verified reference entries, with the change from a world radius to a millimeter diameter stated at every call site; `Down to Table (optimal interval)` is verified at 14 arguments; the library's scatter plot, tick and gridline procedures draw on reversed axes; and `lowerCase$` is documented beside `upperCase$`.
 - **1.1.0 (23 September 2026)** shipped Master Prompt 14.21.0. FormantPath analysis reads the selected candidate by querying Get optimal ceiling and applying it with a fresh To Formant (burg); Extract Formant on a FormantPath returned the middle-ceiling candidate rather than the optimal one, and generated scripts no longer call it. Circle drawing on a chart with a reversed axis uses Paint circle (mm): / Draw circle (mm):, since the world-coordinate forms render nothing and raise no error there. (1.1.1 narrows that to the x-axis only.) The function reference entry for upperCase$ (string$) states its real boundary: absent on Praat 6.4.39 and earlier, available from 6.4.46.
 - **1.0.6 (21 September 2026)** shipped Master Prompt 14.20.0. Library procedures copied into a generated script are renamed to the `emlPG` prefix so they cannot collide with the plugin; the sandbox Praat version is pinned to 6.6.30; the function reference gains the matrix division and comparison forms; the plugin reference gains naming registers, packaging rules and corrected install paths.

@@ -200,13 +200,35 @@ it, gridlines draw on every axis direction. Unpatched upstream.
 The PKB copy predated the plugin's platform gate. The gate is ported unchanged:
 on Linux, sprites stay unavailable and dots use the native fallback.
 
-## 3. Related, lower priority
+## 3. LTAS drawing is blank on reversed axes
 
-**`@emlDrawLTAS`** (`eml-draw-procedures.txt` 521, 527) computes
-`.dotRadius = (.freqMax - .freqMin) * 0.006` and gates its draw behind
-`if .binFreq >= .freqMin and .binFreq <= .freqMax`, which is never true when the
-bounds descend. The speckles vanish before `Paint circle:` is reached, so no
-error appears. Same family, different mechanism.
+**Procedure:** `@emlDrawLTAS`
+**Source:** `eml-draw-procedures.txt` 413 (as of 1.2.0)
+**Status: APPLIED to the PKB copies, 8 October 2026 (release 1.2.1).**
+
+With the frequency axis reversed, the curve, poles and speckles drew nothing;
+with the level axis reversed, the poles and speckles drew nothing. Bars drew
+on every direction. No error in any case. The pole and speckle range tests
+and clamps take `.freqMin`/`.freqMax` and `.powerMin`/`.powerMax` in the order
+given: a reversed pair excludes every bin, or clamps every pole to zero length.
+`Draw: ... "Curve"` on the Ltas draws nothing when its frequency bounds descend.
+
+**Fix:**
+- Range tests and clamps use ordered bounds `.fLo`, `.fHi`, `.pLo`, `.pHi`.
+- Speckles use `Paint circle (mm):` at a diameter of
+  `2 * 0.006 * inner viewport width * 25.4`, the size the old world radius
+  gave on an ascending axis.
+- On a descending frequency axis only, the curve is drawn by hand: bin
+  centers in range, values clamped to the level axis, joined in bin order.
+  On an ascending axis it matches the native curve to within anti-aliasing.
+
+**Evidence:** every method on ascending, reversed-frequency, reversed-level and
+both-reversed axes, plus a sub-range with clipping, Praat 6.6.30 and 7.0.02,
+8 Oct 2026. Ascending renders are byte-identical before and after. Reversed
+renders carry the same ink as ascending (speckles 15012 vs 15014 px; curve
+15339 vs 15356 px).
+
+## 3b. Related, lower priority
 
 **`@emlDrawBox`** (`eml-graph-procedures.txt` 1784) computes
 `.outlierRadius = .width * 0.2`. Both library callers build an ascending
