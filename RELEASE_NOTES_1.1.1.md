@@ -111,9 +111,15 @@ overwriting into it.
 
 Do not rename files; the Master Prompt references them by exact filename.
 
-Sandbox Mode requires `www.fon.hum.uva.nl` in Settings → Capabilities → Allowed
-domains, set *before* the conversation starts. It installs `openbox`,
-`xcompmgr`, `xdotool` and `imagemagick`.
+Sandbox Mode downloads Praat from `www.fon.hum.uva.nl` and installs `openbox`,
+`xcompmgr`, `xdotool` and `imagemagick`. Whether a session can reach that site
+isn't settled yet. It depends on the Claude plan and its settings, and those
+rules aren't fully documented. An individual Max account reached the site by
+default when tested on 8 October 2026; other plans are untested. On Team and
+Enterprise plans, the organization owner controls which domains are allowed.
+If PraatGen reports the site unavailable, ask it to try the download once
+before accepting that. If the download is refused, attach the Praat Linux
+archive and PraatGen installs it from there.
 
 Re-run any script generated before 1.1.0 that uses a FormantPath: its F1 and F2
 values were read at the middle candidate ceiling, not the optimal one.
