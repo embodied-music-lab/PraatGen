@@ -770,6 +770,14 @@ any threshold the user picked. A saved setting (APPENDIX_F S3) may supply the
 default instead. The script must run on another file or another singer
 without editing. A named constant never holds a value the user supplied.
 
+**Canonical values are never dialog fields (hard).** A value that
+APPENDIX_D, a reference file or a rule sets is a named constant, even when
+the user repeats it in an answer ("keep 60 to 330 Hz" keeps a constant). It
+becomes an editable field only when the user asks for editable analysis
+parameters, and then APPENDIX_F S0C applies: a Standard button restores the
+canonical values. The user's own values describe their material: the pitch
+range, the channel mapping, the analysis window, the tier and labels.
+
 ---
 
 ### Rule 27: Non-destructive file output (hard)

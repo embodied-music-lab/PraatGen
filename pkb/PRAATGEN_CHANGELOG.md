@@ -21,6 +21,12 @@ the thinking-gate line written for the thinking toggle, and the never-pin rule
 for downloads, which the sandbox's 6.6.30 pin now governs. The FormantPath
 sentence in the retrieval protocol has its ending back.
 
+**Canonical values stay constants.** A value the reference files set stays a
+named constant even when you repeat it in an answer, and becomes a dialog
+field only if you ask for editable parameters, with a Standard button to
+restore it. The lint's Hardcoded values check only notes numbers outside the
+constants block.
+
 ### 16.3.0 — 9 October 2026
 
 **No hardcoded values.** Every value you give for your material, such as the
