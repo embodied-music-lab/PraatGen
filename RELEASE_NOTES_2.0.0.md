@@ -19,18 +19,17 @@
 | Rules          | 37           | 37               |
 | EML procedures | 263 across 15 files | 263 across 15 files |
 
-PraatGen 2.0 is rebuilt for the Claude app as it now works, where a session
-writes files, runs tools and works through long chains of steps. In a long
-session of that kind, the rules read at the start fall out of view. In 2.0, the rules
-arrive at the step that needs them, every step leaves a file you can see, and
-the script is checked by a tool and a fresh reviewer before you get it. Full
-version history is in `pkb/PRAATGEN_CHANGELOG.md`.
+PraatGen 2.0 is rebuilt for the Claude app, where a session writes files, runs
+tools and works through long chains of steps. The rules arrive at the step
+that needs them, every step leaves a file you can see, and a tool and a fresh
+reviewer check the script before you get it. Full version history is in
+`pkb/PRAATGEN_CHANGELOG.md`.
 
 ---
 
 ## A short core and six rules files
 
-The project instructions are now a short core, about an eighth of the old
+The project instructions are now a short core, about a fifth of the old
 Master Prompt. The core holds the workflow, the pre-flight, the model rules
 and an index. The rest of the rules moved word for word into six `RULES_*.md`
 files in the reference folder, with their numbers unchanged. The core tells
@@ -40,15 +39,14 @@ plus the reference files the task's questions depend on. It reads planning and
 code again at GO, code again before writing the script, and the audit file
 before the SELF-AUDIT. The modes file loads when you use a mode.
 
-## The pre-flight asks better questions
+## The pre-flight asks the same questions as 1.x
 
-Before stating any decision, the pre-flight thinks your task through against
-each canonical value: your singing range, vibrato, your hardware and the
-comparisons you'll make. It states canonical values and required methods as
-decisions and never asks whether to follow a standard. It asks where a value
-would lose signal, or where a change would cost comparability with published
-norms, and states both consequences. On sustained vowels with vibrato, it
-discusses vibrato rate and extent with you.
+The pre-flight weighs each canonical value against your singing range,
+vibrato, hardware and the comparisons you'll make. It asks where a value would
+lose signal, or where a change would cost comparability with published norms,
+and states both consequences. It states canonical values and required methods
+as decisions, and doesn't ask whether to follow a standard. On sustained vowels
+with vibrato, it discusses vibrato rate and extent with you.
 
 ## You approve the plan before any code is written
 
@@ -64,9 +62,8 @@ For each script, PraatGen's output folder holds the plan
 (`<name>_plan.md`, with an unedited copy of the plan as sent), the script,
 the linter output (`<name>_lint.txt`) and the audit (`<name>_audit.md`), with
 `open_items.md` kept current. The linter confirms the plan was sent before the
-script was written. The plan is a
-table that names the reference file verifying each command. You receive the
-plans as a message before any code is written.
+script was written. The plan is a table that names the reference file
+verifying each command.
 
 ## Checks before delivery
 
@@ -97,11 +94,11 @@ files cover that.
 
 - **EGG polarity.** PraatGen tests polarity from the derivative's peaks and
   inverts an inverted EGG automatically, reporting the ratio. You can fix
-  polarity yourself instead. The CQ plausibility bound no longer counts as a
-  polarity check, because an inverted EGG reads as 1 minus the true CQ.
-- **CPPS.** The 60-330 Hz peak search stays at the published value. Raising it
-  for higher voices is a pre-flight question that says the result won't
-  compare with published norms.
+  polarity yourself instead. The CQ plausibility bound isn't a polarity check:
+  an inverted EGG reads as 1 minus the true CQ, inside the bound.
+- **CPPS.** The peak search stays at the published 60-330 Hz. Raising it for
+  higher voices is a pre-flight question that says the result won't compare
+  with published norms.
 - **Range warnings.** Limits derived from your stated range warn when the
   measurement crosses your stated range. Fixed limits warn when a measurement
   comes within 10% of them.
@@ -126,8 +123,12 @@ files cover that.
 The Claude app gives each session its own standing instructions, such as
 holding findings until the end of a turn or searching the web first. Where
 these conflict with PraatGen's workflow, gates or SELF-AUDIT, PraatGen's rules
-win. The introduction is reorganized: the four things PraatGen needs come
-first, and modes and models are tables.
+win.
+
+## A shorter introduction
+
+The four things PraatGen needs from you come first, and modes and models are
+tables.
 
 ## Weaker models stay away from scripts
 
