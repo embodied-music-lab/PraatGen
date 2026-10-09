@@ -119,6 +119,16 @@
   # Reserve Matrix conversion for object types that genuinely lack
   # min/max queries (e.g., PowerCepstrum before Get peak: was available).
 
+  # Studentized range distribution (no selection needed)
+  Get TukeyQ: critical value, number of means, degrees of freedom, number of rows
+  # Verified: Get TukeyQ: 3.5, 3, 20, 1
+  # Returns the upper-tail probability P(Q > critical value).
+  Get invTukeyQ: probability, number of means, degrees of freedom, number of rows
+  # Verified: Get invTukeyQ: 0.05, 3, 20, 1
+  # Returns the critical value for an upper-tail probability (3.578 here).
+  # Number of rows: 1 for ordinary Tukey tests; above 1, the maximum over that many ranges.
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026: count from Praat's "requires only 4 arguments" error; names match the dialog fields in Praat's source; every argument's meaning matches SciPy 1.17 studentized_range to 8 digits.
+
 ---
 
 ## Syntax Notes and Errata

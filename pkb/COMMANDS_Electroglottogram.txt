@@ -23,8 +23,12 @@
   # Verified: Extract Electroglottogram: 2, "no"
   # NOTE: Second argument is named "Invert". invert? = "yes" multiplies by -1
   #   (verified: -0.709517 -> +0.709517 at the same time point). Praat expects
-  #   increasing value = increasing contact area. Wrong polarity produces
-  #   implausible CQ silently — it does not error.
+  #   increasing value = increasing contact area. Wrong polarity doesn't
+  #   error. An inverted EGG gives a dEGG CQ of 1 minus the true CQ, which
+  #   usually lies inside the 0.15 - 0.85 plausibility bound, so the bound
+  #   doesn't catch it (see PLAUSIBILITY BOUND below). Test polarity with
+  #   the derivative peak test: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md §3,
+  #   Polarity.
 
   # Query
   # NONE. Every universal query is unavailable on this type — verified by
@@ -160,7 +164,7 @@
 # GUARD — validated. Blocks all five conditions; passes all valid signals
 # including one at 10 dB SNR. This is a registered library procedure; its
 # canonical source is eml-egg-procedures.txt (registry: EGG section). The
-# copy below is illustrative — copy exactly from the source file (MP Rule 223):
+# copy below is illustrative — copy exactly from the source file (Retrieval Protocol step 11, RULES_RETRIEVAL.md):
 #
 #   procedure emlEggCycleGuard: .eggId, .floor, .ceiling
 #       selectObject: .eggId
@@ -219,9 +223,16 @@
 # Check the result before reporting it.
 #
 # This single check catches, at zero cost, failures that signal-quality
-# metrics do not: wrong polarity, wrong channel, an already-differentiated
-# signal presented as an EGG, and an EGG whose low-frequency content has been
-# filtered away. Worked example from verification: a differentiated signal
+# metrics do not: wrong channel, an already-differentiated signal presented
+# as an EGG, and an EGG whose low-frequency content has been filtered away.
+#
+# It does NOT catch wrong polarity. An inverted EGG reads as 1 minus the true
+# CQ, which stays inside the bound unless the true CQ is below 0.15 or above
+# 0.85. Polarity is tested with the derivative peak test
+# (BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md §3, Polarity).
+# Provenance: sandbox-verified 6.6.30, 8 Oct 2026: a synthetic EGG with a
+# designed dEGG CQ of 0.425 read 0.427 upright and 0.573 inverted, with 0 of
+# 592 cycles out of bounds. Worked example from verification: a differentiated signal
 # analysed as an EGG returned 22.0 dB SNR ("good") and QDelta 7.73 ("strong
 # contact") while producing CQ = 0.049. Only the plausibility bound caught it.
 #

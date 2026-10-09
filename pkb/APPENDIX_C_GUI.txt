@@ -283,7 +283,7 @@ procedure will error.
 
 `@emlWrapperCommonFields` ships in `eml-output.txt` (registry: Output section),
 alongside `@emlHandleCommonFields` which reads the fields back out. Copy both
-from the source file per MP Rule 223, or substitute your own shared-field
+from the source file per Retrieval Protocol step 11 (`RULES_RETRIEVAL.md`), or substitute your own shared-field
 procedure if you are not using the library.
 
 ---

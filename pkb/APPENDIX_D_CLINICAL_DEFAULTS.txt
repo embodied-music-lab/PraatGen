@@ -65,6 +65,11 @@ The following are NOT valid justifications for deviation:
 - "The singer might occasionally go below X"
 - "It's closer to the expected range" (without signal-loss evidence)
 
+Where the canonical value is part of a published method that users
+compare results against, such as the CPPS peak search (§5B), a deviation
+also costs comparability with published norms. Then the deviation is a
+PRE-FLIGHT question that states that cost, never a stated decision.
+
 Narrowing a range below canonical is just as much a deviation as
 widening it. A ceiling of 500 Hz when canonical is 600 Hz requires
 the same justification as a floor of 50 Hz when canonical is 75 Hz.
@@ -405,8 +410,10 @@ Get shimmer (local): 0, 0, 0.0001, 0.02, 1.3, 1.6
 #
 #   Sustained vowel WITH VIBRATO  (most trained singers)
 #       `local` is inflated by the vibrato and is NOT a stability measure.
-#       Use rap/ppq5 (jitter) and apq3/apq5 (shimmer). Report vibrato rate
-#       and extent alongside.
+#       Use rap/ppq5 (jitter) and apq3/apq5 (shimmer). Vibrato rate and
+#       extent are a PRE-FLIGHT discussion: whether to report them alongside
+#       (eml-vibrato-procedures.txt), and what the stability measures mean
+#       on vibrato material. Never add or drop them without that discussion.
 #
 #   Pitch-varying (glide, scale, portamento, register transition)
 #       Slow movement does not inflate `local` much, but this is not a
@@ -435,9 +442,10 @@ Get shimmer (local): 0, 0, 0.0001, 0.02, 1.3, 1.6
 #   https://www.fon.hum.uva.nl/praat/manual/Voice_2__Jitter.html
 #   https://www.fon.hum.uva.nl/praat/manual/Voice_3__Shimmer.html
 #
-# Give the user the URL, or this summary, whenever a jitter or shimmer
-# number will be compared against a clinical threshold or against a value
-# from other software. Most published norms come from MDVP.
+# Whenever a script measures jitter or shimmer, point the user to the
+# "Voice 5. Comparison with other programs" URL above: in the PRE-FLIGHT,
+# in the script header, and in the Info window summary. A summary in your
+# own words doesn't replace the URL. Most published norms come from MDVP.
 #
 # THE MEASURES ARE NOT THE SAME QUANTITY. Boersma's worked case: a
 # computer-generated glottal source with a CONSTANT period, vocal-tract
@@ -819,6 +827,22 @@ Get CPPS: "no", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0, "Straight", "
 # The Maryn values above are what the clinical CPPS literature
 # consistently uses.
 #
+# PEAK-SEARCH RANGE AND PUBLISHED NORMS (hard)
+# The 60-330 Hz peak search is part of the published method. CPPS values
+# compare with published norms and thresholds only when it is unchanged.
+# When the highest expected F0 is above 330 Hz, the canonical ceiling misses
+# signal (§0), and raising it makes the CPPS incomparable with published
+# values. Never raise it as a stated default. Ask in PRE-FLIGHT, and tell
+# the user both consequences:
+#   - Keep 60-330 Hz: CPPS stays comparable with published norms, but the
+#     peak search can't reach F0 above 330 Hz. The script warns, and the
+#     value is reported as censored for that material.
+#   - Raise the ceiling: the peak search covers the sung F0, but the CPPS
+#     can't be compared with published norms or thresholds.
+# Without an answer, keep 60-330 Hz and warn. Report the ceiling used in
+# every output row. When it was raised, say in the Info window and the CSV
+# that the CPPS isn't comparable with published values.
+#
 # ERRATUM (21 April 2026): Prior version of this section had the
 # Praat dialog defaults labeled as "Maryn et al." parameters. Corrected
 # after comparison with Phonanium Cepstrography v01.02 source script.
@@ -879,6 +903,29 @@ To Intensity: 100, 0.0, "yes"
 #           ... " Hz ceiling. Widen the range or treat the result as censored."
 #   endif
 #
+# WHICH WARNING APPLIES TO WHICH LIMIT (hard)
+#
+# The PRE-FLIGHT asks the human question: the highest and lowest pitches in
+# the recordings. The algorithm limits are hard numbers derived from that
+# answer with a buffer. The two kinds of limit get different warnings:
+#   - A fixed limit, such as a canonical floor, or the 60-330 Hz CPPS peak
+#     search kept as published: warn when a measurement comes within 10% of
+#     it, as above.
+#   - A limit derived from the stated range plus a buffer: warn when the
+#     measurement crosses the stated range itself (next rule). Never warn on
+#     proximity to the derived limit. The buffer puts that limit just above
+#     the stated top, so a proximity warning fires on every recording that
+#     reaches the top note.
+#
+# The two pitch algorithms fail differently past their limits:
+#   - Filtered autocorrelation degrades gracefully. Its internal low-pass
+#     starts attenuating at half the pitch top, so the 2x rule (§1A) leaves
+#     a margin.
+#   - Raw cross-correlation stops at its ceiling. Periods above it are lost
+#     outright (§1B). Its buffer must clear the highest F0, vibrato peaks
+#     included, and a measurement that crosses the stated top is the warning
+#     that the buffer may not have been enough.
+#
 # CHECK THE USER'S STATED RANGE AGAINST THE MEASUREMENT (hard)
 #
 # When the user supplies an expected range, compare it to what was measured
@@ -890,6 +937,8 @@ To Intensity: 100, 0.0, "yes"
 # Observed: user stated F0 stayed below 300 Hz; measurement returned 322.87 Hz;
 # nothing flagged it. Report the discrepancy, state which parameters were
 # derived from the stated value, and let the user decide whether to re-run.
+# Name the raw cross-correlation ceiling first when the top was crossed,
+# because it is a hard cutoff.
 #
 # Pattern for plausibility check:
 #

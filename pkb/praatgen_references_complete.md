@@ -39,7 +39,7 @@ Howard, D. M. (1995). Variation of electrolaryngographically derived closed quot
 ## 3. Cepstral Analysis and Voice Quality (CPPS / AVQI)
 
 Maryn, Y., & Weenink, D. (2015). Objective dysphonia measures in the program Praat: Smoothed cepstral peak prominence and acoustic voice quality index. *Journal of Voice*, *29*(1), 35–43. https://doi.org/10.1016/j.jvoice.2014.06.015
-> Cited in: APPENDIX_D §5B, COMMANDS_PowerCepstrogram.txt, Master Prompt House Rules. Primary source for CPPS parameter set used throughout the PKB.
+> Cited in: APPENDIX_D §5B, COMMANDS_PowerCepstrogram.txt, RULES_CODE.md House Rules. Primary source for CPPS parameter set used throughout the PKB.
 
 Maryn, Y., De Bodt, M., Barsties, B., & Roy, N. (2014). The value of the Acoustic Voice Quality Index as a measure of dysphonia severity in subjects speaking different languages. *European Archives of Oto-Rhino-Laryngology*, *271*, 1609–1619. https://doi.org/10.1007/s00405-013-2730-7
 > Cited in: APPENDIX_D §10H. Source for AVQI v02.06 regression formula.
@@ -131,4 +131,4 @@ Brunelle, M. (n.d.). *EGG_DEGG scripts* [Praat scripts]. NC State University.
 
 1. **Praat manual URL convention:** All Praat manual URLs in the PKB follow the pattern `https://www.fon.hum.uva.nl/praat/manual/[ObjectType]__[Command_name]___.html` with spaces replaced by underscores and the URL ending in `___`. These are Tier 2 verification sources per Rule 12.
 
-2. **PRAAT_DEFINITIVE_CATALOGUE.txt** was generated from Praat v6.4.62 C++ source code via automated parsing (20 March 2026). It is a derived work from the Praat source, not a separately published reference.
+2. **PRAAT_DEFINITIVE_CATALOGUE.txt** (in the PKB as `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `_PART2.txt`) was generated from Praat v6.4.62 C++ source code via automated parsing (20 March 2026). It is a derived work from the Praat source, not a separately published reference.

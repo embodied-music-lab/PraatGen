@@ -18,7 +18,7 @@ Generated: 8 April 2026 | **Updated 29 July 2026 (PraatGen v14.1.0) directly fro
 > delivered script (or into a sibling folder shipped with it) — never emit
 > `include ../graphs/….praat`, `preferencesDirectory$`, or any absolute path.
 > Copy transitively: a copied procedure's own `@eml…` calls come too. See
-> Master Prompt retrieval protocol step 12.
+> `RULES_RETRIEVAL.md`, Retrieval Protocol step 12.
 
 > **The `Parameters` column is inputs only — it does NOT list return
 > variables.** A procedure that returns a value does so through a local
@@ -28,7 +28,7 @@ Generated: 8 April 2026 | **Updated 29 July 2026 (PraatGen v14.1.0) directly fro
 > reads back the unchanged candidate path, and silently defeats the collision
 > guard. **Read the `Outputs:` line in the procedure's own header comment, or
 > the procedure body, before consuming a return value.** Never infer the return
-> variable from this table or from a snippet elsewhere in the PKB — Rule 223
+> variable from this table or from a snippet elsewhere in the PKB — Retrieval Protocol step 11 (`RULES_RETRIEVAL.md`)
 > applies: the source file governs.
 
 > **Version discipline.** Each `**File:**` version below is the PLUGIN's version,

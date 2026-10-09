@@ -66,7 +66,7 @@
 # one into generated code produces a script that fails with
 # "Cannot open file" on any machine without the plugin installed.
 #
-# See Master Prompt retrieval protocol step 12 for the two accepted
+# See RULES_RETRIEVAL.md, Retrieval Protocol step 12, for the two accepted
 # delivery shapes and the SELF-AUDIT requirement.
 #
 # ====================================================================

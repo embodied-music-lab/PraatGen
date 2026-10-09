@@ -29,6 +29,9 @@
   # error.
   # Provenance: Empirical verification, Praat 6.4.65 sandbox, 17 May 2026.
   Count differences
+  Count voiced frames
+  # Verified: Count voiced frames
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)
   Get all candidates in frame: frame number
 
   # Query (session-verified)
@@ -56,6 +59,11 @@
   # Verified: Get minimum: 0, 0, "Hertz", "parabolic"
   Get maximum: from time, to time, unit$, interpolation$
   # Verified: Get maximum: 0, 0, "Hertz", "parabolic"
+  Get time of maximum: from time, to time, unit$, interpolation$
+  # Verified: Get time of maximum: 0, 0, "Hertz", "parabolic"
+  Get time of minimum: from time, to time, unit$, interpolation$
+  # Verified: Get time of minimum: 0, 0, "Hertz", "parabolic"
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (argument count from Praat's "requires only 4 arguments" error)
    Get standard deviation: from time, to time, unit$
   # Verified: Get standard deviation: 0, 0, "Hertz"
   # Provenance: Paste Commands 24 Feb 2026

@@ -50,6 +50,9 @@
   # Verified: Select outer viewport: 0, 6, 0, 4
   Select inner viewport: left, right, top, bottom
   # Verified: Select inner viewport: 0, 6, 0, 4
+  Mouse selects outer viewport
+  # Verified: Mouse selects outer viewport
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)
 
   # Edit
   Erase all
@@ -77,6 +80,9 @@
   # Verified: Dashed line
   Dotted line
   # Verified: Dotted line
+  Grey
+  # Verified: Grey
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)
   Line width: width
   # Verified: Line width: 1
   Colour: colour$
@@ -114,6 +120,9 @@
   # Verified: Text bottom: "yes", "Time (s)"
   Text top: far?, text$
   # Verified: Text top: "no", "Title"
+  Text right: far?, text$
+  # Verified: Text right: "yes", "Intensity (dB)"
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (argument count from Praat's "requires only 2 arguments" error)
 
   # File (save)
   Save as 300-dpi PNG file: file path$

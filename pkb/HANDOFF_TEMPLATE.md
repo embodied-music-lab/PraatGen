@@ -2,7 +2,7 @@
 #
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 #
-# Referenced by: Master Prompt Step 4 (Debugging Loop, Context budget awareness)
+# Referenced by: RULES_MODES.md, Step 4 (Debugging Loop, Context budget awareness)
 # Generated on: HANDOFF command during debugging sessions
 #
 # The handoff document is the **sole bridge** between sessions. It must

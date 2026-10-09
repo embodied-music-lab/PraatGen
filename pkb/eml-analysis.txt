@@ -1371,7 +1371,7 @@ endproc
 # Cholesky/BOBYQA machinery used by nothing else) are excluded with it.
 #
 # Consequence (hard): do NOT route a task to @emlRunLMMAnalysis, and do NOT
-# reconstruct the missing procedures — MP Rule 223 has no source to copy from
+# reconstruct the missing procedures — Retrieval Protocol step 11 (RULES_RETRIEVAL.md) has no source to copy from
 # here. If a task genuinely needs a mixed model, say so plainly and ask the
 # user; the plugin has the implementation even though the PKB does not.
 # The other 20 dispatchers in this file are fully resolved.

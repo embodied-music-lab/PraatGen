@@ -1,0 +1,14 @@
+# PRAAT COMMANDS: Matrix
+# Source: Sandbox-verified, Praat 6.6.30 (Linux x64v3), 8 Oct 2026
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+#
+# This file holds the Matrix commands verified in the sandbox. For any other
+# Matrix command, the catalogue is the last fallback, and a command found only
+# there is verified in the sandbox before use (Rule 12).
+
+  To TableOfReal
+  # Verified: To TableOfReal
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)

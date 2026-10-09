@@ -571,7 +571,7 @@
 # AND THE KEY MUST SHOW WHAT YOU USED. Whatever channels separate the series
 # — style, width, value — every one of them appears in the legend, drawn as a
 # line segment with the same Colour / Line style / Line width calls as the
-# series. See Master Prompt Rule 28D2. A colour-only key on a figure that also
+# series. See RULES_CODE.md Rule 28D2. A colour-only key on a figure that also
 # uses dashes is the single commonest defect in an otherwise correct figure,
 # and it is fatal to the greyscale version.
 #

@@ -7,11 +7,178 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.0.0 — 9 October 2026 (ships Master Prompt 16.0.0)
+
+PraatGen is restructured for sessions that work through tools. Upgrade notes
+are in `RELEASE_NOTES_2.0.0.md`; every release is also published at
+https://github.com/embodied-music-lab/PraatGen/releases.
+
+### 16.0.0 — 9 October 2026
+
+**The Master Prompt is a short core plus six rules files.** The core holds the
+workflow, the pre-flight, the model and subagent rules, state persistence and
+an index. Every other section moved word for word, with its number unchanged,
+into `RULES_RETRIEVAL.md`, `RULES_PLANNING.md`, `RULES_CODE.md`,
+`RULES_AUDIT.md`, `RULES_MODES.md` and `RULES_SANDBOX.md`. The core names the
+step at which each file is read in full.
+
+**The plan is approved before any code is written.** On every model, the turn
+ends after the COMMAND PLAN, FUNCTION PLAN and Phase 3B line, and code follows
+the user's next GO. AUTO has no waits. Effort models previously continued to
+code in the same turn.
+
+**The SELF-AUDIT no longer checks an output-commands house rule.** The rule it
+referred to has not been in the prompt since 14.15.0.
+
+**Each workflow step leaves a file.** For each script the output folder holds
+`<name>_plan.md`, an unedited copy of the plan as sent (`<name>_plan_sent.md`),
+the script, `<name>_lint.txt` and `<name>_audit.md`. The COMMAND PLAN is a
+table naming the verifying source of every command, and it is sent to the user
+before any code is written. The lint checks that the sent copy exists, predates
+the script and is still covered by the plan.
+
+**The PRE-FLIGHT reads everything its questions depend on.** In Turn 1 the
+session reads five of the six rules files in full (all but the modes file,
+which loads when a mode starts), plus the domain files the Retrieval Protocol
+makes mandatory for the task, such as `APPENDIX_D_CLINICAL_DEFAULTS.txt` for
+voice analysis and the two EGG files for an EGG signal. It states their
+defaults and asks about the choices they leave open. Canonical values and
+required methods, such as separate Pitch objects for F0 statistics and for
+jitter and shimmer, are stated as decisions and never offered as options. The
+domain files are read again at GO.
+
+**Reference files are read in full.** At GO the session reads every file the
+task needs in full, including `APPENDIX_B_FUNCTIONS.txt` for the FUNCTION PLAN
+and `EML_PROCEDURE_REGISTRY.md` for EML procedures. A search locates an EML
+procedure's source file, which is then read in full.
+
+**Every script is linted before delivery.** The linter in `TOOL_PRAATGEN_LINT.zip` checks
+commands against the reference files, the script against its plan (Rule 17),
+and the mechanical audit items. Blocking findings are fixed before delivery,
+and the lint runs again after every change. The linter ships zipped, because the app returns at most 256 KiB of a
+text project file and saves a zip upload to disk whole.
+
+**The catalogue is in two parts.** `PRAAT_DEFINITIVE_CATALOGUE.txt` became
+`PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `PRAAT_DEFINITIVE_CATALOGUE_PART2.txt`,
+so each reads in full under the app's 256 KiB limit. The text is unchanged.
+A note at the top of each part says which part holds which object type.
+
+**The catalogue is the last fallback.** Commands are checked against the PKB
+reference files, then the Praat manual, then the catalogue (Rule 12). A
+command found only in the catalogue is verified in the sandbox before use, or
+by Paste Commands without a sandbox, and the linter blocks it until then.
+
+**Eight commands moved from the catalogue to the reference files**, each
+verified in Praat 6.6.30: `Count voiced frames` (COMMANDS_Pitch.txt); `Grey`,
+`Mouse selects outer viewport` and `Text right` (COMMANDS_PictureWindow.txt);
+`Get TukeyQ` and `Get invTukeyQ` (COMMANDS_Universal.txt); and Matrix
+`To TableOfReal` in a new COMMANDS_Matrix.txt. The EML library uses all eight.
+
+**A fresh Opus reviewer checks every script.** It reads the reference files
+the plan cites and returns each failure with its file and line. Where no
+subagent can be started on Opus, the session says the review didn't run,
+re-reads `RULES_AUDIT.md` and every reference file the plan cites, in full,
+and writes an itemized compliance table. The lint output doesn't replace those
+reads. Before every SELF-AUDIT, the session re-reads the governing files for
+the script's clinical, drawing and form code.
+
+**The workflow takes precedence over the app's standing instructions.** Where
+the app's own instructions conflict with PraatGen's workflow, gates or
+SELF-AUDIT, PraatGen wins.
+
+**A clean run is not verification.** A sandbox probe can establish that a
+command exists and how many arguments it takes. Meaning, order and defaults
+come from a reference file, a Tier 2 source or Paste Commands.
+
+**Library procedures are read one by one.** PraatGen finds each procedure
+through the procedure registry and reads only its body and the procedures it
+calls, never a whole library file.
+
+**The privacy notice names the Claude settings to check,** as Anthropic's pages
+describe them on 9 October 2026, and asks you to confirm each in the app.
+
+**Connected folders and recordings of people.** PraatGen offers the local route
+first: you run the script on your own computer. It asks for the narrowest
+folder, never changes your files, and proposes an output folder name before
+creating it. Before it reads recordings of people, the pre-flight states the
+privacy precautions every time, and you decide.
+
+**The introduction is reorganized.** The four items come first, and modes and
+models are tables.
+
+**No web search without the user (hard gate).** PraatGen uses Project
+Knowledge and the user as its sources, and Praat's own manual, downloads and
+source repository as its only outside sources. Any other web search needs an
+exhausted Project Knowledge search, a discussion with the user and their yes.
+The rule overrides app instructions to search first, applies to subagents, and
+the SELF-AUDIT reports web access.
+
+**The linter checks the read tokens.** The plan lists each rules file read in
+full with its token, and the linter confirms every pairing without holding the
+tokens in readable form. The SELF-AUDIT copies the linter's verified line, so
+a mislabeled or invented token can't reach the user.
+
+**Range warnings follow the researcher's stated range.** A limit derived from
+the stated range plus a buffer warns when the measurement crosses the stated
+range, never on approaching the derived limit. Fixed limits keep the 10%
+proximity warning.
+
+**Vibrato rate and extent are a pre-flight discussion** on sustained vowels
+with vibrato.
+
+**The pre-flight thinks the task through before it states decisions.** It
+checks each canonical value against the singing range, vibrato, hardware and
+the comparisons the user will make, and asks where a value would lose signal
+or cost comparability with published norms.
+
+**Jitter and shimmer always come with the Praat manual's comparison page.** The
+pre-flight, the script header and the Info window summary give the "Voice 5.
+Comparison with other programs" URL.
+
+**Undefined values are written as Praat writes them, `--undefined--`.** Scripts
+no longer write `NA` or empty cells.
+
+**Raising the CPPS peak-search ceiling is a question, never a default.** The
+pre-flight asks, and says that keeping 60-330 Hz keeps CPPS comparable with
+published norms while raising it doesn't. Without an answer the script keeps
+60-330 Hz and warns.
+
+**The linter checks function names.** Every function call must match a name in
+`APPENDIX_B_FUNCTIONS.txt`; one that doesn't is a blocking finding, and the
+lint lists the functions it found. `info$ ( )` is added to
+`APPENDIX_B_FUNCTIONS.txt`.
+
+**EGG polarity is tested from the derivative peaks.** The EGG is inverted
+automatically when the derivative's negative peak is larger than its positive
+peak, and the ratio is reported. It is the default and a workflow option. The CQ
+plausibility bound no longer claims to catch wrong polarity: an inverted EGG
+reads as 1 minus the true CQ, which usually stays inside the bound.
+
+**The plans appear in full in the chat.** A summary or a pointer to the plan
+file doesn't replace them.
+
+**The plans don't ask whether to follow a standard.** They state canonical
+values and default-ON features as decisions. Open choices get a default listed
+under Assumptions, and a bare GO accepts them.
+
+**Weaker models never touch script content.** Sonnet and Haiku don't draft,
+edit, review or verify Praat code. Haiku is never used, even as a subagent. A
+session may give a Sonnet subagent only mechanical tasks.
+
+**References to "Rule 223" now name Retrieval Protocol step 11.** "Rule 223"
+was the line number of the copy-exactly-from-source rule in an earlier prompt.
+Every reference now names the step and `RULES_RETRIEVAL.md`. The SELF-AUDIT's
+palette item cites the ACCESSIBLE COLOR PALETTE standard in
+`BEST_PRACTICES_DRAWING.txt`, and the PRE-FLIGHT asks its question.
+
+**The PRE-FLIGHT names the files it will load.** Its "Will load at GO" line
+lists each file, and the SELF-AUDIT marks each one read or not read. The
+open-items file never reports no open items while a check is open.
+
 ### Release 1.2.1 — 8 October 2026 (Master Prompt 15.0.0, unchanged)
 
-A correction release. Upgrade notes are in `RELEASE_NOTES_1.2.1.md`; every
-release is also published at
-https://github.com/embodied-music-lab/PraatGen/releases.
+A correction release. Release notes and upgrade notes are on the v1.2.1
+release page: https://github.com/embodied-music-lab/PraatGen/releases/tag/v1.2.1
 
 **`@emlDrawLTAS` draws on reversed axes.** All four methods (curve, bars, poles
 and speckles) now draw when the frequency or level axis is reversed. Before, a

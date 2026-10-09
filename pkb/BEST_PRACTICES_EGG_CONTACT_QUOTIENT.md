@@ -147,6 +147,72 @@ Measured on a real recording:
 
 Differentiation cost 8 dB. Ternström (2024) makes the same point — that no current EGG hardware has sufficient SNR *of the derivative*. **A waveform SNR comfortably above 10 dB does not guarantee a usable derivative.**
 
+
+### Polarity: the derivative peak test (PraatGen practice)
+
+Praat expects an EGG whose value rises with contact. An inverted EGG doesn't
+error, and its dEGG CQ reads as 1 minus the true CQ. That value usually lies
+inside the 0.15–0.85 plausibility bound, so the bound doesn't catch it.
+
+PraatGen tests polarity from the derivative instead. The contacting peak of the
+derivative is sharp and tall, and the de-contacting trough is broad and shallow
+(§1b). On an upright EGG the derivative's largest positive value is larger than
+the size of its largest negative value. When the negative value is larger, the
+EGG is inverted. This test is PraatGen's own practice. It doesn't come from a
+published source.
+
+Make the test the default and offer it as a workflow option. State it in
+PRE-FLIGHT as the default. The user can instead fix polarity as recorded or as
+inverted, for example when they know their hardware. The test runs on the whole
+analysis window, before cycle detection, with the same differentiator as the
+CQ measurement:
+
+```praat
+# Lab judgement, not a validated value
+polarityAmbiguity = 1.25
+
+selectObject: soundId
+eggId = Extract Electroglottogram: eggChannel, "no"
+selectObject: eggId
+polDerivId = Derivative: 5000, 100, 0
+selectObject: polDerivId
+dMax = Get maximum: 0, 0, "Sinc70"
+selectObject: polDerivId
+dMin = Get minimum: 0, 0, "Sinc70"
+removeObject: polDerivId
+polarityRatio = undefined
+if dMin < 0
+    polarityRatio = dMax / abs (dMin)
+endif
+eggInverted$ = "no"
+polarityUndecided = 0
+if polarityRatio = undefined
+    polarityUndecided = 1
+elsif polarityRatio < 1 / polarityAmbiguity
+    removeObject: eggId
+    selectObject: soundId
+    eggId = Extract Electroglottogram: eggChannel, "yes"
+    eggInverted$ = "yes (auto)"
+elsif polarityRatio < polarityAmbiguity
+    polarityUndecided = 1
+endif
+# polarityUndecided = 1: keep the polarity as recorded and warn
+```
+
+- Report the ratio and whether the EGG was inverted, in the Info window and in
+  every output row.
+- A ratio near 1 means the test can't decide. An EGG whose rise and fall take
+  the same time gives a ratio of 1.000 either way up. Between `1 / polarityAmbiguity`
+  and `polarityAmbiguity`, keep the polarity as recorded and warn.
+  `polarityAmbiguity = 1.25` is a lab judgement, not a validated value.
+- One large artifact in the window can decide a whole-window maximum. When the
+  ratio is close to the band, look at the signal.
+
+Provenance: sandbox-verified 6.6.30, 8 Oct 2026, on synthetic EGGs.
+`Derivative` returns a Sound. Ratios: 3.278 upright and 0.305 inverted (fast
+rise, 300 Hz); 1.484 and 0.614 with noise SD 0.1; 4.127 at 150 Hz; 1.822 at
+600 Hz; 1.000 both ways up when rise and fall are equal.
+
 ---
 
 ## 4. De-noising — none in this build
@@ -432,13 +498,13 @@ Companion measure: Ternström (2019) also defines a normalised contact quotient 
 
 1. Read the file. Confirm channel count and sampling frequency.
 2. Identify the EGG channel if not specified. Derivative HNR is a usable discriminator — on a real stereo file ch2 (EGG) gave 21.5 dB against ch1 (audio) 17.7 dB, with waveform HNR 27.1 vs 22.1.
-3. `Extract Electroglottogram: channel, invert?`
+3. `Extract Electroglottogram: channel, "no"`, then the derivative peak polarity test (§3, Polarity). Re-extract with `"yes"` when the test finds the EGG inverted, unless the user fixed polarity.
 4. `To Sound` — keep this; it is the working object for every query.
 5. Measure EGG SNR (§2) on the Sound.
 6. Guard (`COMMANDS_Electroglottogram.txt`) before any call to `To TextGrid (closed glottis)` or `To AmplitudeTier (levels)`.
 7. Method per the §5 agreement reached in PRE-FLIGHT — not a dialog field. dEGG by default; where the discussion concluded the answer was ambiguous, compute **both** dEGG and hybrid-at-0.43 on the same cycles and report them side by side with mean, cycle-to-cycle SD and cycle count.
 8. Plausibility-bound the **output** — every method reported, not just the preferred one. Refuse rather than report an impossible value.
-9. Report, in every output row: method (and differentiator — `Derivative` with its cutoff, or `First central difference`), threshold criterion, EGG SNR, cycles used, and cycle-to-cycle SD.
+9. Report, in every output row: polarity (ratio, and whether the EGG was inverted), method (and differentiator — `Derivative` with its cutoff, or `First central difference`), threshold criterion, EGG SNR, cycles used, and cycle-to-cycle SD.
 
 Object hygiene: `High-pass filter`, `Derivative`, and `First central difference` each create a new object. `To AmplitudeTier (levels)` creates up to three. Track every ID and remove only what the script created (Rule 4B).
 
