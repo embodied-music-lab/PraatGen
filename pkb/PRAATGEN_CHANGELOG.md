@@ -7,6 +7,17 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 16.4.0 — 9 October 2026
+
+**The house rules missing since 14.17.0 are back.** `RULES_CODE.md` again
+carries the house rules that 14.17.0 dropped with its version-check change:
+computed counts and checksummed bundles, no narration of the library's state,
+no unrequested measures, the library style exception, the core syntax and
+drawing rules, the demo window rules, no language-switching advice, `noprogress`
+in loops, comma CSV by default, the editor check, the loop, `and`/`or` and
+`nocheck` behaviors, zip delivery with a manifest, and dependency currency. The
+rule on assigning string literals before output commands stays retired.
+
 ### 16.3.0 — 9 October 2026
 
 **No hardcoded values.** Every value you give for your material, such as the
