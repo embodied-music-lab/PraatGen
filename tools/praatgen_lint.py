@@ -26,6 +26,9 @@ Checks:
                        and the two catalogue part files (outcomes below).
   Plan coverage        Every command called is a row of the command plan
                        (Rule 17); every row has a Source.
+  Task coverage        The plan quotes the task under "Task as given" and has
+                       a Requested | Produced by table; every row names what
+                       produces it, or "dropped:" with the user's words.
   Form numeric defaults  real/positive/integer/natural (and vector) fields in
                        form ... endform have a quoted default (Rule 18).
   Non-ASCII text       Non-ASCII in a string on a line that writes a file
@@ -834,6 +837,66 @@ def check_plan(rows, plan_path):
     return findings
 
 
+TASK_HEADING = re.compile(r'^#{1,6}\s*Task as given\s*$', re.I)
+
+
+def check_task_coverage(plan_path):
+    """The plan quotes the task under "Task as given" and maps each requested
+    item in a Requested | Produced by table. Returns (findings, summary)."""
+    if plan_path is None:
+        return [], ''
+    with open(plan_path, encoding='utf-8') as f:
+        lines = f.read().split('\n')
+    findings = []
+    start = next((i for i, s in enumerate(lines) if TASK_HEADING.match(s.strip())), None)
+    if start is None:
+        findings.append(('BLOCKING', 0, 'the plan has no "Task as given" section quoting the task'))
+    else:
+        body = []
+        for s in lines[start + 1:]:
+            if s.lstrip().startswith('#') or table_cells(s) is not None:
+                break
+            if s.strip():
+                body.append(s)
+        if not body:
+            findings.append(('BLOCKING', 0,
+                             f'plan line {start + 1}: "Task as given" quotes nothing'))
+    rows, dropped, found = 0, 0, False
+    i = 0
+    while i < len(lines):
+        cells = table_cells(lines[i])
+        heads = [c.strip('*').lower() for c in cells] if cells else []
+        if 'requested' in heads and 'produced by' in heads:
+            found = True
+            ri, pi = heads.index('requested'), heads.index('produced by')
+            i += 1
+            while i < len(lines):
+                row = table_cells(lines[i])
+                if row is None:
+                    break
+                if not all(re.fullmatch(r':?-{2,}:?', c) for c in row if c):
+                    req = row[ri].strip() if ri < len(row) else ''
+                    prod = row[pi].strip() if pi < len(row) else ''
+                    if req:
+                        rows += 1
+                        if not prod:
+                            findings.append(('BLOCKING', 0, f'plan line {i + 1}: nothing produces {short(req)}'))
+                        elif prod.lower().startswith('dropped'):
+                            dropped += 1
+                            if len(prod.split(':', 1)[-1].strip()) < 3 or ':' not in prod:
+                                findings.append(('BLOCKING', 0, f'plan line {i + 1}: {short(req)} dropped without '
+                                                 "the user's words agreeing"))
+                i += 1
+            continue
+        i += 1
+    if not found:
+        findings.append(('BLOCKING', 0, 'the plan has no table with Requested and Produced by columns'))
+    elif rows == 0:
+        findings.append(('BLOCKING', 0, 'the Requested | Produced by table has no rows'))
+    summary = f'{rows} requested items mapped, {dropped} dropped' if found else ''
+    return findings, summary
+
+
 # ------------------------------------------------------- script checks
 
 def form_variable(label):
@@ -1440,9 +1503,11 @@ def main():
     fn_findings, fn_verified = check_functions(lines, functions)
     tok_findings, tok_verified = check_read_tokens(plan, token_hashes)
     lib_findings, lib_verified = check_library_copies(script, procs)
+    task_findings, task_summary = check_task_coverage(plan)
     checks = [
         ('Command references', cmd_findings),
         ('Plan coverage', check_plan(rows, plan)),
+        ('Task coverage', task_findings),
         ('Checkpoint files', check_checkpoint_files(script, plan)),
         ('Form numeric defaults', check_form_defaults(lines)),
         ('Non-ASCII text', check_non_ascii(lines)),
@@ -1480,6 +1545,8 @@ def main():
               + ', '.join(sorted(fn_verified)))
     if tok_verified:
         print('Read tokens verified: ' + '; '.join(sorted(tok_verified)))
+    if task_summary:
+        print('Task coverage in the plan: ' + task_summary)
     if lib_verified:
         print('Library copies verified against the EML library: '
               + ', '.join(sorted(lib_verified)))
