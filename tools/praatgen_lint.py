@@ -2,6 +2,13 @@
 """Static checks for a Praat script produced by PraatGen.
 
 Usage:  python3 praatgen_lint.py SCRIPT.praat [PLAN.md] [PKB_FOLDER]
+        python3 praatgen_lint.py --procedure NAME [NAME ...]
+
+--procedure prints EML library procedures ready to paste at the end of a
+script: each named procedure and every library procedure it calls, with its
+header comment, renamed to the emlPG prefix and otherwise verbatim. NAME may
+carry @, the eml prefix or the emlPG prefix. Exit status 1 names any NAME the
+library doesn't have.
 
 With PKB_FOLDER, the command reference files are read from that folder.
 Without it, the index embedded at the end of this file is used (the PKB copy,
@@ -26,6 +33,9 @@ Checks:
   Plugin includes      include only from a relative folder named *_lib.
   Library prefix       eml library procedures are copied as emlPG<Name>.
   Procedure calls      Every @name call has a procedure definition.
+  Library copies       Every emlPG procedure, in the script or an included
+                       *_lib file, matches its EML library source line for
+                       line, apart from the emlPG prefix on procedure names.
   Reserved names       No assignment, loop variable or procedure parameter
                        named e, pi or undefined.
   Old syntax           No do ( / do$ ( / call / select / plus / minus / echo /
@@ -932,6 +942,143 @@ def check_prefix(lines):
     return sorted(findings, key=lambda f: f[1])
 
 
+LIBRARY_FILE = re.compile(r'^eml-[\w-]+\.txt$')
+PROC_DEF = re.compile(r'^procedure\s+([A-Za-z_]\w*)')
+
+
+def load_procedures(pkb):
+    """name -> [file, header comment, body] for every procedure in the PKB
+    copies of the EML library (eml-*.txt). The body runs from the procedure
+    line to its endproc, trailing spaces removed; the header is the block of
+    comment lines directly above the procedure line."""
+    out = {}
+    for fn in sorted(os.listdir(pkb)):
+        if not LIBRARY_FILE.match(fn):
+            continue
+        with open(os.path.join(pkb, fn), encoding='utf-8') as f:
+            raw = [s.rstrip() for s in f.read().split('\n')]
+        i = 0
+        while i < len(raw):
+            m = PROC_DEF.match(raw[i])
+            if not m:
+                i += 1
+                continue
+            j = i
+            while j < len(raw) and not raw[j].startswith('endproc'):
+                j += 1
+            k = i
+            while k > 0 and raw[k - 1].startswith('#'):
+                k -= 1
+            out.setdefault(m.group(1), [fn, '\n'.join(raw[k:i]),
+                                        '\n'.join(raw[i:j + 1])])
+            i = j + 1
+    return out
+
+
+LIB_NAME = re.compile(r'(@|^procedure\s+)(eml\w+)', re.M)
+PG_NAME = re.compile(r'(@|^procedure\s+)emlPG(?=\w)', re.M)
+
+
+def to_pg(text, names):
+    """Rename library procedures to the emlPG prefix, at definitions and calls."""
+    return LIB_NAME.sub(lambda m: m.group(1) + LIB_PREFIX + m.group(2)[3:]
+                        if m.group(2) in names else m.group(0), text)
+
+
+def from_pg(text):
+    """Undo to_pg. The library has no emlPG names, so this is its exact inverse."""
+    return PG_NAME.sub(r'\1eml', text)
+
+
+def with_callees(names, procs):
+    """The requested procedures, then every library procedure they call, in turn."""
+    order, queue = [], list(names)
+    while queue:
+        n = queue.pop(0)
+        if n in order or n not in procs:
+            continue
+        order.append(n)
+        queue += [c for c in re.findall(r'@(eml\w+)', procs[n][2]) if c != n]
+    return order
+
+
+def extract(names, procs):
+    """Praat text for the procedures, renamed to emlPG, with their callees.
+    Returns (text, unknown names)."""
+    wanted, unknown = [], []
+    for n in names:
+        n = n.lstrip('@').rstrip(':')
+        if n.startswith(LIB_PREFIX):
+            n = 'eml' + n[len(LIB_PREFIX):]
+        (wanted if n in procs else unknown).append(n)
+    order = with_callees(wanted, procs)
+    added = [n for n in order if n not in wanted]
+    out = [f'# EML library procedures: {", ".join(wanted) or "none"}'
+           + (f'; called by them: {", ".join(added)}' if added else '')]
+    for n in order:
+        fn, header, body = procs[n]
+        out.append('')
+        out.append(f'# --- {LIB_PREFIX}{n[3:]}, copied verbatim from {fn} ---')
+        if header:
+            out.append(to_pg(header, procs))
+        out.append(to_pg(body, procs))
+    return '\n'.join(out) + '\n', unknown
+
+
+def script_copies(path, seen=None):
+    """(file, line number, name, body) for every emlPG procedure in the script
+    and in the *_lib files it includes that exist on disk."""
+    seen = set() if seen is None else seen
+    path = os.path.normpath(path)
+    if path in seen or not os.path.isfile(path):
+        return []
+    seen.add(path)
+    with open(path, encoding='utf-8') as f:
+        raw = [s.rstrip() for s in f.read().split('\n')]
+    out = []
+    for i, s in enumerate(raw):
+        m = PROC_DEF.match(s.strip())
+        if m and m.group(1).startswith(LIB_PREFIX):
+            j = i
+            while j < len(raw) and not raw[j].strip().startswith('endproc'):
+                j += 1
+            out.append((path, i + 1, m.group(1), raw[i:j + 1]))
+    for ln in read_lines(path):
+        target = include_target(ln)
+        if target:
+            out += script_copies(os.path.join(os.path.dirname(path), target), seen)
+    return out
+
+
+def check_library_copies(script_path, procs):
+    """Every emlPG procedure matches its library source, apart from the prefix.
+    Returns (findings, verified names)."""
+    findings, verified = [], []
+    top = os.path.normpath(script_path)
+    for path, n, name, body in script_copies(script_path):
+        where_ = '' if path == top else f'{os.path.basename(path)} '
+        orig = 'eml' + name[len(LIB_PREFIX):]
+        if orig not in procs:
+            findings.append(('BLOCKING', 0 if where_ else n,
+                             f'{where_}{"line " + str(n) + ": " if where_ else ""}'
+                             f'procedure {name}: the EML library has no {orig}; '
+                             f'the {LIB_PREFIX} prefix is only for library copies'))
+            continue
+        lib = procs[orig][2].split('\n')
+        got = from_pg('\n'.join(body)).split('\n')
+        if got == lib:
+            verified.append(name)
+            continue
+        k = next((i for i, (a, b) in enumerate(zip(got, lib)) if a != b),
+                 min(len(got), len(lib)))
+        expected = lib[k].strip() if k < len(lib) else '(the procedure ends here)'
+        findings.append(('BLOCKING', 0 if where_ else n + k,
+                         f'{where_}{"line " + str(n + k) + ": " if where_ else ""}'
+                         f'{name} differs from {orig} in {procs[orig][0]} '
+                         f'at its line {k + 1}; the source has: {short(expected)}'))
+    return findings, verified
+
+
 def lib_procedures(lines, script_dir, seen=None):
     """Procedures defined in included *_lib files that exist on disk."""
     seen = set() if seen is None else seen
@@ -1229,8 +1376,29 @@ def tally(checks):
     return 'Tally: ' + '; '.join(parts)
 
 
+def library_procedures():
+    """The library index: embedded in the PKB copy, else the pkb folder beside."""
+    if EMBEDDED_INDEX is not None:
+        return {k: list(v) for k, v in EMBEDDED_INDEX['procedures'].items()}
+    beside = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'pkb')
+    return load_procedures(os.path.normpath(beside)) if os.path.isdir(beside) else {}
+
+
+def main_procedure(names):
+    procs = library_procedures()
+    if not names:
+        usage()
+    text, unknown = extract(names, procs)
+    for n in unknown:
+        print(f'# NOT IN THE EML LIBRARY: {n}')
+    sys.stdout.write(text)
+    sys.exit(1 if unknown else 0)
+
+
 def main():
     args = sys.argv[1:]
+    if args[:1] == ['--procedure']:
+        main_procedure(args[1:])
     if not 1 <= len(args) <= 3:
         usage()
     script, plan, pkb = args[0], None, None
@@ -1250,6 +1418,7 @@ def main():
         catalogue = load_catalogue(pkb)
         functions = load_functions(pkb)
         token_hashes = load_token_hashes(pkb)
+        procs = load_procedures(pkb)
     elif EMBEDDED_INDEX is not None:
         curated = {k: [tuple(e) for e in v]
                    for k, v in EMBEDDED_INDEX['curated'].items()}
@@ -1257,6 +1426,7 @@ def main():
                      for k, v in EMBEDDED_INDEX['catalogue'].items()}
         functions = dict(EMBEDDED_INDEX['functions'])
         token_hashes = dict(EMBEDDED_INDEX['tokens'])
+        procs = library_procedures()
     else:
         print('No reference folder given, no embedded index and no pkb folder '
               'beside this file.')
@@ -1269,6 +1439,7 @@ def main():
     cmd_findings, verified = check_commands(rows, curated, catalogue)
     fn_findings, fn_verified = check_functions(lines, functions)
     tok_findings, tok_verified = check_read_tokens(plan, token_hashes)
+    lib_findings, lib_verified = check_library_copies(script, procs)
     checks = [
         ('Command references', cmd_findings),
         ('Plan coverage', check_plan(rows, plan)),
@@ -1278,6 +1449,7 @@ def main():
         ('Plugin includes', check_includes(lines)),
         ('Library procedure prefix', check_prefix(lines)),
         ('Procedure calls resolve', check_calls(lines, os.path.dirname(os.path.abspath(script)))),
+        ('Library copies', lib_findings),
         ('Reserved names', check_reserved(lines)),
         ('Old syntax', check_old_syntax(lines)),
         ('Pause dialogs', check_pause(lines)),
@@ -1308,6 +1480,9 @@ def main():
               + ', '.join(sorted(fn_verified)))
     if tok_verified:
         print('Read tokens verified: ' + '; '.join(sorted(tok_verified)))
+    if lib_verified:
+        print('Library copies verified against the EML library: '
+              + ', '.join(sorted(lib_verified)))
     print(tally(checks))
     sys.exit(1 if blocking else 0)
 
