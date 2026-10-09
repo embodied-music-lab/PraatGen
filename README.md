@@ -79,7 +79,7 @@ In Claude (claude.ai or the Claude app):
 ### 2. Set the System Prompt
 
 1. In your new project, click **instructions**
-2. Paste the entire contents of `MASTER_PROMPT_CORE_v16_0_0.md` into the instructions field
+2. Paste the entire contents of `MASTER_PROMPT_CORE_v16_1_0.md` into the instructions field
 3. Scroll to the bottom and edit the "Canary" text if you wish. PraatGen reports this value back to you in pre-flight as a confidence measure that it read the core prompt in full. The `RULES_*.md` files are read at the workflow steps the core names, and the SELF-AUDIT lists the read token at the end of each one.
 4. Save
 
@@ -180,7 +180,7 @@ PraatGen cannot reliably tell from the inside that anything happened.
 
 | File | Purpose |
 |------|---------|
-| `MASTER_PROMPT_CORE_v16_0_0.md` | The project instructions: the workflow, its checkpoints, the pre-flight, the model rules and an index of the six `RULES_*.md` files that hold the rest of the 37 rules. The session reads each rules file in full at the step that needs it. Master Prompt content version: 16.0.0. |
+| `MASTER_PROMPT_CORE_v16_1_0.md` | The project instructions: the workflow, its checkpoints, the pre-flight, the model rules and an index of the six `RULES_*.md` files that hold the rest of the 37 rules. The session reads each rules file in full at the step that needs it. Master Prompt content version: 16.0.0. |
 | `README.md` | This file. |
 | `RELEASE_NOTES_2.0.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.0.0 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
@@ -289,7 +289,7 @@ Each PKB source carries the **plugin's** version number verbatim. If a PKB file'
 | `RULES_AUDIT.md` | Output compression and the SELF-AUDIT templates. Read in full before every pre-flight and every audit |
 | `RULES_MODES.md` | SCAFFOLD, AUTO, DEBUGGING and modification requests |
 | `RULES_SANDBOX.md` | SANDBOX mode and sandbox verification. Read in full before every pre-flight and before installing or running Praat |
-| `TOOL_PRAATGEN_LINT.zip` | A zipped Python 3 linter PraatGen runs on every script before delivery: commands against the reference files, functions against `APPENDIX_B_FUNCTIONS.txt`, the script against its plan, and the mechanical audit checks |
+| `TOOL_PRAATGEN_LINT.zip` | A zipped Python 3 linter PraatGen runs on every script before delivery: commands against the reference files, functions against `APPENDIX_B_FUNCTIONS.txt`, copied library procedures against their source, the script against its plan, and the mechanical audit checks. It also supplies the EML library procedures a script copies |
 | `HANDOFF_TEMPLATE.md` | Template for session handoff documents during long sessions and debugging |
 | `DEVELOPER_MODE_ADDON.md` | Developer-mode extensions for EML Tools contributors |
 | `praatgen_references_complete.md` | Full bibliographic reference list for all works cited across the prompt, appendices, and procedure libraries |
@@ -304,7 +304,7 @@ PraatGen tracks three version numbers:
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
 | **Release** | 2.0.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 16.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
+| **Master Prompt** | 16.1.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
 | **PKB Snapshot** | 2026-10-09 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
