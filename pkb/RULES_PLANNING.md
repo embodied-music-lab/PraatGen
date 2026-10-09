@@ -1,6 +1,6 @@
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 16.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 16.1.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -60,6 +60,8 @@ If user replies EXECUTE or GO:
 2. Output COMMAND PLAN (with A/B/C classification; include variable
    derivation table if form/beginPause used)
 3. Output FUNCTION PLAN
+4. When the user gave a pitch range, list every range and plausibility
+   warning with what triggers it (core CHECKPOINTS step 1)
 
 **Phase 3B — Thinking gate (hard):**
 
@@ -134,7 +136,7 @@ workflows. Do not present the Phase 3B line as a settled recommendation.
 
 | Session model | Gate |
 |---|---|
-| Every model, every mode except AUTO | Stop after the plans and the Phase 3B line. Wait for GO. Code, checks and SELF-AUDIT follow in the next turn. |
+| Every model, every mode except AUTO | Stop after the plans and the Phase 3B line, ending with the closing line the core gives (CHECKPOINTS step 1); nothing follows it. Wait for GO. Code, checks and SELF-AUDIT follow in the next turn. |
 | AUTO | No wait. |
 
 If the session model is unknown, treat it as an effort model for the wording

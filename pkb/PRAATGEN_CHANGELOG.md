@@ -7,6 +7,28 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 16.1.0 — 9 October 2026
+
+**Library procedures come from the linter.** The linter carries an exact copy
+of every EML library procedure. `--procedure` prints the procedures a script
+needs, with every procedure they call, renamed to `emlPG` and otherwise
+verbatim. Sessions no longer read library files or search for procedure
+source. A new lint check, Library copies, blocks any copied procedure that
+differs from its source.
+
+**The plan lists the range warnings.** When you give a pitch range, the plan
+lists every range and plausibility warning with what triggers it, including
+the check of measured F0 against your stated range.
+
+**Nothing follows the last line of the pre-flight or the plan.** The plan turn
+ends with "Reply GO to write the script, or correct the plan."
+
+**The reference list includes the EGG contact quotient sources,** among them
+Herbst et al. (2017), so a script header can cite them.
+
+**Opus 5.5 is the recommended model.** Opus 5 is a good option, and Opus 4.8
+down to 4.6 works if you want to conserve tokens.
+
 ### Release 2.0.0 — 9 October 2026 (ships Master Prompt 16.0.0)
 
 PraatGen is restructured for sessions that work through tools. Upgrade notes
@@ -89,9 +111,6 @@ SELF-AUDIT, PraatGen wins.
 **A clean run is not verification.** A sandbox probe can establish that a
 command exists and how many arguments it takes. Meaning, order and defaults
 come from a reference file, a Tier 2 source or Paste Commands.
-
-**Opus 5.5 is the recommended model.** Opus 5 is a good option, and Opus 4.8
-down to 4.6 works if you want to conserve tokens.
 
 **Library procedures are read one by one.** PraatGen finds each procedure
 through the procedure registry and reads only its body and the procedures it

@@ -22,6 +22,9 @@ Howell, I. (2026). *EML PraatGen Scripting Assistant*. Embodied Music Lab. https
 
 ## 2. Electroglottography
 
+Davies, P., McGowan, R., & Rosenberg, A. (1986). Variation in glottal open and closed phases for speakers of English. *Proceedings of the Institute of Acoustics*, *8*, 539.
+> Cited in: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md. Copied from that file's reference list; not yet checked against publisher databases.
+
 Henrich, N., d'Alessandro, C., Doval, B., & Castellengo, M. (2004). On the use of the derivative of electroglottographic signals for characterization of nonpathological phonation. *Journal of the Acoustical Society of America*, *115*(3), 1321–1332. https://doi.org/10.1121/1.1646401
 > Cited in: COMMANDS_Electroglottogram.txt §9. Referenced for first central difference DEGG method.
 
@@ -31,8 +34,26 @@ Herbst, C. T. (2020). Electroglottography – An update. *Journal of Voice*, *34
 Herbst, C. T., Fitch, W. T., & Švec, J. G. (2010). Electroglottographic wavegrams: A technique for visualizing vocal fold dynamics noninvasively. *Journal of the Acoustical Society of America*, *128*(5), 3070–3078. https://doi.org/10.1121/1.3493423
 > Cited in: COMMANDS_Electroglottogram.txt §9. Referenced for DEGG analysis methodology.
 
+Herbst, C. T., Schutte, H. K., Bowling, D. L., & Švec, J. G. (2017). Comparing chalk with cheese: The EGG contact quotient is only a limited surrogate of the closed quotient. *Journal of Voice*, *31*(4), 401–409. https://doi.org/10.1016/j.jvoice.2016.11.007
+> Cited in: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md. Copied from that file's reference list; not yet checked against publisher databases. Referenced for dEGG as the default CQ method and the 10 dB EGG SNR criterion.
+
+Herbst, C. T., & Ternström, S. (2006). A comparison of different methods to measure the EGG contact quotient. *Logopedics Phoniatrics Vocology*, *31*(3), 126–138. https://doi.org/10.1080/14015430500376580
+> Cited in: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md. Copied from that file's reference list; not yet checked against publisher databases. Referenced for threshold criteria compared with videokymography.
+
 Howard, D. M. (1995). Variation of electrolaryngographically derived closed quotient for trained and untrained adult female singers. *Journal of Voice*, *9*(2), 163–172. https://doi.org/10.1016/S0892-1997(05)80250-4
 > Cited in: COMMANDS_Electroglottogram.txt §5, §9. Referenced for CQ25 threshold criterion.
+
+Kankare, E., Laukkanen, A.-M., Ilomäki, I., et al. (2012). Electroglottographic contact quotient in different phonation types using different amplitude threshold levels. *Logopedics Phoniatrics Vocology*, *37*(3), 127–132. https://doi.org/10.3109/14015439.2012.664656
+> Cited in: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md. Copied from that file's reference list; not yet checked against publisher databases.
+
+Ternström, S. (2019). Normalized time-domain parameters for electroglottographic waveforms. *Journal of the Acoustical Society of America*, *146*(1), EL65–EL70. https://doi.org/10.1121/1.5117174
+> Cited in: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md. Copied from that file's reference list; not yet checked against publisher databases.
+
+Ternström, S. (2024). Pragmatic de-noising of electroglottographic signals. *Bioengineering*, *11*(5), 479. https://doi.org/10.3390/bioengineering11050479
+> Cited in: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md. Copied from that file's reference list; not yet checked against publisher databases. Referenced for the SNR cost of differentiation.
+
+Ternström, S., Johansson, D., & Selamtzis, A. (2018). FonaDyn: A system for real-time analysis of the electroglottogram, over the voice range. *SoftwareX*, *7*, 74–80.
+> Cited in: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md. Copied from that file's reference list; not yet checked against publisher databases.
 
 ---
 

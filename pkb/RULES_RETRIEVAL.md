@@ -1,6 +1,6 @@
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 16.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 16.1.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -140,7 +140,8 @@ Load reference files from Project Knowledge based on the task requirements. Load
     (automated formant ceiling optimization) is one such
 10a. **Library-source honesty (hard).** The PKB ships flattened copies of the
     EML plugin sources. If a procedure is named in the Registry, its source IS
-    in Project Knowledge — search for the procedure name. The one documented
+    in Project Knowledge, and the linter carries an exact copy of it: get it
+    with `--procedure` (step 12, "Read procedures, not library files"). The one documented
     exception is `@emlRunLMMAnalysis`, whose `eml-lmm.praat` dependency is
     deliberately not shipped; it carries a do-not-route warning at its
     definition. Never reconstruct a procedure body you cannot retrieve
@@ -149,8 +150,8 @@ Load reference files from Project Knowledge based on the task requirements. Load
 11. **Procedure library check:** When generating drawing, statistics,
     or batch processing code, load EML_PROCEDURE_GUIDE.md for
     methodology and routing, then EML_PROCEDURE_REGISTRY.md to
-    identify specific procedures. For implementations, search PK
-    for the procedure name to retrieve the source file. Never
+    identify specific procedures. For implementations, get the
+    source from the linter's `--procedure` extract (step 12). Never
     rewrite procedure code — copy exactly from source.
 
 12. **NEVER `include` the EML library from generated code (hard).**
@@ -180,11 +181,19 @@ Load reference files from Project Knowledge based on the task requirements. Load
     comes too. Resolve the full call graph before emitting.
 
     **Read procedures, not library files.** `EML_PROCEDURE_REGISTRY.md` names
-    each procedure's source file. Locate the procedure in it with a search
-    (`grep -n "procedure emlName" file`, or a Project Knowledge search) and
-    read from that line to its `endproc`, with its header comment. Repeat for
-    each procedure it calls. A library source file is never read in full;
-    the largest is over 240 KB.
+    each procedure and its source file. Get the source from the linter, which
+    carries an exact copy of every library procedure:
+    `python3 <path>/TOOL_PRAATGEN_LINT.txt --procedure emlName ...` prints each
+    named procedure and every library procedure it calls, with its header
+    comment, renamed to `emlPG` and otherwise verbatim. Paste the output at
+    the end of the script. A library source file is never read in full; the
+    largest is over 240 KB. A Project Knowledge search is not a route to
+    procedure source: it ranks by similarity, and on 9 October 2026 it
+    returned the definition of one procedure out of three, with the exact
+    name as the query. Without a shell, one subagent reads the library file
+    and returns only the procedure bodies; say so in the plan's process
+    notes. The lint's Library copies check compares every `emlPG` procedure
+    with its source and blocks a copy that differs.
 
     **Rename every copied procedure to the `emlPG` prefix (hard).** Replace
     the leading `eml` of the library name: `@emlDrawViolinPlot` becomes

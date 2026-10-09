@@ -1,6 +1,6 @@
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 16.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 16.1.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.

@@ -7,8 +7,9 @@ Generated: 8 April 2026 | **Updated 29 July 2026 (PraatGen v14.1.0) directly fro
 > **Path convention.** Every `**File:**` entry uses the *plugin tree* path
 > (`stats/…`, `graphs/…`, `*.praat`). In Project Knowledge these ship
 > **flattened**: `graphs/eml-graph-procedures.praat` is the file
-> `eml-graph-procedures.txt`. Retrieve an implementation by searching PK for
-> the procedure name or the flattened stem (drop the subdir, `.praat`→`.txt`).
+> `eml-graph-procedures.txt` (drop the subdir, `.praat`→`.txt`). Retrieve an
+> implementation with the linter's `--procedure` extract, never by reading
+> the whole file or by a Project Knowledge search (`RULES_RETRIEVAL.md`, step 12).
 > `include ../graphs/….praat` lines inside sources are plugin-tree references
 > and are not expected to resolve in the flat PK layout.
 
