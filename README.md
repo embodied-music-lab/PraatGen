@@ -13,8 +13,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 1.2.1
-**Release:** 8 October 2026
+**Version:** 2.0.0
+**Release:** 9 October 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -43,7 +43,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 - **Claude Pro, Team, Max, or Enterprise account** (Projects require a paid plan). PraatGen can burn tokens quickly on complex projects; for serious code production, the Max plan is recommended.
 - **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees.
 - **Claude model:** Claude Opus 5 is the current recommendation; Opus 4.8 also performs well. Opus 4.6 (with Extended Thinking) remains a solid token-conscious choice. Sonnet and Haiku are not supported. See "Choosing a model" below.
-- **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by changing the Master Prompt's references to the PKB files so they point at a local directory; you may also want to separate the Master Prompt from your `CLAUDE.md` file.
+- **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by changing the references to the PKB files in the Master Prompt core and the `RULES_*.md` files so they point at a local directory; you may also want to separate the Master Prompt from your `CLAUDE.md` file.
 - **Praat:** Version 6.4.39 or later. **Prefer 6.6.30** when installing Praat for writing and testing scripts; Sandbox Mode installs 6.6.30 (pinned) in Claude's own workspace. No PraatGen feature requires 7.0.02 or later. Praat 7.0.02 and later add a security feature that slows development: a script that writes a file or runs a system command stops to ask your permission, each run. Anything that runs on 6.6.30 also runs on the current version. Direct downloads for 6.6.30: [Mac](https://www.fon.hum.uva.nl/praat/praat6630_mac.dmg), [Windows](https://www.fon.hum.uva.nl/praat/praat6630_win-x64v3.zip) ([ARM](https://www.fon.hum.uva.nl/praat/praat6630_win-arm64.zip)), [Linux](https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz).
 
 ### Choosing a model
@@ -78,14 +78,14 @@ In Claude (claude.ai or the Claude app):
 ### 2. Set the System Prompt
 
 1. In your new project, click **instructions**
-2. Paste the entire contents of `MASTER_PROMPT_CORE_v15_0_0.md` into the instructions field
-3. Scroll to the bottom and edit the "Canary" text if you wish. PraatGen reports this value back to you in pre-flight as a confidence measure that it read the entire Master Prompt.
+2. Paste the entire contents of `MASTER_PROMPT_CORE_v16_0_0.md` into the instructions field
+3. Scroll to the bottom and edit the "Canary" text if you wish. PraatGen reports this value back to you in pre-flight as a confidence measure that it read the core prompt in full. The `RULES_*.md` files are read at the workflow steps the core names, and the SELF-AUDIT lists the read token at the end of each one.
 4. Save
 
 ### 3. Upload the Knowledge Base
 
 1. In your project, click **add files**
-2. Upload all 62 files from the `pkb/` folder — these are the verified reference files PraatGen uses to validate commands and functions
+2. Upload all 71 files from the `pkb/` folder. They include the six `RULES_*.md` files that hold most of PraatGen's rules, the zipped linter `TOOL_PRAATGEN_LINT.zip` (upload the zip as it is; don't unzip it), and the verified reference files PraatGen uses to validate commands and functions
 3. Do not rename the files; the Master Prompt references them by their exact filenames
 
 ### 4. Start a Conversation
@@ -108,11 +108,13 @@ Open a new conversation within the project. PraatGen will respond with its readi
 
 2. **Review the pre-flight.** PraatGen verifies it has the right references loaded and flags any ambiguities. It notes a model tier and, where relevant, thinking or effort settings. You approve this step or raise concerns.
 
-3. **Reply EXECUTE (or GO).** PraatGen generates a command plan, then scores its complexity. On 4.6/4.7 that is a gate: it tells you whether to keep Thinking on for code generation and waits for GO. On 4.8+ it is advisory — a one-line note on whether the plan looks complete enough that a lower effort setting may serve — and generation continues in the same turn.
+3. **Reply EXECUTE (or GO).** PraatGen sends you its command plan, with the reference file that verifies each command, and a one-line complexity note. On 4.6/4.7 the note says whether to keep Thinking on; on 4.8+ it says whether a lower effort setting may serve. Then it stops. Review the plan, correct it if you need to, and reply GO again for the code. (In AUTO mode there's no stop.)
 
-4. **Test in Praat.** PraatGen delivers the script as a downloadable `.praat` file rather than a code block — open it in Praat's script editor and run it. (The file matters: copying source out of a rendered code block can substitute curly quotes and en-dashes for the plain characters Praat needs.) If it works, you're done.
+4. **Checks before delivery.** PraatGen runs its linter on the script, has a fresh Opus reviewer check the script against the reference files, and fixes what they find. The SELF-AUDIT shows you the linter output and the reviewer's result, or says which check didn't run and why.
 
-5. **Report errors if any.** Paste the exact error message (with line number) and tell it you are debugging. PraatGen diagnoses before changing code — no guesswork fixes. You can also screenshot errors; Claude can read the images.
+5. **Test in Praat.** PraatGen delivers the script as a downloadable `.praat` file rather than a code block — open it in Praat's script editor and run it. (The file matters: copying source out of a rendered code block can substitute curly quotes and en-dashes for the plain characters Praat needs.) If it works, you're done.
+
+6. **Report errors if any.** Paste the exact error message (with line number) and tell it you are debugging. PraatGen diagnoses before changing code — no guesswork fixes. You can also screenshot errors; Claude can read the images.
 
 ### Output verbosity (SPARSE / VERBOSE)
 
@@ -132,13 +134,13 @@ Reply with any of these in place of (or alongside) your task. Modes compose free
 
 ### Work survives a long session: the output folder
 
-**PraatGen writes as it goes.** The current script, test results, and open items are
+**PraatGen writes as it goes.** Each step leaves a file: the plan (`<name>_plan.md`, with an unedited copy as sent, `<name>_plan_sent.md`), the script, the linter output (`<name>_lint.txt`) and the audit (`<name>_audit.md`). The current script, test results, and open items are
 kept in its output folder and updated in the same turn as the work that changed them
 — not held in the conversation to be restated later. The folder survives both a
 context compaction and a page reload, so there is always a current copy to come back
 to that does not depend on anything being remembered.
 
-You get the finished script as a downloadable `.praat` file (step 4 above). That
+You get the finished script as a downloadable `.praat` file (step 5 above). That
 delivery is for you; the folder is what PraatGen reads back from. You can ask for
 anything in it at any point.
 
@@ -177,9 +179,9 @@ PraatGen cannot reliably tell from the inside that anything happened.
 
 | File | Purpose |
 |------|---------|
-| `MASTER_PROMPT_CORE_v15_0_0.md` | The system instructions that configure Claude as a Praat scripting specialist. Contains 37 rules governing syntax validation, command verification, clinical defaults, debugging protocol, sandbox/autonomous modes, and code-quality standards. Master Prompt content version: 15.0.0. |
+| `MASTER_PROMPT_CORE_v16_0_0.md` | The project instructions: the workflow, its checkpoints, the pre-flight, the model rules and an index of the six `RULES_*.md` files that hold the rest of the 37 rules. The session reads each rules file in full at the step that needs it. Master Prompt content version: 16.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_1.2.1.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v1.2.1 GitHub Release. |
+| `RELEASE_NOTES_2.0.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.0.0 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -209,6 +211,7 @@ The `pkb/` folder contains the verified reference files. These are PraatGen's so
 | `COMMANDS_AmplitudeTier.txt` | AmplitudeTier objects |
 | `COMMANDS_FormantGrid.txt` | FormantGrid objects |
 | `COMMANDS_Ltas.txt` | Long-term average spectrum |
+| `COMMANDS_Matrix.txt` | Matrix commands verified in the sandbox |
 | `COMMANDS_LongSound.txt` | LongSound objects |
 | `COMMANDS_Electroglottogram.txt` | EGG analysis |
 | `COMMANDS_SpeechRecognizer.txt` | Whisper ASR and speech recognition |
@@ -233,7 +236,7 @@ The `pkb/` folder contains the verified reference files. These are PraatGen's so
 | File | Purpose |
 |------|---------|
 | `PRAAT_VERSION_FLOOR.txt` | The Praat 6.4.39 version floor, which features are known to need something newer, and which are verified safe at the floor |
-| `PRAAT_DEFINITIVE_CATALOGUE.txt` | Complete Praat capability inventory — 136 object types, 3,300+ registered commands (2,536 single-class + 405 cross-class + 364 menu), 365 Formula engine functions — extracted from v6.4.62 source code. The fallback/verification source; carries a staleness banner and known-gap list. |
+| `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt`, `PRAAT_DEFINITIVE_CATALOGUE_PART2.txt` | The catalogue, in two parts so each reads in full in the Claude app. Complete Praat capability inventory — 136 object types, 3,300+ registered commands (2,536 single-class + 405 cross-class + 364 menu), 365 Formula engine functions — extracted from v6.4.62 source code. The capabilities check: whether Praat can do something and which command does it. The last fallback for verification, never the source for arguments; carries a staleness banner and known-gap list. |
 | `WHITELIST_CURRENT.txt` | Recently verified commands not yet merged into the primary references |
 
 **Drawing and methodology references:**
@@ -279,6 +282,13 @@ Each PKB source carries the **plugin's** version number verbatim. If a PKB file'
 
 | File | Purpose |
 |------|---------|
+| `RULES_RETRIEVAL.md` | Which reference file to load for which task. Read in full before every pre-flight |
+| `RULES_PLANNING.md` | Planning, command verification and the complexity gate. Read in full before every pre-flight and again at GO |
+| `RULES_CODE.md` | The Praat correctness contract. Read in full before every pre-flight, at GO, and before writing or changing a script |
+| `RULES_AUDIT.md` | Output compression and the SELF-AUDIT templates. Read in full before every pre-flight and every audit |
+| `RULES_MODES.md` | SCAFFOLD, AUTO, DEBUGGING and modification requests |
+| `RULES_SANDBOX.md` | SANDBOX mode and sandbox verification. Read in full before every pre-flight and before installing or running Praat |
+| `TOOL_PRAATGEN_LINT.zip` | A zipped Python 3 linter PraatGen runs on every script before delivery: commands against the reference files, functions against `APPENDIX_B_FUNCTIONS.txt`, the script against its plan, and the mechanical audit checks |
 | `HANDOFF_TEMPLATE.md` | Template for session handoff documents during long sessions and debugging |
 | `DEVELOPER_MODE_ADDON.md` | Developer-mode extensions for EML Tools contributors |
 | `praatgen_references_complete.md` | Full bibliographic reference list for all works cited across the prompt, appendices, and procedure libraries |
@@ -292,14 +302,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 1.2.1 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 15.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
-| **PKB Snapshot** | 2026-10-08 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 2.0.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 16.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
+| **PKB Snapshot** | 2026-10-09 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **1.2.1 (8 October 2026)** is the current stable release. It keeps Master Prompt 15.0.0 and fixes `@emlDrawLTAS`, which left its curve, poles and speckles blank on a reversed frequency or level axis.
+- **2.0.0 (9 October 2026)** is the current stable release. It ships Master Prompt 16.0.0, restructured for sessions that work through tools: a short core prompt, six rules files read in full at the step that needs them, a file for each workflow step, a linter run on every script, and a fresh Opus review before delivery.
+- **1.2.1 (8 October 2026)** kept Master Prompt 15.0.0 and fixes `@emlDrawLTAS`, which left its curve, poles and speckles blank on a reversed frequency or level axis.
 - **1.2.0 (8 October 2026)** shipped Master Prompt 15.0.0, which adapts PraatGen to the Claude app now that chat and Cowork are one environment: PraatGen tries the Praat download instead of reading a settings list, SANDBOX means every script is tested before delivery, commands use the working folder the shell reports, the install commands apply the 6.6.30 pin, files count as delivered only when sent, test results name their platform, re-checks of a rule read the whole file, the pre-flight report ends the turn, and subagents may take bounded tasks under an Opus session. The Table `Formula:` entry now takes the column name first.
 - **1.1.1 (29 September 2026)** shipped Master Prompt 14.21.0, unchanged from 1.1.0. It was a correction release: the reversed-axis circle rule now applies to the x-axis only, since a reversed y-axis does not affect these commands; `Paint circle (mm):` and `Draw circle (mm):` gain verified reference entries, with the change from a world radius to a millimeter diameter stated at every call site; `Down to Table (optimal interval)` is verified at 14 arguments; the library's scatter plot, tick and gridline procedures draw on reversed axes; and `lowerCase$` is documented beside `upperCase$`.
 - **1.1.0 (23 September 2026)** shipped Master Prompt 14.21.0. FormantPath analysis reads the selected candidate by querying Get optimal ceiling and applying it with a fresh To Formant (burg); Extract Formant on a FormantPath returned the middle-ceiling candidate rather than the optimal one, and generated scripts no longer call it. Circle drawing on a chart with a reversed axis uses Paint circle (mm): / Draw circle (mm):, since the world-coordinate forms render nothing and raise no error there. (1.1.1 narrows that to the x-axis only.) The function reference entry for upperCase$ (string$) states its real boundary: absent on Praat 6.4.39 and earlier, available from 6.4.46.
@@ -312,7 +323,7 @@ PraatGen tracks three version numbers:
 
 ## Known Limitations
 
-**Reference coverage gaps.** The `COMMANDS_*.txt` files cover the most commonly used object types thoroughly but are not exhaustive for every parameter variant. The Definitive Catalogue (`PRAAT_DEFINITIVE_CATALOGUE.txt`) provides fallback coverage for all object types but with less contextual annotation. Gaps are filled as they're discovered — report them.
+**Reference coverage gaps.** The `COMMANDS_*.txt` files cover the most commonly used object types thoroughly but are not exhaustive for every parameter variant. The Definitive Catalogue (`PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `_PART2.txt`) provides fallback coverage for all object types but with less contextual annotation. Gaps are filled as they're discovered — report them.
 
 **EML Tools integration.** PraatGen generates **self-contained** scripts. Where it uses an EML library procedure, the procedure body is copied into the delivered script (or into a folder shipped alongside it) — generated code never `include`s the plugin, and you are never assumed to have it installed. The EML Tools plugin itself is distributed separately.
 

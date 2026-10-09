@@ -50,7 +50,7 @@ with no sweep entry is one nobody will notice being broken.
 
 ## 2. Master Prompt code blocks versus their PKB sources
 
-The Master Prompt carries a small number of Praat code blocks. Each is a
+The core prompt and the RULES files carry a small number of Praat code blocks. Each is a
 copyable answer that can drift from the source it summarises, and nothing
 cross-checks them automatically.
 
@@ -70,15 +70,62 @@ disagree.
 
 ---
 
+## 2B. The Master Prompt is a core plus six RULES files
+
+Since 16.0.0 the project instructions are `MASTER_PROMPT_CORE_v*.md`, and the
+rest of the rules live in `pkb/RULES_*.md`. Each RULES file is canonical for
+the rules it holds: edit it directly. The core's rule index says which file
+holds which rule; update it whenever a rule moves or a new one is added, and
+keep rule numbers unchanged across files. `tools/split_prompt_v16.py` is the
+one-time migration from 15.1.0, kept for provenance.
+
+When a rule needs to bind at a particular workflow step, put it in the RULES
+file that step reads, not in the core. The core stays short so that what it
+says stays in view.
+
+## 2C. The linter
+
+`pkb/TOOL_PRAATGEN_LINT.zip` is generated from `tools/praatgen_lint.py` with
+the command index embedded. It holds one file, `TOOL_PRAATGEN_LINT.txt`. It
+ships zipped because the Claude app returns at most 256 KiB of a text project
+file and saves nothing to disk, while a zip upload is saved to disk whole.
+Regenerate it after any change to the linter, a `COMMANDS_*.txt` file or the
+catalogue, and check that it is current before a release:
+
+    python3 tools/build_lint.py
+    python3 tools/build_lint.py --check
+
+## 2D. The catalogue
+
+The catalogue is in the PKB as two parts, `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt`
+and `PRAAT_DEFINITIVE_CATALOGUE_PART2.txt`, because the Claude app returns at
+most 256 KiB of a text project file and the whole catalogue is larger. Each
+part opens with a note saying which part holds which object type. Everything
+after the note is the catalogue text, unchanged. Edit the parts directly. To
+replace the catalogue with a new extraction, split it, then check the parts and
+rebuild the linter:
+
+    python3 tools/split_catalogue.py split NEW_CATALOGUE.txt
+    python3 tools/split_catalogue.py --check
+    python3 tools/build_lint.py
+
+`join OUT.txt` rebuilds the whole file from the parts.
+
+A new hard prohibition with a mechanical signature belongs in the linter as
+well as the sweep, so that sessions catch it before delivery.
+
+---
+
 ## 3. Version and release discipline
 
-- The **release number** (1.0.x) is incremented only when a release is cut.
+- The **release number** is incremented only when a release is cut.
   It is not bumped per Master Prompt change.
-- The **Master Prompt number** (14.x.y) versions the instruction set and moves
-  with rule changes. `main` is normally ahead of the last cut release; README
+- The **Master Prompt number** versions the instruction set, core and RULES
+  files together, and moves with rule changes. `main` is normally ahead of the last cut release; README
   and the changelog say so.
 - Every Master Prompt change gets a `PRAATGEN_CHANGELOG.md` entry and an
-  update to the one-line summary in the prompt's CHANGELOG section.
+  update to the version line in the core's CHANGELOG section. A change to a
+  RULES file counts as a Master Prompt change.
 
 ## 4. What belongs in a changelog and what belongs in a PKB file
 
