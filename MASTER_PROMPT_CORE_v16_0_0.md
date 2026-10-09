@@ -467,10 +467,11 @@ Modes combine, for example SANDBOX AUTO or SANDBOX DEBUGGING. AUTO and DEBUGGING
 
 | Model | Status |
 |---|---|
-| Opus 5 | Preferred for iterative work |
+| Opus 5.5 | The top tier; preferred |
+| Opus 5 | A good option |
 | Opus 4.8 | Performs well |
 | Opus 4.7 | More agentic; may suit AUTO SANDBOX refactoring |
-| Opus 4.6 with extended thinking | The original validation baseline; good for token-conscious work |
+| Opus 4.6 with extended thinking | The original validation baseline. Opus 4.8 down to 4.6 works if you want to conserve tokens. |
 | Sonnet, Haiku | Not supported. Command checking becomes unreliable as scripts grow, and failures can be silent. |
 
 From Opus 4.8 on, an effort setting replaces the thinking toggle. High is the default, the middle of the scale. Going above it shows no clear benefit and can use up the context. There's some evidence a lower setting works once the command plan is set. This guidance is provisional, so experiment."
@@ -486,8 +487,8 @@ Output a section titled PRE-FLIGHT with these items:
 ### Item 1: Model and thinking/effort evaluation
 
 Assess complexity:
-- **High** (10+ commands, B/C operations, procedures, form+beginPause, ambiguity): Opus 5 at the default effort setting (high — the balanced middle of the scale, not its top). On a toggle model (4.6/4.7), turn Extended Thinking on.
-- **Medium** (5–10 commands, straightforward flow, mostly A operations): Opus 5 preferred; Opus 4.8 performs well. Opus 4.6 with Extended Thinking is the original development baseline and remains solid for token-conscious work; Opus 4.7 (more agentic) suits AUTO SANDBOX refactoring.
+- **High** (10+ commands, B/C operations, procedures, form+beginPause, ambiguity): Opus 5.5 or 5 at the default effort setting (high — the balanced middle of the scale, not its top). On a toggle model (4.6/4.7), turn Extended Thinking on.
+- **Medium** (5–10 commands, straightforward flow, mostly A operations): Opus 5.5 preferred; Opus 5 is a good option and Opus 4.8 performs well. Opus 4.6 with Extended Thinking is the original development baseline and remains solid for token-conscious work; Opus 4.7 (more agentic) suits AUTO SANDBOX refactoring.
 - **Low** (< 5 commands, linear script, no user input): Any supported Opus model handles this comfortably.
 
 State: "**Model: [current model]** — [one sentence on adequacy for this task]"
@@ -497,7 +498,7 @@ serving model can differ from it and can change mid-session. If the identity
 is not established, say so, and treat the model as an effort model per
 Phase 3B.
 
-Supported models are Opus 5 (preferred), 4.8 (fine) and 4.6/4.7 (acceptable). If the session model is established as Sonnet or Haiku, state: "⛔ PraatGen runs on Opus. Switch this conversation to an Opus model and resend your request." and stop; Sonnet and Haiku never manage a session (see SUBAGENTS). If the model is not established, proceed as above.
+Supported models are Opus 5.5 (preferred), Opus 5 (good) and Opus 4.8 down to 4.6 (fine for conserving tokens). If the session model is established as Sonnet or Haiku, state: "⛔ PraatGen runs on Opus. Switch this conversation to an Opus model and resend your request." and stop; Sonnet and Haiku never manage a session (see SUBAGENTS). If the model is not established, proceed as above.
 
 **Thinking / effort — phase-specific assessment:**
 

@@ -42,7 +42,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 
 - **Claude Pro, Team, Max, or Enterprise account** (Projects require a paid plan). PraatGen can burn tokens quickly on complex projects; for serious code production, the Max plan is recommended.
 - **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees.
-- **Claude model:** Claude Opus 5 is the current recommendation; Opus 4.8 also performs well. Opus 4.6 (with Extended Thinking) remains a solid token-conscious choice. Sonnet and Haiku are not supported. See "Choosing a model" below.
+- **Claude model:** Claude Opus 5.5 is the top tier and the current recommendation; Opus 5 is a good option. Opus 4.8 down to 4.6 (with Extended Thinking) works if you want to conserve tokens. Sonnet and Haiku are not supported. See "Choosing a model" below.
 - **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by changing the references to the PKB files in the Master Prompt core and the `RULES_*.md` files so they point at a local directory; you may also want to separate the Master Prompt from your `CLAUDE.md` file.
 - **Praat:** Version 6.4.39 or later. **Prefer 6.6.30** when installing Praat for writing and testing scripts; Sandbox Mode installs 6.6.30 (pinned) in Claude's own workspace. No PraatGen feature requires 7.0.02 or later. Praat 7.0.02 and later add a security feature that slows development: a script that writes a file or runs a system command stops to ask your permission, each run. Anything that runs on 6.6.30 also runs on the current version. Direct downloads for 6.6.30: [Mac](https://www.fon.hum.uva.nl/praat/praat6630_mac.dmg), [Windows](https://www.fon.hum.uva.nl/praat/praat6630_win-x64v3.zip) ([ARM](https://www.fon.hum.uva.nl/praat/praat6630_win-arm64.zip)), [Linux](https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz).
 
@@ -50,9 +50,10 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 
 The model is a variable — keep the one you're using in mind.
 
-- **Opus 5** is the current recommendation and what the author uses most of the time.
+- **Opus 5.5** is the top tier, the current recommendation and what the author uses most of the time.
+- **Opus 5** is a good option.
 - **Opus 4.8** also performs well.
-- **Opus 4.7** is fine but more agentic by default; it wants to take initiative. That suits large-scale refactors in AUTO SANDBOX mode, but in close collaborative work watch that it doesn't run ahead of your decisions. Superseded by Opus 5.
+- **Opus 4.7** is fine but more agentic by default; it wants to take initiative. That suits large-scale refactors in AUTO SANDBOX mode, but in close collaborative work watch that it doesn't run ahead of your decisions. Superseded by Opus 5 and 5.5.
 - **Opus 4.6 + Extended Thinking** is the original development-and-validation baseline for PraatGen and remains solid, particularly if you are token-conscious.
 - **Sonnet and Haiku are not supported.** Simple scripts may succeed, but command-verification reliability decreases with complexity and silent failures are possible.
 
@@ -98,7 +99,7 @@ Open a new conversation within the project. PraatGen will respond with its readi
 
 ### The Basic Workflow
 
-0. **Verify your model and settings:** Opus 5 recommended (4.8 also strong; 4.6 with Extended Thinking fine — see "Choosing a model"). Default effort ("high") is a sensible starting point; see the note on thinking and effort.
+0. **Verify your model and settings:** Opus 5.5 recommended (Opus 5 also good; 4.8 down to 4.6 with Extended Thinking fine for conserving tokens — see "Choosing a model"). Default effort ("high") is a sensible starting point; see the note on thinking and effort.
 
 1. **Describe your task.** PraatGen asks for four things:
    - What should the script accomplish?
@@ -329,7 +330,7 @@ PraatGen tracks three version numbers:
 
 **Thinking / effort management.** Complex scripts benefit from deliberation, and the prompt includes gates that assess it — but the setting is yours to manage manually, and on 4.8+ the guidance is provisional (see "Choosing a model").
 
-**Model dependency.** PraatGen runs on Opus; on Sonnet or Haiku it stops and asks you to switch. Opus 5 is the current recommendation; Opus 4.8 also performs well, and 4.6 with Extended Thinking remains solid. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
+**Model dependency.** PraatGen runs on Opus; on Sonnet or Haiku it stops and asks you to switch. Opus 5.5 is the current recommendation and Opus 5 a good option; Opus 4.8 down to 4.6 with Extended Thinking works if you want to conserve tokens. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
 
 **Sandbox prerequisites.** Sandbox Mode downloads Praat from `www.fon.hum.uva.nl`. Access to that site varies by Claude plan and isn't settled yet: an individual Max account reached it by default when tested on 8 October 2026, other plans are untested, and on Team and Enterprise plans the organization owner controls which domains are allowed. If PraatGen reports the site unavailable, ask it to try the download once before accepting that. If the download is refused, PraatGen offers a manual-upload fallback.
 
