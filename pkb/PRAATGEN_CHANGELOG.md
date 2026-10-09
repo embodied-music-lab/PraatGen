@@ -7,6 +7,15 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 16.3.0 — 9 October 2026
+
+**No hardcoded values.** Every value you give for your material, such as the
+pitch range, becomes a dialog field with your answer as its default, so the
+script runs on another file or singer without editing. Every other number is
+a named constant with its source, including plausibility bands and warning
+thresholds. The Opus reviewer checks both, and a new lint check, Hardcoded
+values, notes any number outside the constants block.
+
 ### 16.2.0 — 9 October 2026
 
 **The plan carries your task.** It opens with your task message quoted word

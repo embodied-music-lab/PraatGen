@@ -1,6 +1,6 @@
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 16.2.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 16.3.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -71,6 +71,7 @@ standard of proof.
     ✓ GUI (18,19,20) — [compliant / not used]; numeric defaults QUOTED in form: (bare is a parse error); beginPause: accepts either, bare preferred for consistency — quoted is NOT a defect; if form/beginPause present, verified through the actual dialog (runScript: with positional arguments for form:; the real dialog for beginPause:), not by direct variable assignment
     ✓ Pitch (22B) — [algorithm chosen / not used]
     ✓ Task coverage — [N] requested items from the quoted task; [N] produced; dropped: [each, with the user's words / none]
+    ✓ No hardcoded values (26, 35) — user values as dialog fields: [each field]; numbers outside the constants block: [none / each with its line and reason]
     ✓  Clinical (App D) — [all parameters canonical per §0 / deviations listed with signal-loss evidence / not used]; Formant: [FormantPath / Formant(burg) ceiling=X / not used]; if FormantPath, confirm no Extract Formant call on it — the selected ceiling is read with Get optimal ceiling and applied with a fresh To Formant (burg)
     ✓ FormantModeler (App D §4D) — [sustained vowel / per-segment / not used]
     ✓ Input validation (29) — [guards listed / no Sound input]

@@ -1,6 +1,6 @@
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 16.2.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 16.3.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -762,6 +762,14 @@ All input/output paths MUST be solicited via GUI:
 
 No hardcoded or assumed paths. SELF-AUDIT must confirm compliance.
 
+**User values are dialog fields (hard).** Every value that describes the
+user's material or records the user's choice is a dialog field, with the
+user's PRE-FLIGHT answer as its default: the expected pitch range, the
+channel mapping, the analysis window, the tier and labels to measure, and
+any threshold the user picked. A saved setting (APPENDIX_F S3) may supply the
+default instead. The script must run on another file or another singer
+without editing. A named constant never holds a value the user supplied.
+
 ---
 
 ### Rule 27: Non-destructive file output (hard)
@@ -1102,6 +1110,16 @@ in two places, it must be computed once and passed. If a constant
 appears as a magic number in two locations, it must become a named
 variable. The first occurrence is implementation; the second is a
 defect.
+
+**No bare numbers (hard).** Every numeric value in the script is a named
+constant, set once in the constants block with its source: an APPENDIX_D
+section, a reference file, a rule, or "lab judgement". This includes
+plausibility bands, warning thresholds and command arguments. The only
+numerals allowed in code are 0, 1 and 2, unit conversions such as 100 for
+percent and 12 semitones per octave, vector indexes, and the digits argument
+of `fixed$`. Copied library procedures and the version-check block are
+exempt. Values the user supplied are dialog fields (Rule 26), never
+constants. The lint's Hardcoded values check notes every exception it finds.
 
 **Highest abstraction:** Code should operate at the highest level of
 abstraction available. If a procedure exists that encapsulates a
