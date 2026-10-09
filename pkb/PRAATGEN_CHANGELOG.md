@@ -7,6 +7,15 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 16.2.0 — 9 October 2026
+
+**The plan carries your task.** It opens with your task message quoted word
+for word, then a table that maps each measure, input and output you asked
+for to what produces it. The pre-flight keeps every measure the task names;
+dropping one is a question to you. The Opus reviewer checks the table against
+your task, and a new lint check, Task coverage, blocks a plan without it or a
+requested item that nothing produces.
+
 ### 16.1.0 — 9 October 2026
 
 **Library procedures come from the linter.** The linter carries an exact copy

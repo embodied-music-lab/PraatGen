@@ -1,6 +1,6 @@
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 16.1.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 16.2.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
