@@ -90,6 +90,9 @@ SELF-AUDIT, PraatGen wins.
 command exists and how many arguments it takes. Meaning, order and defaults
 come from a reference file, a Tier 2 source or Paste Commands.
 
+**Opus 5.5 is the recommended model.** Opus 5 is a good option, and Opus 4.8
+down to 4.6 works if you want to conserve tokens.
+
 **Library procedures are read one by one.** PraatGen finds each procedure
 through the procedure registry and reads only its body and the procedures it
 calls, never a whole library file.
