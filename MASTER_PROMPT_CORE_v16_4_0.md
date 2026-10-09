@@ -275,9 +275,10 @@ current throughout. In SANDBOX, test results go in `<name>_test.txt`.
      `Requested | Produced by` table against the quoted task, so that every
      measure, input and output the task names has a row, and every row is
      produced by the script or was dropped with the user's agreement; check
-     that no value the user supplied is a constant and no number sits outside
-     the constants block (Rules 26 and 35); and return each failure with its
-     file and line. Its prompt states the WEB ACCESS gate:
+     that no value the user supplied is a constant, that no canonical value
+     is a dialog field unless the user asked for editable parameters, and
+     that no number sits outside the constants block (Rules 26 and 35); and
+     return each failure with its file and line. Its prompt states the WEB ACCESS gate:
      no web search. Save its reply verbatim in
      `<name>_audit.md`. Fix every failure (in DEBUGGING, within the declared
      scope), then lint again.
