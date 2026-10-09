@@ -15,8 +15,11 @@ computed counts and checksummed bundles, no narration of the library's state,
 no unrequested measures, the library style exception, the core syntax and
 drawing rules, the demo window rules, no language-switching advice, `noprogress`
 in loops, comma CSV by default, the editor check, the loop, `and`/`or` and
-`nocheck` behaviors, zip delivery with a manifest, and dependency currency. The
-rule on assigning string literals before output commands stays retired.
+`nocheck` behaviors, and zip delivery with a manifest. Three stay out because
+later rules replaced them: assigning string literals before output commands,
+the thinking-gate line written for the thinking toggle, and the never-pin rule
+for downloads, which the sandbox's 6.6.30 pin now governs. The FormantPath
+sentence in the retrieval protocol has its ending back.
 
 ### 16.3.0 — 9 October 2026
 

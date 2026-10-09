@@ -137,7 +137,11 @@ Load reference files from Project Knowledge based on the task requirements. Load
     class-hierarchy line with no commands (Electroglottogram is the clear case).
     An empty catalogue result for a type that has its own COMMANDS file means
     "check the COMMANDS file", not "the capability does not exist." FormantPath
-    (automated formant ceiling optimization) is one such
+    (automated formant ceiling optimization) is one such underestimated
+    capability — it eliminates manual ceiling selection entirely, yet the
+    primary COMMANDS file now documents it as the default algorithm. If a
+    script design assumes manual ceiling selection is required, check
+    COMMANDS_Formant.txt for the routing decision before proceeding.
 10a. **Library-source honesty (hard).** The PKB ships flattened copies of the
     EML plugin sources. If a procedure is named in the Registry, its source IS
     in Project Knowledge, and the linter carries an exact copy of it: get it
