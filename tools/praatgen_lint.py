@@ -48,8 +48,7 @@ Checks:
   Hardcoded paths      No absolute path, file:// URL or UNC path in a string.
   Hardcoded values     Notes each number written outside the constants block
                        (0, 1, 2, 12, 100, fixed$ digits and indexes are
-                       exempt), and each constant whose value appears in the
-                       user's words quoted in the plan (Rules 26 and 35).
+                       exempt) (Rule 35).
   Overwrite guard      A script that writes files checks fileReadable or
                        calls a *UniquePath* procedure. A note.
   Nested queries       No query command inside an expression (Rule 5E).
@@ -871,30 +870,12 @@ def blank_precision(code):
     return ''.join(out)
 
 
-def task_numbers(plan_path):
-    """Numbers quoted under "Task as given" in the plan (the user's words)."""
-    if plan_path is None:
-        return set()
-    with open(plan_path, encoding='utf-8') as f:
-        lines = f.read().split('\n')
-    start = next((i for i, s in enumerate(lines) if TASK_HEADING.match(s.strip())), None)
-    if start is None:
-        return set()
-    nums = set()
-    for s in lines[start + 1:]:
-        if s.lstrip().startswith('#') or table_cells(s) is not None:
-            break
-        if s.lstrip().startswith('>'):
-            nums |= {n for n in NUMBER.findall(s) if n not in STRUCTURAL}
-    return nums
-
-
 def check_hardcoded(lines, plan_path):
-    """Notes: numbers outside the constants block, and constants whose value
-    the user supplied (Rules 26 and 35). Copied library procedures and the
-    version-check block are exempt."""
+    """Notes each number outside the constants block (Rule 35). Copied library
+    procedures and the version-check block are exempt. It never suggests a
+    dialog field: whether a value is the user's or canonical is the
+    reviewer's call (Rule 26)."""
     findings = []
-    user_nums = task_numbers(plan_path)
     in_lib = False
     for ln in lines:
         text = ln.text.strip()
@@ -910,16 +891,12 @@ def check_hardcoded(lines, plan_path):
         head = code.lstrip().split(':', 1)[0].strip()
         if head in DIALOG_FIELDS:
             continue
-        m = CONSTANT_DEF.match(code.strip())
-        if m:
-            if m.group(1) in user_nums:
-                findings.append(('NOTE', ln.n, f'{short(text)} -- {m.group(1)} also appears in the '
-                                 "user's words; if the user supplied it, it belongs in a dialog field (Rule 26)"))
+        if CONSTANT_DEF.match(code.strip()):
             continue
         scan = re.sub(r'\[[^\]]*\]', lambda s: ' ' * len(s.group(0)), blank_precision(code))
         for n in NUMBER.findall(scan):
             if n not in STRUCTURAL:
-                findings.append(('NOTE', ln.n, f'bare number {n} -- {short(text)}'))
+                findings.append(('NOTE', ln.n, f'bare number {n} -- name it in the constants block -- {short(text)}'))
     return findings
 
 
