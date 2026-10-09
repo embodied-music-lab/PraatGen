@@ -21,12 +21,14 @@ the thinking-gate line written for the thinking toggle, and the never-pin rule
 for downloads, which the sandbox's 6.6.30 pin now governs. The FormantPath
 sentence in the retrieval protocol has its ending back.
 
-**Three kinds of value.** Your values, such as the pitch range, are dialog
-fields. Canonical values are named constants, even when you repeat them in
-an answer. Derived limits, such as the pitch floors and ceilings, are
-computed when the script runs from the range in the dialog, by the clinical
-defaults' rules: canonical unless your range would lose signal, with the
-outcome and reason reported. None is offered for editing unless you ask, and
+**Three kinds of value.** Your values, such as the channel mapping, are dialog
+fields. Canonical values are named constants, even when you repeat them in an
+answer, with two exceptions that are dialog fields: the pitch range of the
+samples, and any threshold with no canonical source. Derived limits, such as
+the pitch floors and ceilings, are computed when the script runs from the
+range in the dialog, by the clinical defaults' rules: canonical unless your
+range would lose signal, with the outcome and reason reported. No other
+canonical value or derived limit is offered for editing unless you ask, and
 then a Standard button restores the canonical values. The lint's Hardcoded
 values check only notes numbers outside the constants block.
 

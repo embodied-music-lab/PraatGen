@@ -772,14 +772,22 @@ without editing. A named constant never holds a value the user supplied.
 
 **Three kinds of value (hard).** Every value in a script is one of these,
 and the plan says which:
-- **The user's values** describe their material or record their choice: the
-  lowest and highest pitch, the channel mapping, the analysis window, the
-  tier and labels, and any method choice the user made in the PRE-FLIGHT.
-  Each is a dialog field with the user's answer as its default.
 - **Canonical values** come from APPENDIX_D, a reference file or a rule. Each
   is a named constant with its source, even when the user repeats it in an
-  answer ("keep 60 to 330 Hz" keeps a constant).
-- **Derived limits** are computed in the script from the user's values by
+  answer ("keep 60 to 330 Hz" keeps a constant). Two are dialog fields
+  instead:
+  - The pitch range of the samples. In almost all cases this is the
+    canonical value the user needs to see. Its default is the canonical
+    range, or the range the user gave in the PRE-FLIGHT.
+  - Any threshold with no canonical source, such as a silence level for
+    segmenting. Its default is the value the plan chose, and the plan says
+    why.
+- **The user's values** describe their material or record their choice: the
+  channel mapping, the analysis window, the tier and labels, any threshold
+  the user moved off its canonical value, and any method choice the user
+  made in the PRE-FLIGHT. Each is a dialog field with the user's answer as
+  its default.
+- **Derived limits** are computed in the script from the dialog's values by
   the reference rule that governs them. The pitch limits are the main case:
   the floors, the filtered-autocorrelation pitch top and the
   cross-correlation ceiling start canonical and change only where the
@@ -789,9 +797,9 @@ and the plan says which:
   canonical or moved and why, and warns as APPENDIX_D requires. A derived
   limit is never typed in as a fixed number and never asked for directly.
 
-A canonical value or derived limit becomes an editable dialog field only
-when the user asks for editable analysis parameters, and then APPENDIX_F
-S0C applies: a Standard button restores the canonical values.
+Any other canonical value, or a derived limit, becomes an editable dialog
+field only when the user asks for editable analysis parameters, and then
+APPENDIX_F S0C applies: a Standard button restores the canonical values.
 
 ---
 
