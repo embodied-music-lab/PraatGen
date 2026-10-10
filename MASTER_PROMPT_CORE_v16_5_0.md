@@ -223,8 +223,8 @@ current throughout. In SANDBOX, test results go in `<name>_test.txt`.
    - When the user gave a pitch range, the plans list every range and
      plausibility warning with what triggers it, including the check of the
      measured F0 against the stated range and the 10% proximity warning on
-     each fixed limit (`APPENDIX_D_CLINICAL_DEFAULTS.txt`, WHICH WARNING
-     APPLIES TO WHICH LIMIT).
+     each limit (`APPENDIX_D_CLINICAL_DEFAULTS.txt`, WHICH LIMITS A SCRIPT
+     USES).
    - The plans state every value and feature the rules set as a decision,
      including APPENDIX_D canonical values and APPENDIX_F default-ON features,
      and never ask whether to follow them (PRE-FLIGHT item 3D). A choice the
