@@ -7,6 +7,15 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 16.5.0 — 9 October 2026
+
+**The value rules added in 16.3.0 and 16.4.0 are removed.** Scripts no longer
+follow rules that sort every value into dialog fields, named constants and
+derived limits. The plan line, the reviewer's checks and the SELF-AUDIT line
+that applied them are gone, and the lint no longer notes bare numbers. Which
+settings appear in a script's dialog is settled with you in the PRE-FLIGHT and
+the plan, as before 16.3.0. The house rules restored in 16.4.0 stay.
+
 ### 16.4.0 — 9 October 2026
 
 **The house rules missing since 14.17.0 are back.** `RULES_CODE.md` again
