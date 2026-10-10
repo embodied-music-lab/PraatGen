@@ -23,6 +23,9 @@
   # Verified: Get minimum: 0, 0, "parabolic"
   Get maximum: from time, to time, interpolation$
   # Verified: Get maximum: 0, 0, "parabolic"
+  Get standard deviation: from time, to time
+  # Arity 2 confirmed in a live Praat 6.6.30 (PRAAT_DEFINITIVE_CATALOGUE_PART1.txt, uncorrected-arity list)
+  # Example: Get standard deviation: 0, 0
 
   # Modify
   Formula: formula$
