@@ -7,6 +7,29 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.1.0 — 10 October 2026 (ships Master Prompt 17.0.0)
+
+The whole prompt is read on every turn, and Opus 5 is the recommended model.
+Upgrade notes are in `RELEASE_NOTES_2.1.0.md`.
+
+### 17.0.0 — 10 October 2026
+
+**The whole prompt is read on every turn.** The project instructions are now
+one short rule: before anything else on every turn, read
+`PRAATGEN_RULES_FULL.md` in full. That file holds the core and the six rules
+files, so every rule is in front of the model each time it acts, as the
+project instructions were when chat re-sent them on every turn.
+
+**Each reply opens with the marker.** The first line of every reply is "Rules
+read this turn:" followed by the marker on the file's last line, so you can see
+the file was read to the end.
+
+**The six rules files are one knowledge file.** `PRAATGEN_RULES_FULL.md`
+replaces the six `RULES_*.md` files. Their text is unchanged, and their read
+tokens still sit at the end of each section. The core describes the new
+arrangement: where it says to read a rules file, that file is its section of
+`PRAATGEN_RULES_FULL.md`.
+
 ### 16.5.0 — 9 October 2026
 
 **The value rules added in 16.3.0 and 16.4.0 are removed.** Scripts no longer
@@ -18,10 +41,35 @@ the plan, as before 16.3.0. The house rules restored in 16.4.0 stay.
 
 **Pitch limits are canonical again unless signal would be lost.** Both pitch
 floors, the filtered-autocorrelation pitch top, the cross-correlation ceiling,
-the Harmonicity floor, the jitter and shimmer periods and the CPPS search stay
-canonical. The pitch top becomes exactly 2 x your highest F0 only above 400 Hz.
-Any change is decided in the plan from your PRE-FLIGHT answer, with no added
-margin, and is never recomputed from the dialog when the script runs.
+the jitter and shimmer periods and the CPPS search stay canonical. The pitch top
+becomes exactly 2 x your highest F0 only above 400 Hz. The cross-correlation
+ceiling stays 600 Hz unless your highest pitch, plus vibrato, exceeds it; then
+it is set to accommodate your range. The Harmonicity floor is always 75 Hz. Any
+change follows the rule for that limit exactly, with no added margin, whether
+the plan sets it from your PRE-FLIGHT answer or the script computes it from
+the range you enter in the dialog.
+
+**The independent audit reads less.** The Opus reviewer reads the code rules
+and the clinical defaults (and the drawing standards when the script draws),
+and checks clinical parameters, pitch limits, file output, dialogs, drawing and
+task coverage. Command, function and procedure checks stay with the lint.
+
+**You can skip the independent review with NOREVIEW.** The review runs before
+every delivery by default. Add NOREVIEW in any message up to the GO for code to
+skip it; it combines with every other mode. With NOREVIEW, delivery runs the
+lint and the SELF-AUDIT.
+
+**The lint no longer notes non-ASCII text inside a library copy that matches
+its source.** A verified copy keeps the library's own characters, such as an
+em dash in an Info window message. A line that writes a file still blocks.
+
+**Scripts use American spelling in text you see.** Info window text, dialogs,
+warnings, CSV headers and comments use American spelling. Praat command names
+keep Praat's own spelling.
+
+**Opus 5 is the recommended model.** Opus 5.5 is no longer recommended: like 4.7,
+it settles decisions itself that the workflow puts to you. Opus 4.8 down to 4.6
+still works if you want to conserve tokens.
 
 ### 16.4.0 — 9 October 2026
 

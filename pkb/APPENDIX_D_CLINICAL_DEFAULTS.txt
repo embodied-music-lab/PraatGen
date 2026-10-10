@@ -193,9 +193,10 @@ To Pitch (raw cross-correlation): 0.0, 75, 600, 15, "no", 0.03, 0.45, 0.01, 0.35
 # filtered autocorrelation applies, giving more accurate period detection
 # for perturbation measures.
 #
-# Pitch ceiling is a HARD CUTOFF — no LPF attenuation. Set it to exceed
-# the highest expected F0. For singing tasks, raise pitch ceiling to
-# cover the vocal range (e.g., soprano to C6 → pitch ceiling = 1100 Hz).
+# Pitch ceiling is a HARD CUTOFF — no LPF attenuation. The ceiling is
+# 600 Hz, unless the highest expected pitch (plus vibrato, if present)
+# exceeds 600 Hz. In that case, adjust the ceiling to accommodate the
+# expected pitch range.
 #
 # Always solicit the expected pitch range from the user.
 
@@ -238,6 +239,9 @@ To Harmonicity (cc): 0.01, 75, 0.1, 1.0
 #   pitch floor = 75 Hz
 #   silence threshold = 0.1
 #   periods per window = 1.0
+#
+# The pitch floor stays 75 Hz in every script. It never follows the pitch
+# floors or the expected pitch range.
 #
 # NOTE: Praat's GUI default for periods per window is 1.0.
 # Some clinical literature uses 4.5 (which is Praat's default for
@@ -906,15 +910,22 @@ To Intensity: 100, 0.0, "yes"
 # WHICH LIMITS A SCRIPT USES (hard)
 #
 # Every limit is canonical: both pitch floors, the filtered-autocorrelation
-# pitch top, the raw cross-correlation ceiling, the Harmonicity pitch floor,
-# the jitter and shimmer period arguments and the CPPS peak search. A limit
-# changes only under §0, when the user's PRE-FLIGHT answer shows signal the
-# canonical value would miss. The filtered-autocorrelation pitch top then
-# becomes exactly 2 x the highest expected F0, and only when that F0 is above
-# 400 Hz (§1A). No limit gets a margin or multiplier on top of that. A changed
-# limit is decided in the plan, written into the script as a named constant
-# and justified in the SELF-AUDIT with the §0 sentence. The script never
-# recomputes a limit from a dialog value at run time.
+# pitch top, the raw cross-correlation ceiling, the jitter and shimmer period
+# arguments and the CPPS peak search. A limit changes only under §0, when the
+# expected pitch range shows signal the canonical value would miss:
+#   - The filtered-autocorrelation pitch top becomes exactly 2 x the highest
+#     expected F0, and only when that F0 is above 400 Hz (§1A).
+#   - The raw cross-correlation ceiling is 600 Hz, unless the highest
+#     expected pitch (plus vibrato, if present) exceeds 600 Hz. In that case,
+#     adjust the ceiling to accommodate the expected pitch range (§1B).
+# The Harmonicity pitch floor is always 75 Hz (§2A). No limit gets a margin
+# or multiplier beyond what these rules state.
+#
+# A limit may be set in the plan from the PRE-FLIGHT answer, or computed in
+# the script from the range the user enters in the dialog. Either way it
+# follows these rules exactly: canonical unless the range would lose signal,
+# changed only by the rule stated for that limit, with no added margin. The
+# SELF-AUDIT states each limit used and whether it stayed canonical.
 #
 # Warn when a measurement comes within 10% of any limit the script uses, as
 # above. For the filtered-autocorrelation pitch top, the limit is half the
