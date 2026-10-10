@@ -70,11 +70,23 @@ disagree.
 
 ---
 
-## 2B. The Master Prompt is a core plus six RULES files
+## 2B. The Master Prompt is a core plus six RULES files, read as one file
 
-Since 16.0.0 the project instructions are `MASTER_PROMPT_CORE_v*.md`, and the
-rest of the rules live in `pkb/RULES_*.md`. Each RULES file is canonical for
-the rules it holds: edit it directly. The core's rule index says which file
+The sources are `src/MASTER_PROMPT_CORE_v*.md` and the six `src/RULES_*.md`
+files. Each is canonical for the rules it holds: edit it directly. Since
+17.0.0 neither ships as a separate project file. `tools/build_rules_full.py`
+joins them, word for word, into `pkb/PRAATGEN_RULES_FULL.md`, and the project
+instructions (`PROJECT_INSTRUCTIONS.txt`) tell the session to read that file
+in full at the start of every turn. Rebuild it after any change to `src/`, and
+check that it is current before a release:
+
+    python3 tools/build_rules_full.py
+    python3 tools/build_rules_full.py --check
+
+The build fails if the file reaches 262,144 bytes, the most the Claude app
+returns from one read of a text project file.
+
+The core's rule index says which file
 holds which rule; update it whenever a rule moves or a new one is added, and
 keep rule numbers unchanged across files. `tools/split_prompt_v16.py` is the
 one-time migration from 15.1.0, kept for provenance.
