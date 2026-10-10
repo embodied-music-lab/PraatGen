@@ -75,8 +75,10 @@ def sweep(paths):
 
 
 def main():
-    targets = (glob.glob(os.path.join(ROOT, 'pkb', '*')) +
-               glob.glob(os.path.join(ROOT, 'MASTER_PROMPT_CORE_*.md')))
+    # pkb/PRAATGEN_RULES_FULL.md is built from src/, so src/ is swept instead.
+    targets = ([p for p in glob.glob(os.path.join(ROOT, 'pkb', '*'))
+                if os.path.basename(p) != 'PRAATGEN_RULES_FULL.md'] +
+               glob.glob(os.path.join(ROOT, 'src', '*.md')))
     hits = sweep(targets)
     if not hits:
         print('clean — no prohibited construct outside a labelled block')

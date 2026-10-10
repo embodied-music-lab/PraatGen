@@ -32,7 +32,8 @@ Checks:
   Form numeric defaults  real/positive/integer/natural (and vector) fields in
                        form ... endform have a quoted default (Rule 18).
   Non-ASCII text       Non-ASCII in a string on a line that writes a file
-                       blocks; elsewhere it is a note.
+                       blocks; elsewhere it is a note, except inside a
+                       library copy that matches its source.
   Plugin includes      include only from a relative folder named *_lib.
   Library prefix       eml library procedures are copied as emlPG<Name>.
   Procedure calls      Every @name call has a procedure definition.
@@ -940,11 +941,16 @@ def writes_file(body):
     return bool(re.match(r'^(Save as\b|Write to .*\bfile\b)', body))
 
 
-def check_non_ascii(lines):
+def check_non_ascii(lines, skip=()):
+    """skip: (first, last) line ranges of library copies already verified
+    against their source; a NOTE there would only repeat the library's own
+    text. A file-writing line is still BLOCKING inside them."""
     findings = []
     for ln in lines:
         _t, body = statement(ln.text)
         level = 'BLOCKING' if writes_file(body) else 'NOTE'
+        if level == 'NOTE' and any(a <= ln.n <= b for a, b in skip):
+            continue
         for start, lit in ln.strings:
             bad = sorted({c for c in lit if ord(c) > 127})
             if bad:
@@ -1503,6 +1509,10 @@ def main():
     fn_findings, fn_verified = check_functions(lines, functions)
     tok_findings, tok_verified = check_read_tokens(plan, token_hashes)
     lib_findings, lib_verified = check_library_copies(script, procs)
+    top_script = os.path.normpath(script)
+    lib_ranges = [(n, n + len(body) - 1)
+                  for path, n, name, body in script_copies(script)
+                  if path == top_script and name in lib_verified]
     task_findings, task_summary = check_task_coverage(plan)
     checks = [
         ('Command references', cmd_findings),
@@ -1510,7 +1520,7 @@ def main():
         ('Task coverage', task_findings),
         ('Checkpoint files', check_checkpoint_files(script, plan)),
         ('Form numeric defaults', check_form_defaults(lines)),
-        ('Non-ASCII text', check_non_ascii(lines)),
+        ('Non-ASCII text', check_non_ascii(lines, lib_ranges)),
         ('Plugin includes', check_includes(lines)),
         ('Library procedure prefix', check_prefix(lines)),
         ('Procedure calls resolve', check_calls(lines, os.path.dirname(os.path.abspath(script)))),
