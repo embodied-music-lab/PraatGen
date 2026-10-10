@@ -1,3 +1,5 @@
+**PraatGen has been redesigned to work with the new version of Claude.** Please send feedback to help improve it to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
+
 ⚠️ Best practice: PraatGen is structured to work within the claude.ai project framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected. 
 PraatGen was originally trained on Opus 4.6 with Extended Thinking. All signs indicate that Opus 4.8 at high effort excels. Opus 4.7 really wants to behave agentically, and has been superseded by Opus 5. Opus 5 is the current recommendation. Opus 5.5 is too agentic for this workflow, much like 4.7. Always keep the model you are using in mind. It is a variable.
 
