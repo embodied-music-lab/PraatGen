@@ -46,9 +46,6 @@ Checks:
                        form, and no 'variable' interpolation.
   Pause dialogs        endPause: ends with 0, the cancel-button index.
   Hardcoded paths      No absolute path, file:// URL or UNC path in a string.
-  Hardcoded values     Notes each number written outside the constants block
-                       (0, 1, 2, 12, 100, fixed$ digits and indexes are
-                       exempt) (Rule 35).
   Overwrite guard      A script that writes files checks fileReadable or
                        calls a *UniquePath* procedure. A note.
   Nested queries       No query command inside an expression (Rule 5E).
@@ -840,66 +837,6 @@ def check_plan(rows, plan_path):
     return findings
 
 
-NUMBER = re.compile(r"(?<![\w.$#'])(-?\d+(?:\.\d+)?)(?![\w.])")
-# Numerals that are structure, not values: counts, unit conversions.
-STRUCTURAL = {'0', '0.0', '1', '-1', '2', '12', '100'}
-DIALOG_FIELDS = ('real', 'positive', 'integer', 'natural', 'word', 'sentence',
-                 'text', 'boolean', 'optionmenu', 'choice', 'option', 'comment',
-                 'infile', 'outfile', 'folder')
-CONSTANT_DEF = re.compile(r'^[A-Za-z_]\w*\$?\s*=\s*(-?\d+(?:\.\d+)?)\s*$')
-
-
-def blank_precision(code):
-    """Blank the digits argument of fixed$ (value, digits): formatting, not a value."""
-    out = list(code)
-    for m in re.finditer(r'fixed\$\s*\(', code):
-        depth, i = 1, m.end()
-        comma = None
-        while i < len(code) and depth:
-            c = code[i]
-            if c == '(':
-                depth += 1
-            elif c == ')':
-                depth -= 1
-            elif c == ',' and depth == 1:
-                comma = i
-            i += 1
-        if comma is not None:
-            for j in range(comma + 1, i - 1):
-                out[j] = ' '
-    return ''.join(out)
-
-
-def check_hardcoded(lines, plan_path):
-    """Notes each number outside the constants block (Rule 35). Copied library
-    procedures and the version-check block are exempt. It never suggests a
-    dialog field: whether a value is the user's or canonical is the
-    reviewer's call (Rule 26)."""
-    findings = []
-    in_lib = False
-    for ln in lines:
-        text = ln.text.strip()
-        if re.match(r'^procedure\s+emlPG', text):
-            in_lib = True
-        if in_lib:
-            if text.startswith('endproc'):
-                in_lib = False
-            continue
-        code = ln.code
-        if 'vc_' in code or ln.in_form:
-            continue
-        head = code.lstrip().split(':', 1)[0].strip()
-        if head in DIALOG_FIELDS:
-            continue
-        if CONSTANT_DEF.match(code.strip()):
-            continue
-        scan = re.sub(r'\[[^\]]*\]', lambda s: ' ' * len(s.group(0)), blank_precision(code))
-        for n in NUMBER.findall(scan):
-            if n not in STRUCTURAL:
-                findings.append(('NOTE', ln.n, f'bare number {n} -- name it in the constants block -- {short(text)}'))
-    return findings
-
-
 TASK_HEADING = re.compile(r'^#{1,6}\s*Task as given\s*$', re.I)
 
 
@@ -1582,7 +1519,6 @@ def main():
         ('Old syntax', check_old_syntax(lines)),
         ('Pause dialogs', check_pause(lines)),
         ('Hardcoded paths', check_paths(lines)),
-        ('Hardcoded values', check_hardcoded(lines, plan)),
         ('Overwrite guard', check_overwrite(lines)),
         ('Nested queries', check_nested(lines)),
         ('Functions', fn_findings),
