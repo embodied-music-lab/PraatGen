@@ -16,6 +16,13 @@ that applied them are gone, and the lint no longer notes bare numbers. Which
 settings appear in a script's dialog is settled with you in the PRE-FLIGHT and
 the plan, as before 16.3.0. The house rules restored in 16.4.0 stay.
 
+**Pitch limits are canonical again unless signal would be lost.** Both pitch
+floors, the filtered-autocorrelation pitch top, the cross-correlation ceiling,
+the Harmonicity floor, the jitter and shimmer periods and the CPPS search stay
+canonical. The pitch top becomes exactly 2 x your highest F0 only above 400 Hz.
+Any change is decided in the plan from your PRE-FLIGHT answer, with no added
+margin, and is never recomputed from the dialog when the script runs.
+
 ### 16.4.0 — 9 October 2026
 
 **The house rules missing since 14.17.0 are back.** `RULES_CODE.md` again

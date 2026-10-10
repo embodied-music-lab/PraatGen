@@ -903,42 +903,38 @@ To Intensity: 100, 0.0, "yes"
 #           ... " Hz ceiling. Widen the range or treat the result as censored."
 #   endif
 #
-# WHICH WARNING APPLIES TO WHICH LIMIT (hard)
+# WHICH LIMITS A SCRIPT USES (hard)
 #
-# The PRE-FLIGHT asks the human question: the highest and lowest pitches in
-# the recordings. The algorithm limits are hard numbers derived from that
-# answer with a buffer. The two kinds of limit get different warnings:
-#   - A fixed limit, such as a canonical floor, or the 60-330 Hz CPPS peak
-#     search kept as published: warn when a measurement comes within 10% of
-#     it, as above.
-#   - A limit derived from the stated range plus a buffer: warn when the
-#     measurement crosses the stated range itself (next rule). Never warn on
-#     proximity to the derived limit. The buffer puts that limit just above
-#     the stated top, so a proximity warning fires on every recording that
-#     reaches the top note.
+# Every limit is canonical: both pitch floors, the filtered-autocorrelation
+# pitch top, the raw cross-correlation ceiling, the Harmonicity pitch floor,
+# the jitter and shimmer period arguments and the CPPS peak search. A limit
+# changes only under §0, when the user's PRE-FLIGHT answer shows signal the
+# canonical value would miss. The filtered-autocorrelation pitch top then
+# becomes exactly 2 x the highest expected F0, and only when that F0 is above
+# 400 Hz (§1A). No limit gets a margin or multiplier on top of that. A changed
+# limit is decided in the plan, written into the script as a named constant
+# and justified in the SELF-AUDIT with the §0 sentence. The script never
+# recomputes a limit from a dialog value at run time.
 #
-# The two pitch algorithms fail differently past their limits:
+# Warn when a measurement comes within 10% of any limit the script uses, as
+# above. For the filtered-autocorrelation pitch top, the limit is half the
+# pitch top, where attenuation begins. The two pitch algorithms fail
+# differently past their limits:
 #   - Filtered autocorrelation degrades gracefully. Its internal low-pass
-#     starts attenuating at half the pitch top, so the 2x rule (§1A) leaves
-#     a margin.
+#     starts attenuating at half the pitch top.
 #   - Raw cross-correlation stops at its ceiling. Periods above it are lost
-#     outright (§1B). Its buffer must clear the highest F0, vibrato peaks
-#     included, and a measurement that crosses the stated top is the warning
-#     that the buffer may not have been enough.
+#     outright (§1B).
 #
 # CHECK THE USER'S STATED RANGE AGAINST THE MEASUREMENT (hard)
 #
 # When the user supplies an expected range, compare it to what was measured
-# and warn on disagreement. The stated value is an INPUT to parameter
-# derivation — ceilings are commonly derived as max(600, 1.2 * stated) or
-# similar — so a wrong statement propagates silently into every downstream
-# parameter.
+# and warn on disagreement. The limits were chosen from that statement, so a
+# wrong statement leads to wrong limits without any error.
 #
 # Observed: user stated F0 stayed below 300 Hz; measurement returned 322.87 Hz;
-# nothing flagged it. Report the discrepancy, state which parameters were
-# derived from the stated value, and let the user decide whether to re-run.
-# Name the raw cross-correlation ceiling first when the top was crossed,
-# because it is a hard cutoff.
+# nothing flagged it. Report the discrepancy, name each limit the measured F0
+# crossed or came within 10% of, the raw cross-correlation ceiling first
+# because it is a hard cutoff, and let the user decide whether to re-run.
 #
 # Pattern for plausibility check:
 #
