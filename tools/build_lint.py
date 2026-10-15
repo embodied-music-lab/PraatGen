@@ -7,7 +7,9 @@ returns at most 256 KiB of a text project file, while a zip is saved whole.
 Run from the repo root after any change to the linter, a COMMANDS_*.txt file,
 the catalogue, APPENDIX_B, a RULES file or an eml-*.txt library file:
     python3 tools/build_lint.py
-Run with --check to confirm the PKB copy matches the current sources.
+Run with --check to confirm the PKB copy matches the current sources. The
+check compares the text inside the zip. A zip uploaded through GitHub's web
+page is compressed by the browser, so its bytes differ from a Python build.
 """
 import importlib.util
 import io
@@ -61,14 +63,29 @@ def pack(text):
     return buf.getvalue()
 
 
+def check():
+    """Return a problem with the PKB zip, or None when its text matches a build."""
+    try:
+        with zipfile.ZipFile(OUT) as z:
+            names = z.namelist()
+            if names != [NAME]:
+                return f'{OUT} should hold only {NAME}; it holds {names}'
+            text = z.read(NAME).decode('utf-8')
+    except FileNotFoundError:
+        return f'{OUT} is missing'
+    except zipfile.BadZipFile:
+        return f'{OUT} is not a readable zip'
+    if text != build():
+        return f'{NAME} in {OUT} differs from a build of the current sources'
+    return None
+
+
 if __name__ == '__main__':
-    data = pack(build())
     if '--check' in sys.argv:
-        try:
-            ok = open(OUT, 'rb').read() == data
-        except FileNotFoundError:
-            ok = False
-        print('PKB linter is current' if ok else 'PKB linter is STALE: regenerate')
-        sys.exit(0 if ok else 1)
+        problem = check()
+        print('PKB linter is current' if problem is None
+              else f'PKB linter is STALE: {problem}; regenerate')
+        sys.exit(0 if problem is None else 1)
+    data = pack(build())
     open(OUT, 'wb').write(data)
     print(f'wrote {OUT} ({len(data)} bytes)')
