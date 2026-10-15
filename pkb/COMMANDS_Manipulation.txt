@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: Manipulation
 # Source: Praat C API (praatlib.h), June 2025
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -23,7 +28,9 @@
 
   # Query
   Get resynthesis (overlap-add)
+  # Returns: Sound
   Get resynthesis (LPC)
+  # Returns: Sound
   # Modify
   Replace duration tier
   Replace pitch tier?
@@ -33,11 +40,16 @@
   Replace original sound
   # Convert / Analyze
   To Manipulation
+  # Returns: Manipulation
   # Extract / Combine
   Extract original sound
+  # Returns: Sound
   Extract pulses
+  # Returns: PointProcess
   Extract pitch tier
+  # Returns: PitchTier
   Extract duration tier
+  # Returns: DurationTier
   # Other
   Play (overlap-add)
   Play (LPC)

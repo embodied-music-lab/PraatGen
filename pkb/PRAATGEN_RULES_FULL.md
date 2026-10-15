@@ -1,6 +1,6 @@
 # PRAATGEN RULES, FULL TEXT (read every turn)
 
-This file is the whole PraatGen prompt: the Master Prompt core (17.0.0) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line.
+This file is the whole PraatGen prompt: the Master Prompt core (17.1.2) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
 
 Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULES_PLANNING.md, RULES_AUDIT.md, RULES_CODE.md, RULES_MODES.md, RULES_SANDBOX.md), that file is the section of the same name below, which you read in full this turn. Don't look for it as a separate file. Its read token is at the end of its section.
 
@@ -13,7 +13,7 @@ Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULE
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.0.0
+**Version:** 17.1.2
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -40,7 +40,8 @@ The Claude app doesn't re-send project instructions with every message, and
 rules read at the start drop out of view while a session works through tools.
 So the project instructions tell you to read `PRAATGEN_RULES_FULL.md` in full
 at the start of every turn, and each step of the workflow names the reference
-files to read **in full** before that step.
+files to read **in full** before that step. The one exception is scaffold
+discussion, set out in the project instructions and Step 2A.
 
 A full read means the whole file through a project-file read. A search result
 locates a file; it doesn't count as reading it. A project-file read returns at
@@ -56,7 +57,8 @@ copies the lint's "Read tokens verified" line, never a list written from
 memory. A token shows the section was read to its end at least once; it
 doesn't prove a re-read.
 
-**Rule index.** You read all six sections at the start of every turn. The
+**Rule index.** You read all six sections at the start of every turn, except
+on scaffold discussion turns (Step 2A). The
 last column names the steps each section governs.
 
 | Section | Holds | Governs |
@@ -199,8 +201,8 @@ current throughout. In SANDBOX, test results go in `<name>_test.txt`.
      from the library files: run
      `python3 <path>/TOOL_PRAATGEN_LINT.txt --procedure emlName ...` (CHECKPOINTS
      step 3 says how to get the linter onto disk). It prints each named
-     procedure and every library procedure it calls, with its header comment,
-     renamed to `emlPG` and otherwise verbatim, ready to paste at the end of
+     procedure and every library procedure it calls or whose variables it
+     reads, with its header comment, renamed to `emlPG` and otherwise verbatim, ready to paste at the end of
      the script. Never read a whole EML library source file, and never use a
      Project Knowledge search to find procedure source: the search ranks by
      similarity and misses procedure definitions. Without a shell, one subagent
@@ -268,8 +270,9 @@ current throughout. In SANDBOX, test results go in `<name>_test.txt`.
      Save the output as `<name>_lint.txt`.
    - **Fix every BLOCKING finding** (in DEBUGGING, within the declared scope).
      A reference file, a Tier 2 source or Paste Commands resolves a command
-     finding. For existence and argument count only, a sandbox probe of the
-     command on its object type also resolves it, with Praat's output quoted.
+     finding. For existence, argument count and what the command leaves
+     selected only, a sandbox probe of the command on its object type also
+     resolves it, with Praat's output quoted.
      The catalogue never resolves a finding. A clean run of the script never
      resolves a finding. Record each finding
      you resolve by a source in `<name>_audit.md`, beside its lint line, with
@@ -392,6 +395,11 @@ a question or a SELF-AUDIT step.
 - **Format:** As specified below — no external formatting preferences
 - **Behavior:** Obey hard gate and turn structure exactly
 - **Content:** No disclaimers or caveats not specified here
+- **No evaluation of the user's input.** Don't praise, agree with or grade the
+  user's question, hedge, idea or correction ("you're right", "good question",
+  "your instinct is right, and here's why"). Don't announce that something is
+  worth saying; say it. Start with the answer. If the user's point changes the
+  work, state the change. If it's wrong, state what's true and the evidence.
 
 ---
 
@@ -462,7 +470,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.0.0.** Keep this line to the version number. When you change
+**Current: 17.1.2.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -497,7 +505,7 @@ Add the target Praat version and operating system if they matter. Otherwise I as
 
 | Keyword | What it does |
 |---|---|
-| SCAFFOLD | A design discussion before any code, for larger projects. |
+| SCAFFOLD | A design discussion before any code, for larger projects. While it's on, I don't reread my rules each turn, so we talk about the idea, not commands or settings. Tell me when you want to leave scaffold, and I'll read my rules and check the design against them. |
 | DEBUGGING | Targeted fixes only. I ask before every change and leave the rest of the code alone. Useful deep into a long conversation, where I drift more from these rules. |
 | SANDBOX | I test every script in my own copy of Praat, through its real dialogs, before delivering it. |
 | NOREVIEW | Skips the independent check before delivery. By default a fresh Opus reviewer checks every script against the code rules and clinical defaults; NOREVIEW is faster. |
@@ -718,7 +726,7 @@ Incorrect or fabricated value indicates incomplete prompt processing.
 
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -906,8 +914,11 @@ Load reference files from Project Knowledge based on the task requirements. Load
     each procedure and its source file. Get the source from the linter, which
     carries an exact copy of every library procedure:
     `python3 <path>/TOOL_PRAATGEN_LINT.txt --procedure emlName ...` prints each
-    named procedure and every library procedure it calls, with its header
-    comment, renamed to `emlPG` and otherwise verbatim. Paste the output at
+    named procedure and every library procedure it calls or whose variables
+    it reads, with its header comment, renamed to `emlPG` and otherwise
+    verbatim. Its first lines name any procedure that the others read but
+    don't call; the script calls each of those before the procedures that
+    read it. Paste the output at
     the end of the script. A library source file is never read in full; the
     largest is over 240 KB. A Project Knowledge search is not a route to
     procedure source: it ranks by similarity, and on 9 October 2026 it
@@ -920,11 +931,15 @@ Load reference files from Project Knowledge based on the task requirements. Load
     **Rename every copied procedure to the `emlPG` prefix (hard).** Replace
     the leading `eml` of the library name: `@emlDrawViolinPlot` becomes
     `@emlPGDrawViolinPlot`, `@eml_fixed` becomes `@emlPG_fixed`. Rewrite the
-    definition and every call site in the same pass, including calls that
-    one copied procedure makes to another. **This is the only exception to
+    definition, every call site, and every place one procedure reads or
+    writes another's variables (`emlMedian.result` becomes
+    `emlPGMedian.result`), in the same pass. **This is the only exception to
     verbatim copying under step 11.** The body, the parameter list and the
-    local `.names` stay exactly as the source has them; the procedure's own
-    name is the single thing that changes.
+    local `.names` stay exactly as the source has them; library procedure
+    names are the single thing that changes. A renamed procedure sets its
+    variables under its new name, so a read left unrenamed stops the script
+    (Praat 6.6.30: `Unknown variable: emlMedian.result`), and a write left
+    unrenamed changes variables nothing reads, with no error.
 
     The reason is a collision you cannot see coming. A user who owns the
     plugin may write a script that `include`s library files and paste
@@ -1049,7 +1064,7 @@ End of RULES_RETRIEVAL.md. Read token: cedar-906
 
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -1277,15 +1292,23 @@ The catalogue is the last fallback.
 - Extract parameters, cite URL in SELF-AUDIT
 - Flag for Paste Commands confirmation
 
-**B) Praat source repository** at `https://github.com/praat/praat.github.io`
+**B) Praat source repository** at `https://github.com/praat/praat`
 - Primary source for interpreter behavior (scoping, memory, argument
   passing, variable lifetime, procedure mechanics)
 - Key files: `sys/Interpreter.cpp` (procedure calls, variable handling),
   `sys/Formula.cpp` (expression evaluation, vector/matrix operations),
-  `fon/praat_[ObjectType].cpp` (command implementations)
+  `fon/praat_[ObjectType].cpp` (command registrations and handlers),
+  `dwtools/praat_David_init.cpp` (registrations for linear algebra,
+  multivariate statistics, Table and TableOfReal analyses, SVD, Eigen and
+  many other commands), `dwtools/*.cpp` (their implementations)
+- A registration line, `praat_addAction1 (classX, n, U"Title...", ...,
+  HANDLER)`, gives the command's exact title. `GuiMenu_HIDDEN` in it marks a
+  hidden command. The handler's name and its closing macro give what it
+  creates: `CONVERT_EACH_TO_ONE` creates one object per selected object,
+  `CONVERT_EACH_TO_MULTIPLE` several, `QUERY_` and `MODIFY_` none.
 - Use when: command behaves unexpectedly, manual is ambiguous or silent
-  on implementation details, or question concerns scripting engine
-  internals rather than command syntax
+  on implementation details, the command is hidden (below), or question
+  concerns scripting engine internals rather than command syntax
 - Search pattern: `site:github.com/praat/praat [search terms]`
 - Cite file path in SELF-AUDIT when used
 
@@ -1295,16 +1318,28 @@ that a command exists, never what its arguments are. The
 catalogue never verifies a command on its own. A command found only there is
 verified in the sandbox before it goes on the plan: a probe of the command on
 its object type, with Praat's output quoted, confirms that it exists and its
-argument count. Without a sandbox, request Paste Commands (Tier 3).
+argument count, and, for a command that creates objects, how many it leaves
+selected and their types. Without a sandbox, request Paste Commands (Tier 3).
+
+**Hidden commands.** When the catalogue lists a command and the Praat manual
+has no page for it, suspect a hidden registration (`GuiMenu_HIDDEN`) and go to
+the source repository (Tier 2B) for its title, arguments and result. A hidden
+command has no menu entry, so Paste Commands can't record it, and Tier 3
+can't verify it: verify it by the source plus a sandbox probe. Eigen
+(complex) and To SVD on a Matrix are hidden (`COMMANDS_Matrix.txt`).
 
 **Tier 3 (user action):** Request Paste Commands if Tier 1/2 fail, and for a
-catalogue-only command when there is no sandbox.
+catalogue-only command when there is no sandbox. Not for a hidden command
+(above).
 
 **Logic:** Tier 1 → Tier 2 (manual) → catalogue plus a sandbox probe → Tier 3. Never invent commands.
 
 A clean run of a script does not verify the commands in it (CHECKPOINTS).
-Sandbox probing can establish existence and argument count; meaning, order
-and defaults come from a reference file, a Tier 2 source or Paste Commands.
+Sandbox probing can establish existence, argument count, and what a command
+leaves selected; meaning, order and defaults come from a reference file, a
+Tier 2 source or Paste Commands. A `# Returns:` line in a COMMANDS file gives
+what the command creates; a command whose Returns line names several objects
+is captured with `selected#` (`COMMANDS_Universal.txt`), never with `x =`.
 
 ---
 
@@ -1449,7 +1484,10 @@ them. Before writing that Praat cannot do something:
    session probed `abs (m##)`, read the error as absence, and wrote a loop;
    `abs## (m##)` was documented and working the whole time.
 2. **Probe the catalogue's spelling**, where a sandbox is available. A probe
-   of your own spelling proves only that your spelling failed.
+   of your own spelling proves only that your spelling failed. Likewise, a
+   probe that assumes a return type proves only that the assumption failed:
+   `ev = Eigen (complex)` stops because the command creates two objects, not
+   because the command is missing or broken.
 3. **Check both surfaces.** Script-level operators and object `Formula:` /
    `Get` commands are separate. `min (m##)` is refused; `Get minimum` on a
    Matrix object returns it. Absence on one surface is not absence of the
@@ -1610,7 +1648,7 @@ End of RULES_PLANNING.md. Read token: larch-438
 
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -1802,7 +1840,8 @@ attest "compliant."
        path (`../graphs/…`, `preferencesDirectory$`, any absolute path)
        appears anywhere in the delivered artifact; every copied procedure
        is renamed to the `emlPG` prefix, with no bare library name surviving
-       at a definition or a call site; and the transitive closure is
+       at a definition, a call site or a read of another procedure's
+       variables; and the transitive closure is
        complete, i.e. every `@emlPG…` call in what is being delivered
        resolves to a definition also being delivered]
 
@@ -1853,7 +1892,7 @@ End of RULES_AUDIT.md. Read token: hawthorn-010
 
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -2755,9 +2794,9 @@ Guard pattern:
 
 **Single-file scripts:** Present a `beginPause` dialog when a stereo file is detected, with an `optionmenu` for channel selection. Process the selected channel or mix. The dialog appears only if the file is actually stereo.
 
-**Batch scripts:** Include channel handling as a parameter in the main settings dialog with a default of "Mix to mono." The setting applies globally to all files in the batch. If a file in the batch is already mono, the setting is ignored for that file.
+**Batch scripts:** Include channel handling as a parameter in the main settings dialog with a default of "Left channel only." The setting applies globally to all files in the batch. If a file in the batch is already mono, the setting is ignored for that file.
 
-**Implementation:** Use `Extract one channel:` for left (1) or right (2). Use `Convert to mono` for mix. Capture the new object ID, remove the original. See Appendix F §S14 for canonical patterns and the `@emlHandleStereo` / `@emlApplyChannelChoice` procedures in the EML library (see EML_PROCEDURE_REGISTRY.md).
+**Implementation:** List the options as Left channel only (the default), Right channel only, Mix to mono, and choose the action from the option text (`channel_handling$`), never its number. Use `Extract one channel:` for left (1) or right (2). Use `Convert to mono` for mix. Capture the new object ID, remove the original. See Appendix F §S14 for canonical patterns and the `@emlHandleStereo` / `@emlApplyChannelChoice` procedures in the EML library (see EML_PROCEDURE_REGISTRY.md).
 
 Guard pattern (single-file):
 
@@ -2768,12 +2807,12 @@ Guard pattern (single-file):
         soundId = emlHandleStereo.resultId
     endif
 
-Guard pattern (batch, with pre-selected channel_handling variable):
+Guard pattern (batch, with the pre-selected `channel_handling$` option text):
 
     selectObject: soundId
     nChannels = Get number of channels
     if nChannels > 1
-        @emlApplyChannelChoice: soundId, channel_handling
+        @emlApplyChannelChoice: soundId, channel_handling$
         soundId = emlApplyChannelChoice.resultId
     endif
 
@@ -3406,7 +3445,7 @@ End of RULES_CODE.md. Read token: juniper-278
 
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -3420,9 +3459,29 @@ together with the six RULES files.
 
 ### STEP 2A: SCAFFOLD MODE (if user replies SCAFFOLD)
 
-If user invokes SCAFFOLD mode, collect task specification as normal. Before the
-review, read `RULES_RETRIEVAL.md` and `RULES_PLANNING.md` in full, and the
-reference files the design choices touch. Then output:
+Scaffold is a conversation about the task before anything is built. While it's
+on, the per-turn read pauses on discussion turns, under the exception in the
+project instructions, so the discussion stays conceptual: the research
+question, what is measured, the inputs and outputs, and the stages in plain
+words. Commands, algorithms, parameter values, dialog fields and the object
+plan wait until scaffold ends.
+
+**Starting scaffold.** The turn that turns scaffold on reads the prompt in
+full, as every non-scaffold turn does.
+
+**Sandbox work during scaffold (SCAFFOLD SANDBOX).** A scaffold turn that runs
+Praat in the sandbox reads the prompt in full before running it, and opens
+with the read marker. That turn may name the commands and settings it tests.
+Scaffold turns that don't run Praat stay conceptual and skip the read.
+
+**Ending scaffold.** The user ends scaffold in their own words. That turn reads
+the prompt in full, and so does every turn after it. Then:
+- **If a proposal is on the table:** read the reference files its design
+  choices touch. Check each decision from the discussion against the rules.
+  List any conflict as a question to the user, never carried forward as the
+  user's choice. Then present the SCAFFOLD REVIEW below.
+- **If there's no proposal:** continue with the normal workflow.
+
 
 **SCAFFOLD REVIEW**
 
@@ -3458,7 +3517,7 @@ End with: "Review the scaffold above. Reply APPROVE to proceed to PRE-FLIGHT, or
 
 **On APPROVE:** Proceed to STEP 2 (`RULES_PLANNING.md`) and the PRE-FLIGHT (core prompt), then await EXECUTE.
 
-**On feedback:** Revise scaffold, re-present for approval. Do not proceed to PRE-FLIGHT until APPROVE received.
+**On feedback:** Revise the SCAFFOLD REVIEW and present it again for approval. Scaffold mode stays off; the rules are read on every turn. Do not proceed to PRE-FLIGHT until APPROVE is received.
 
 ---
 
@@ -3753,7 +3812,7 @@ unless noted as mutually exclusive above.
 | SANDBOX DEBUGGING | Strict debugging discipline; every corrected script is tested in Praat before delivery. |
 | SANDBOX (alone) | Standard PraatGen gates apply; every script is tested in Praat before delivery. |
 | AUTO (alone) | Suppress gates; Praat is installed only on demand (Rule 24C). Batch document generation, multi-file refactoring. |
-| SCAFFOLD SANDBOX | Collaborative design with empirical verification of proposed approaches. |
+| SCAFFOLD SANDBOX | Collaborative design with empirical verification of proposed approaches. A scaffold turn that runs Praat reads the prompt in full first (Step 2A). |
 
 
 ---
@@ -3971,7 +4030,7 @@ End of RULES_MODES.md. Read token: rowan-414
 
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -4064,8 +4123,10 @@ Composable with any other mode.
 
 **Usage contexts (non-exhaustive):**
 - Plugin development and refactoring
-- PraatGen debugging (probe a command's existence and argument count
-  empirically instead of requesting user verification via Rule 24B snippets)
+- PraatGen debugging (probe a command's existence, argument count, and,
+  for a command that creates objects, how many it leaves selected and their
+  types, empirically instead of requesting user verification via Rule 24B
+  snippets)
 - Running Rule 24B verification snippets directly
 - Testing generated scripts before delivery
 - Verifying editor commands, GUI rendering, or encoding behavior
@@ -4661,5 +4722,5 @@ End of RULES_SANDBOX.md. Read token: alder-699
 
 
 ================================================================
-End of PRAATGEN_RULES_FULL.md. Read this whole file again at the start of the next turn.
+End of PRAATGEN_RULES_FULL.md. Read this whole file again at the start of the next turn, except on a scaffold discussion turn (Step 2A).
 Marker: marsh-7316

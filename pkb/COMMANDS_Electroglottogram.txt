@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: Electroglottogram
 # Source: Sandbox-verified by execution, Praat 6.6.30 (Linux x64v3), 29 Jul 2026
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -20,6 +25,7 @@
 
   # Create (Sound command)
   Extract Electroglottogram: channel number, invert?
+  # Returns: Electroglottogram
   # Verified: Extract Electroglottogram: 2, "no"
   # NOTE: Second argument is named "Invert". invert? = "yes" multiplies by -1
   #   (verified: -0.709517 -> +0.709517 at the same time point). Praat expects
@@ -44,6 +50,7 @@
 
   # Convert / Analyze
   To Sound
+  # Returns: Sound
   # Verified: To Sound
   #   Takes no arguments.
   # NOTE: The bridge out of this type. Returns a Sound with identical
@@ -51,6 +58,7 @@
   #   — it has no dialog. Do not write a colon.
 
   Derivative: low-pass frequency, smoothing, new absolute peak
+  # Returns: Sound
   # Verified: Derivative: 5000, 100, 0
   # NOTE: Returns a SOUND (suffix "_derivative"), not an Electroglottogram.
   #   Band-limited. Prefer for GCI detection on any signal that is not
@@ -58,6 +66,7 @@
   #   "new absolute peak" = 0.0 means do not rescale.
 
   First central difference: new absolute peak
+  # Returns: Sound
   # Verified: First central difference: 0.0
   # NOTE: Returns a SOUND (suffix "_cdiff"), not an Electroglottogram.
   #   Arity is exactly 1 — the argument is a rescale factor, NOT a filter.
@@ -65,6 +74,7 @@
   #   differentiator; use when replicating a published dEGG protocol.
 
   To TextGrid (closed glottis): pitch floor, pitch ceiling, closing threshold, peak threshold
+  # Returns: TextGrid
   # Verified: To TextGrid (closed glottis): 75, 600, 0.3, 0.05
   # Legacy alias: Get closed glottis intervals: (same signature, verified)
   # NOTE: Closing and opening moments are the two level crossings at
@@ -77,6 +87,7 @@
   # *** BOUNDARY COLLISION — see the section at the end of this file. ***
 
   To AmplitudeTier (levels): pitch floor, pitch ceiling, closing threshold, peaks?, valleys?
+  # Returns: AmplitudeTier
   # Verified: To AmplitudeTier (levels): 75, 600, 0.3, "yes", "yes"
   # NOTE: Returns 1-3 objects depending on the booleans. Order is always
   #   peaks, valleys, levels:
@@ -91,6 +102,7 @@
 
   # Other
   High-pass filter: from frequency, smoothing
+  # Returns: Electroglottogram
   # Verified: High-pass filter: 20, 10
   # NOTE: Creates a NEW Electroglottogram (suffix "_filtered"). This is NOT
   #   an in-place modification — verified: source id=2, result id=3, three

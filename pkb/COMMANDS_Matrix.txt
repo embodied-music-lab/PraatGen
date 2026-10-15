@@ -1,14 +1,85 @@
 # PRAAT COMMANDS: Matrix
 # Source: Sandbox-verified, Praat 6.6.30 (Linux x64v3), 8 Oct 2026
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
 #
 # This file holds the Matrix commands verified in the sandbox. For any other
 # Matrix command, the catalogue is the last fallback, and a command found only
-# there is verified in the sandbox before use (Rule 12).
+# there is verified in the sandbox before use (Rule 12). The SVD commands,
+# for the object that To SVD creates, are in their own section at the end.
 
   To TableOfReal
+  # Returns: TableOfReal
   # Verified: To TableOfReal
   # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)
+
+  # Linear algebra (hidden commands)
+  # Eigen (complex) and To SVD are registered GuiMenu_HIDDEN in
+  # dwtools/praat_David_init.cpp (Praat 6.6.30). They have no menu entry and
+  # no manual page, so Paste Commands can't record them. Their names and
+  # results below come from the source and a sandbox run in 6.6.30,
+  # 12 Oct 2026.
+
+  Eigen (complex)
+  # Returns: two Matrix objects, eigenvectors first, then eigenvalues; both
+  #   selected afterward. ev = Eigen (complex) stops with "Multiple objects
+  #   selected. Cannot assign object IDs to numeric variable". Capture both
+  #   with selected# (COMMANDS_Universal.txt).
+  # Layout, for an n x n Matrix (checked by A*v = lambda*v on a 3 x 3
+  #   non-symmetric Matrix, residual below 1e-15):
+  #   eigenvalues: n rows x 2 columns. Row k = (real part, imaginary part)
+  #     of eigenvalue k. The rotation [[0,-1],[1,0]] gives rows (0, 1)
+  #     and (0, -1).
+  #   eigenvectors: n rows x 2n columns. Row k is the eigenvector of
+  #     eigenvalue k. Its component j is at columns 2j-1 (real) and 2j
+  #     (imaginary). A column pair is one component across eigenvectors,
+  #     not one eigenvector.
+  # Before a script relies on this layout for a new case, check A*v = lambda*v
+  #   in the sandbox.
+
+  To SVD
+  # Returns: SVD. Hidden command: no menu entry or manual page, so Paste
+  #   Commands can't record it. Works on a non-square Matrix (4 x 3 tested).
+
+## Object type: SVD (the object To SVD creates)
+# Source: Praat 6.6.30 source (dwtools/praat_David_init.cpp) and a sandbox run
+#   in 6.6.30, 12 Oct 2026. These SVD commands are in the menus.
+
+  Get number of rows
+  Get number of columns
+  Get rank
+  Get condition number
+  Get singular value: index
+  # Verified: Get singular value: 1
+  Get sum of singular values: from, to
+  # Verified: Get sum of singular values: 1, 0
+  Get sum of singular values (fraction): from, to
+  # Verified: Get sum of singular values (fraction): 1, 2
+  Get minimum number of singular values: fraction of total sum
+  # Verified: Get minimum number of singular values: 0.95
+  # ERRATUM: "Get number of singular values" does not exist. Praat 6.6.30
+  #   stops with "Command "Get number of singular values" not available for
+  #   current selection". The count is min (rows, columns): Get number of
+  #   rows and Get number of columns return the original Matrix's sizes
+  #   (3 and 5 for a 3 x 5 Matrix, which has 3 singular values). Extract
+  #   singular values gives a 1 x k TableOfReal, so its Get number of
+  #   columns is the count.
+  Extract left singular vectors
+  # Returns: TableOfReal (named <name>_lsv)
+  Extract right singular vectors
+  # Returns: TableOfReal (named <name>_rsv), not a Matrix
+  Extract singular values
+  # Returns: TableOfReal (named <name>_sv)
+  To TableOfReal: first component, last component
+  # Verified: To TableOfReal: 1, 0
+  # Returns: TableOfReal
+  To Matrix: first component, last component
+  # Verified: To Matrix: 1, 0
+  # Returns: Matrix

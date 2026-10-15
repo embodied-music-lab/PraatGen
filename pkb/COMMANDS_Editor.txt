@@ -2,6 +2,11 @@
 # Source: Praat source code (FunctionEditor.cpp, SoundArea.cpp,
 #         SoundAnalysisArea.cpp, TextGridArea.cpp) + empirical verification
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Version: 2.0 (fully verified — Praat 6.4.62 desktop + 6.4.65 xvfb)
 # Date: 9 May 2026
@@ -360,18 +365,22 @@
 ## Sound menu — Extract
 
   Extract selected sound (preserve times)                           [V]
+  # Returns: Sound, in the Objects window
   # Extracts selection to Objects window, preserving original times.
   # WARNING: after endeditor, the extracted Sound is selected.
   # The editor may close. Use defensive re-open afterward.
 
   Extract selected sound (time from 0)                              [V]
+  # Returns: Sound, in the Objects window
   # Extracts selection to Objects window, starting from time 0.
 
   Extract selected sound (windowed): name$, window_shape$, relative_width, preserve_times$  [V]
+  # Returns: Sound, in the Objects window
   # Extracts with windowing applied.
   # window_shape: "rectangular", "Hanning", "Hamming", "Gaussian1", etc.
 
   Extract selected sound for overlap: overlap                       [V-n]
+  # Returns: Sound, in the Objects window
   # Extracts with overlap for concatenation.
   # WARNING: may close the editor. Defensive re-open required.
 
@@ -457,6 +466,7 @@
   # Moves the frequency cursor to a specific Hz value.
 
   Extract visible spectrogram                                       [V]
+  # Returns: Spectrogram, in the Objects window
   # Creates a Spectrogram object from the visible window.
   # WARNING: defensive re-open may be needed after endeditor.
 
@@ -603,6 +613,7 @@
   # Draws pitch to the Picture window.
 
   Extract visible pitch contour                                     [V]
+  # Returns: Pitch, in the Objects window
   # Creates a Pitch object from the visible analysis.
 
 ## Intensity menu
@@ -637,6 +648,7 @@
 
   Draw visible intensity contour: preserve_times$, garnish$         [V-n]
   Extract visible intensity contour                                 [V]
+  # Returns: Intensity, in the Objects window
 
 ## Formants menu
 
@@ -682,6 +694,7 @@
 
   Draw visible formant contour: preserve_times$, garnish$           [V-n]
   Extract visible formant contour                                   [V]
+  # Returns: Formant, in the Objects window
 
 ## Pulses menu
 
@@ -719,6 +732,7 @@
 
   Draw visible pulses: preserve_times$, garnish$                    [V-n]
   Extract visible pulses                                            [V]
+  # Returns: PointProcess, in the Objects window
   # Creates a PointProcess object from the visible analysis.
 
 # ============================================================================
@@ -771,10 +785,12 @@
 ## TextGrid menu — Extract
 
   Extract selected TextGrid (preserve times)                        [V]
+  # Returns: TextGrid, in the Objects window
   # Extracts TextGrid selection to Objects window.
   # WARNING: defensive re-open may be needed after endeditor.
 
   Extract selected TextGrid (time from 0)                           [V]
+  # Returns: TextGrid, in the Objects window
 
 ## TextGrid menu — Alignment (requires Sound)
 
@@ -846,6 +862,7 @@
   # Removes the selected tier entirely.
 
   Publish tier                                                      [V-n]
+  # Returns: TextGrid holding a copy of the selected tier, in the Objects window
   # Extracts the selected tier to the Objects window.
   # WARNING: the new TextGrid object may have the same ID confusion
   # as other extract commands. Use defensive re-open.

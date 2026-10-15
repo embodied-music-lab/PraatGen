@@ -379,12 +379,12 @@
 #       soundId = emlHandleStereo.resultId
 #   endif
 #
-# For batch scripts with a pre-selected channel_handling variable:
+# For batch scripts with the pre-selected channel_handling$ option text:
 #
 #   selectObject: soundId
 #   nChannels = Get number of channels
 #   if nChannels > 1
-#       @emlApplyChannelChoice: soundId, channel_handling
+#       @emlApplyChannelChoice: soundId, channel_handling$
 #       soundId = emlApplyChannelChoice.resultId
 #   endif
 #

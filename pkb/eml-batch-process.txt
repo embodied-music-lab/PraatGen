@@ -93,9 +93,9 @@ repeat
         folder: "Sound folder", sound_folder$
         word: "File extension", file_extension$
         optionmenu: "Channel handling", channel_handling
-            option: "Mix to mono"
             option: "Left channel only"
             option: "Right channel only"
+            option: "Mix to mono"
         comment: "--- Measures ---"
         boolean: "Mean F0", mean_F0
         boolean: "Mean intensity", mean_intensity
@@ -320,15 +320,20 @@ for iFile from start_from_file to end_at_file
     appendInfoLine: line$
 
     # --- Channel handling ---
+    # Matches the option text; Left channel only is the default.
+    # Provenance: PraatGen-only edit, 14 October 2026; not yet in the plugin source.
+    #   Was Mix to mono (default), Left, Right, matched by option number.
     selectObject: soundId
     nChannels = Get number of channels
     if nChannels > 1
-        if channel_handling = 1
-            derivedId = Convert to mono
-        elsif channel_handling = 2
+        if channel_handling$ = "Left channel only"
             derivedId = Extract one channel: 1
-        else
+        elsif channel_handling$ = "Right channel only"
             derivedId = Extract one channel: 2
+        elsif channel_handling$ = "Mix to mono"
+            derivedId = Convert to mono
+        else
+            exitScript: "Unknown channel handling: " + channel_handling$
         endif
         removeObject: soundId
         soundId = derivedId

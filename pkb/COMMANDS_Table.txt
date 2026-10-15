@@ -2,6 +2,11 @@
 # Source: Praat C API (praatlib.h), June 2025
 # Additional commands: Session-verified via Paste Commands (Feb–Apr 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -28,16 +33,27 @@
   # Provenance: Paste Commands, 4 March 2026
   # Note: Space-separated string form also works: "speaker dialect age_yr F0_Hz F1_Hz F2_Hz"
   Create Table without column names: name$, number of rows, number of columns
+  # Returns: Table
   Create formant table (Peterson & Barney 1952)
+  # Returns: Table
   Create formant table (Pols & Van Nierop 1973)
+  # Returns: Table
   Create formant table (Weenink 1985)
+  # Returns: Table
   Create H1H2 table (Keating & Esposito 2006)
+  # Returns: Table
   Create Table (Ganong 1980)
+  # Returns: Table
   Create TableOfReal (Sandwell 1987)
+  # Returns: TableOfReal
   Read Table from tab-separated file: file name$
+  # Returns: Table
   Read Table from comma-separated file: file name$
+  # Returns: Table
   Read Table from semicolon-separated file: file name$
+  # Returns: Table
   Read Table from whitespace-separated file: file name$
+  # Returns: Table
 
   # Query (API)
   List: include row numbers?
@@ -94,10 +110,15 @@
 
   # Convert / Analyze
   To linear regression
+  # Returns: LinearRegression
   To logistic regression: dependent1$, dependent2$
+  # Returns: LogisticRegression
   To RealTier: column with times$, column with values$, start time, end time
+  # Returns: RealTier
   Down to TableOfReal: column for row labels$
+  # Returns: TableOfReal
   Down to Matrix
+  # Returns: Matrix
 
   # Extract / Combine
   Append row
@@ -107,9 +128,13 @@
   Append product column: column1$, column2$, label$
   Append quotient column: column1$, column2$, label$
   Extract rows where column (number): extract all rows where column$, is$, the number
+  # Returns: Table
   Extract rows where column (text): extract all rows where column$, $, the text$
+  # Returns: Table
   Extract rows where: condition$
+  # Returns: Table
   Extract rows where (mahalanobis): which$, number of sigmas, factor column name$
+  # Returns: Table
 
   # Draw
   Draw ellipse (standard deviation): horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, number of sigmas, garnish?
@@ -196,8 +221,11 @@
   # Verified: Rename column (by number): 1, "eml_row"
   # Provenance: Used in @emlTukeyHSD, 4 March 2026. Renames unnamed column 1 in Tukey output table.
   Transpose
+  # Returns: Table
   Collapse rows
+  # Returns: Table
   Rows to columns: column to transpose$
+  # Returns: Table
 
 ---
 
@@ -214,6 +242,7 @@
 
   # Convert
   To Table: rowColumnName$
+  # Returns: Table
   # Verified: To Table: "Group"
   # Converts row labels to a named column. Essential bridge from
   # TableOfReal statistical output to Table for further processing.
@@ -224,28 +253,45 @@
   # Provenance: Buttons menu screenshot, 26 Feb 2026
   # [NEED PASTE for exact parameter syntax on all below]
   To Discriminant
+  # Returns: Discriminant
   To PCA
+  # Returns: PCA
   To SSCP...
+  # Returns: SSCP
   To SSCP (row weights)...
+  # Returns: SSCP
   To Covariance
+  # Returns: Covariance
   To Correlation
+  # Returns: Correlation
   To Correlation (rank)
+  # Returns: Correlation
   To CCA...
+  # Returns: CCA
   To TableOfReal (means by row labels)...
+  # Returns: TableOfReal
   To TableOfReal (medians by row labels)...
+  # Returns: TableOfReal
   To Configuration (pca)...
+  # Returns: Configuration
   To Configuration (lda)...
+  # Returns: Configuration
 
   # Hidden commands
   # [NEED PASTE for exact parameter syntax on all below]
   To GaussianMixture...
+  # Returns: GaussianMixture. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
   To GaussianMixture (CEMM)...
+  # Returns: GaussianMixture
   To GaussianMixture (row labels)...
+  # Returns: GaussianMixture. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
   To TableOfReal (rank columns)...
+  # Returns: TableOfReal. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
 
   # Cross-type (2 TableOfReal objects selected)
   # [NEED PASTE for exact parameter syntax]
   To TableOfReal (cross-correlations)...
+  # Returns: TableOfReal
 
 ---
 

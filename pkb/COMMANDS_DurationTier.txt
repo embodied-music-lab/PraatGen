@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: DurationTier
 # Source: Praat C API (praatlib.h), June 2025
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -23,12 +28,15 @@
 
   # Create / Read
   Create DurationTier: name$, start time, end time
+  # Returns: DurationTier
   # Modify
   Add point: time, relative duration
   Formula: formula$
   # Convert / Analyze
   Down to PointProcess
+  # Returns: PointProcess
   Down to RealTier
+  # Returns: RealTier
   # Other
   View & Edit
   View & Edit with Sound?

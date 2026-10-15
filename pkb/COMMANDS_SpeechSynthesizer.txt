@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: SpeechSynthesizer + KlattGrid
 # Source: PRAAT_DEFINITIVE_CATALOGUE.txt (v6.4.62) + session-verified
 # Part of EML PraatGen (CC BY-NC-SA 4.0) — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Version: 1.1
 # Date: 23 April 2026
@@ -47,6 +52,7 @@
 
   # Create
   Create SpeechSynthesizer: language$, voice$
+  # Returns: SpeechSynthesizer
   # Verified: Create SpeechSynthesizer: "English (America)", "Female1"
   # Provenance: Paste Commands, 25 March 2026.
   # Known language values: "English (America)", "English (Great Britain)"
@@ -85,6 +91,7 @@
 
   # Generate
   To Sound: text$, create_TextGrid_with_annotations$
+  # Returns: Sound; with the TextGrid option on, a TextGrid first and then the Sound, both selected afterward; capture them with selected# (COMMANDS_Universal.txt)
   # Verified: To Sound: "The blue spot is on the key again", "yes"
   # When create_TextGrid = "yes": creates BOTH Sound and TextGrid,
   #   both selected after command. TextGrid contains word and phoneme tiers.
@@ -105,6 +112,7 @@
 # Cross-type: SpeechSynthesizer & TextGrid (1 command)
 
   To Sound: tier_number, interval_number, create_TextGrid_with_annotations$
+  # Returns: Sound; with the TextGrid option on, a TextGrid first and then the Sound, both selected afterward; capture them with selected# (COMMANDS_Universal.txt)
   # Behavior: synthesizes the text in the specified interval
   # Provenance: Catalogue, 5 April 2026.
 
@@ -116,6 +124,7 @@
 # must be selected simultaneously.
 
   To TextGrid (align): tier_number, from_interval, to_interval, silence_threshold, minimum_silent_interval, minimum_sounding_interval
+  # Returns: TextGrid
   # Verified signature from catalogue:
   #   tier number = 1
   #   from interval number = 1
@@ -125,6 +134,7 @@
   #   minimum sounding interval duration (s) = 0.1
 
   To TextGrid (align,trim): tier_number, from_interval, to_interval, silence_threshold, minimum_silent_interval, minimum_sounding_interval, silence_trim_duration
+  # Returns: TextGrid
   # Same as above plus:
   #   silence trim duration (s) = 0.08
 
@@ -166,6 +176,7 @@
 # sustained vowel synthesis with specified formant structure.
 
   Create KlattGrid from vowel: name$, duration, f0, f1, b1, f2, b2, f3, b3, f4, bandwidthFraction, formantFreqInterval
+  # Returns: KlattGrid
   # Verified: Create KlattGrid from vowel: "test_ah", 0.5, 120, 730, 80, 1090, 70, 2440, 100, 3300, 0.05, 1000
   # 12 parameters. Returns: KlattGrid ID.
   # Provenance: Showcase script, 21 Mar 2026

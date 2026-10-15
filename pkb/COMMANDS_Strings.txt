@@ -2,6 +2,11 @@
 # Source: Praat C API (praatlib.h), June 2025
 # Additional commands: Session-verified via Paste Commands (Feb 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 # Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
 #   21 documented commands probed against a live Praat install by invoking each
 #   with excess arguments; Praat's "requires only N arguments" error reports the
@@ -18,10 +23,15 @@
 
   # Create / Read
   Create Strings from texts: name$
+  # Returns: Strings
   Create Strings as file list: name$, path$
+  # Returns: Strings
   Create Strings as folder list: name$, path$
+  # Returns: Strings
   Create Strings from tokens: name$, text$, separators$
+  # Returns: Strings
   Read Strings from raw text file: file name$
+  # Returns: Strings
 
   # Query (API)
   Get string: position
@@ -36,14 +46,19 @@
   Insert string: at position, string$
   Remove string: position
   Replace all: find$, replace with$, replace limit per string, find and replace strings are$
+  # Returns: Strings
 
   # Convert / Analyze
   To Distributions
+  # Returns: Distributions
   To Permutation: sorting method$
+  # Returns: Permutation
   To WordList
+  # Returns: WordList
 
   # Extract / Combine
   Extract part: from index, to index
+  # Returns: Strings
 
   # Other
   Save as raw text file: file name$

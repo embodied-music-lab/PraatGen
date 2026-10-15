@@ -2,6 +2,11 @@
 # Source: Praat C API (praatlib.h), June 2025
 # Additional commands: Session-verified via Paste Commands (Feb 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 # Sandbox-verified: Praat 6.6.30 (Linux x64v3), 29 July 2026 — `Scale times` arity corrected (0 -> 2); Pitch/Sound co-selection requirement documented for the Draw/Speckle/Extract blocks
 # Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
 #   71 documented commands probed against a live Praat install by invoking each
@@ -19,7 +24,9 @@
 
   # Create / Read
   Create TextGrid: start time, end time, all tier names$, which of these are point tiers$
+  # Returns: TextGrid
   Read TextGrid from Xwaves: sound file path$, tiers are point tiers?, override number of tiers, file name$
+  # Returns: TextGrid
 
   # Query (API)
   List: include line number?, time decimals, include tier names?, include empty intervals?
@@ -27,11 +34,17 @@
   Get label of interval: tier number, interval number
   Get label of point: tier number, point number
   Get starting points: tier number, get starting points whose label$, the text$
+  # Returns: PointProcess
   Get end points: tier number, get end points whose label$, the text$
+  # Returns: PointProcess
   Get centre points: tier number, get centre points whose label$, the text$
+  # Returns: PointProcess
   Get points: tier number, get points whose label$, the text$
+  # Returns: PointProcess
   Get points (preceded): tier number, get points whose label$, the text$, preceded by a label that$, the text$
+  # Returns: PointProcess
   Get points (followed): tier number, get points whose label$, the text$, followed by a label that$, the text$
+  # Returns: PointProcess
 
   # Query — interval tier (session-verified)
   Get number of intervals: tier number
@@ -73,17 +86,27 @@
 
   # Convert / Analyze
   Down to Table: include line number?, time decimals, include tier names?, include empty intervals?
+  # Returns: Table
   To DurationTier: tier number, time scale factor, left transition duration, right transition duration, scale intervals whose label$, the text$
+  # Returns: DurationTier
 
   # Extract / Combine
   Append
+  # Returns: TextGrid
   Extract all intervals: tier number, preserve times?
+  # Returns: one Sound per interval (TextGrid and Sound selected); all selected afterward; capture them with selected# (COMMANDS_Universal.txt), not x = ...
   Extract non-empty intervals: tier number, preserve times?
+  # Returns: one Sound per non-empty interval (TextGrid and Sound selected); all selected afterward; capture them with selected# (COMMANDS_Universal.txt), not x = ...
   Extract intervals where: tier number, preserve times?, extract every interval whose label$, the text$
+  # Returns: one Sound per matching interval (TextGrid and Sound selected); all selected afterward; capture them with selected# (COMMANDS_Universal.txt), not x = ...
   Extract one tier: tier number
+  # Returns: TextGrid
   Extract part: from time, to time, preserve times?
+  # Returns: TextGrid
   Merge: equalize domains?
+  # Returns: TextGrid
   Concatenate
+  # Returns: TextGrid
 
   # Draw
   # ⚠️ CO-SELECTION REQUIRED (sandbox-verified, Praat 6.6.30, 29 Jul 2026).
@@ -127,6 +150,7 @@
   View & Edit alone
   View & Edit with Sound?
   Tabulate occurrences: search tiers#, list every label that$, the text$, case sensitive?
+  # Returns: Table
   # Verified: Tabulate occurrences: {1}, "is equal to", "a", "no"
   # CORRECTION (sandbox, Praat 6.6.30, 29 Jul 2026): "Search tiers" is a
   #   numeric VECTOR — a bare 1 fails with "should be a numeric vector, not a number".

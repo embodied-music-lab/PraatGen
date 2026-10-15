@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: FormantGrid
 # Source: PRAAT_VERIFIED_COMMANDS whitelist (Paste Commands, February 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -24,6 +29,7 @@
 
   # Create
   Create FormantGrid: name$, start time, end time, number of formants, initial first formant, initial formant spacing, initial first bandwidth, initial bandwidth spacing
+  # Returns: FormantGrid
 
   # Modify — formant points
   Remove formant points between: formant number, from time, to time
@@ -35,7 +41,9 @@
 
   # Cross-type operations (require Sound + FormantGrid selected)
   Filter
+  # Returns: Sound
   Filter (no scale)
+  # Returns: Sound
 
 ---
 

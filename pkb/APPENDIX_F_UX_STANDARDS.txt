@@ -1201,7 +1201,7 @@
 #       beginPause: "Stereo file detected"
 #           comment: "File: " + fileName$
 #           comment: "This file has " + string$ (nChannels) + " channels."
-#           optionmenu: "Channel handling", 3
+#           optionmenu: "Channel handling", 1
 #               option: "Left channel only"
 #               option: "Right channel only"
 #               option: "Mix to mono"
@@ -1210,12 +1210,14 @@
 #           removeObject: soundId
 #           exitScript: "User quit."
 #       endif
-#       if channel_handling = 1
+#       if channel_handling$ = "Left channel only"
 #           newId = Extract one channel: 1
-#       elsif channel_handling = 2
+#       elsif channel_handling$ = "Right channel only"
 #           newId = Extract one channel: 2
-#       else
+#       elsif channel_handling$ = "Mix to mono"
 #           newId = Convert to mono
+#       else
+#           exitScript: "Unknown channel handling: " + channel_handling$
 #       endif
 #       removeObject: soundId
 #       soundId = newId
@@ -1228,7 +1230,7 @@
 #
 # In the main beginPause:
 #
-#   optionmenu: "Channel handling", 3
+#   optionmenu: "Channel handling", 1
 #       option: "Left channel only"
 #       option: "Right channel only"
 #       option: "Mix to mono"
@@ -1238,12 +1240,14 @@
 #   selectObject: soundId
 #   nChannels = Get number of channels
 #   if nChannels > 1
-#       if channel_handling = 1
+#       if channel_handling$ = "Left channel only"
 #           newId = Extract one channel: 1
-#       elsif channel_handling = 2
+#       elsif channel_handling$ = "Right channel only"
 #           newId = Extract one channel: 2
-#       else
+#       elsif channel_handling$ = "Mix to mono"
 #           newId = Convert to mono
+#       else
+#           exitScript: "Unknown channel handling: " + channel_handling$
 #       endif
 #       removeObject: soundId
 #       soundId = newId
@@ -1256,6 +1260,9 @@
 # The optionmenu "Channel handling" derives:
 #   channel_handling   — numeric index (1 = left, 2 = right, 3 = mono mix)
 #   channel_handling$  — string ("Left channel only", etc.)
+# Left channel only is listed first and is the default. The action is chosen
+# from channel_handling$, never from the index, so the order of the options
+# can't pick the wrong channel. Any other text stops the script.
 #
 # S14E: INFO WINDOW REPORTING
 #

@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: Ltas
 # Source: Praat C API (praatlib.h), June 2025
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -43,13 +48,17 @@
   Formula: formula$
   # Convert / Analyze
   To SpectrumTier (peaks)
+  # Returns: SpectrumTier
   To Matrix
+  # Returns: Matrix
   # Draw
   Draw: from frequency, to frequency, from power, to power, garnish?, drawing method$
   # Other
   Report spectral trend: from frequency, to frequency, frequency scale$, fit method$
   Compute trend line: from frequency, to frequency
+  # Returns: Ltas
   Subtract trend line: from frequency, to frequency
+  # Returns: Ltas
 
 ---
 

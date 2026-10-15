@@ -169,7 +169,7 @@ CQ measurement:
 
 ```praat
 # Lab judgement, not a validated value
-polarityAmbiguity = 1.25
+polarityWarnRatio = 1.25
 
 selectObject: soundId
 eggId = Extract Electroglottogram: eggChannel, "no"
@@ -185,30 +185,37 @@ if dMin < 0
     polarityRatio = dMax / abs (dMin)
 endif
 eggInverted$ = "no"
-polarityUndecided = 0
+polaritySuspect = 0
 if polarityRatio = undefined
-    polarityUndecided = 1
-elsif polarityRatio < 1 / polarityAmbiguity
+    polaritySuspect = 1
+elsif polarityRatio < 1
     removeObject: eggId
     selectObject: soundId
     eggId = Extract Electroglottogram: eggChannel, "yes"
     eggInverted$ = "yes (auto)"
-elsif polarityRatio < polarityAmbiguity
-    polarityUndecided = 1
 endif
-# polarityUndecided = 1: keep the polarity as recorded and warn
+if polarityRatio <> undefined
+    if polarityRatio > 1 / polarityWarnRatio and polarityRatio < polarityWarnRatio
+        polaritySuspect = 1
+    endif
+endif
+# polaritySuspect = 1: warn that the signal is suspect and needs looking at
 ```
 
 - Report the ratio and whether the EGG was inverted, in the Info window and in
   every output row.
-- A ratio near 1 means the test can't decide. An EGG whose rise and fall take
-  the same time gives a ratio of 1.000 either way up. Between `1 / polarityAmbiguity`
-  and `polarityAmbiguity`, keep the polarity as recorded and warn.
-  `polarityAmbiguity = 1.25` is a lab judgement, not a validated value.
+- The stronger peak marks contact, so a ratio below 1 always inverts.
+- A ratio near 1 means the negative peak nearly matches the positive one, and
+  that signal is suspect whichever way up it is. Between `1 / polarityWarnRatio`
+  and `polarityWarnRatio`, apply the stronger-peak decision and warn that the
+  signal needs looking at. `polarityWarnRatio = 1.25` is a lab judgement, not a
+  validated value. A derivative with no negative values is also suspect.
 - One large artifact in the window can decide a whole-window maximum. When the
-  ratio is close to the band, look at the signal.
+  ratio is near the warning range, look at the signal.
 
-Provenance: sandbox-verified 6.6.30, 8 Oct 2026, on synthetic EGGs.
+Provenance: sandbox-verified 6.6.30, 8 Oct 2026, on synthetic EGGs. Revised
+test sandbox-verified 6.6.30, 15 Oct 2026: ratio 2.995 kept; 0.334 inverted;
+1.151 kept with a warning; 0.869 inverted with a warning.
 `Derivative` returns a Sound. Ratios: 3.278 upright and 0.305 inverted (fast
 rise, 300 Hz); 1.484 and 0.614 with noise SD 0.1; 4.127 at 150 Hz; 1.822 at
 600 Hz; 1.000 both ways up when rise and fall are equal.

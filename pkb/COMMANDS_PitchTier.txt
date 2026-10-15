@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: PitchTier
 # Source: Praat C API (praatlib.h), June 2025
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -23,19 +28,29 @@
 
   # Create / Read
   Create PitchTier: name$, start time, end time
+  # Returns: PitchTier
   # Modify
   Add point: time, pitch
   Formula: formula$
   # Convert / Analyze
   To PointProcess
+  # Returns: PointProcess
   To Sound (pulse train): sampling frequency, adaptation factor, adaptation time, interpolation depth, hum?
+  # Returns: Sound
   To Sound (phonation): sampling frequency, adaptation factor, maximum period, open phase, collision phase, power1, power2, hum?
+  # Returns: Sound
   To Sound (sine): sampling frequency
+  # Returns: Sound
   To Pitch: step size, pitch floor, pitch ceiling
+  # Returns: Pitch
   Down to PointProcess
+  # Returns: PointProcess
   Down to RealTier
+  # Returns: RealTier
   Down to TableOfReal: unit$
+  # Returns: TableOfReal
   To PitchTier
+  # Returns: PitchTier
   # Draw
   Draw: from time, to time, from frequency, to frequency, line type for nonperiodic intervals$, garnish?, drawing method$
   Draw: from time, to time, from frequency, to frequency, garnish?, drawing method$

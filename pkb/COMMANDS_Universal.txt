@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: Universal + Save
 # Source: Praat C API (praatlib.h), June 2025
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -53,6 +58,24 @@
   # INTERPRETER BEHAVIOR: Selection is a set, not a multiset.
   # Adding an already-selected object via plusObject: is a no-op.
   # Selection always contains each object exactly once.
+
+  # Capturing a command that creates several objects
+  # (sandbox-verified, Praat 6.6.30, 12 Oct 2026)
+  # A command whose Returns line names several objects leaves all of them
+  # selected. x = Command then stops with "Multiple objects selected. Cannot
+  # assign object IDs to numeric variable". Capture the IDs with selected#,
+  # and read every name or selection-dependent value before the first
+  # selectObject:, because selectObject: clears the rest of the selection.
+  #   Eigen (complex)
+  #   ids# = selected# ()
+  #   vectors = ids# [1]
+  #   values = ids# [2]
+  #   vectorsName$ = selected$ (1)
+  #   valuesName$ = selected$ (2)
+  #   selectObject: values
+  # The order in ids# is creation order; the Returns line gives it. For a
+  # count that depends on the data (Extract all intervals, Read separate
+  # channels from sound file), loop over size (ids#).
   # selectObject: a, b, b produces the selection {a, b}, not {a, b, b}.
   # Combine to stereo, Combine to mono, and other multi-selection
   # commands see each selected object once.
@@ -64,9 +87,11 @@
 
   Rename: new name$
   Copy: new name$
+  # Returns: one object of the selected type
   Info
   Remove
   Read from file: file path$
+  # Returns: the object or objects stored in the file; the file sets the type
   # Time-domain queries (Sound, TextGrid, Pitch, etc.)
   Get start time
   Get end time

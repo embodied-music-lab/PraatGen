@@ -2,6 +2,11 @@
 # Source: Praat C API (praatlib.h), June 2025
 # Additional commands: Session-verified via Paste Commands (Feb 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 # Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
 #   36 documented commands probed against a live Praat install by invoking each
 #   with excess arguments; Praat's "requires only N arguments" error reports the
@@ -24,7 +29,9 @@
 
   # Create / Read
   Create empty PointProcess: name$, start time, end time
+  # Returns: PointProcess
   Create Poisson process: name$, start time, end time, density
+  # Returns: PointProcess
 
   # Query — jitter (PointProcess only)
   # ⚠️ VARIANT SELECTION IS NOT COSMETIC. Five jitter and six shimmer
@@ -101,20 +108,35 @@
 
   # Convert / Analyze
   To TextGrid: tier names$, point tiers$
+  # Returns: TextGrid
   To PitchTier: maximum interval
+  # Returns: PitchTier
   To TextGrid (vuv): maximum period, mean period
+  # Returns: TextGrid
   To Sound (pulse train): sampling frequency, adaptation factor, adaptation time, interpolation depth
+  # Returns: Sound
   To Sound (phonation): sampling frequency, adaptation factor, maximum period, open phase, collision phase, power1, power2
+  # Returns: Sound
   To Sound (hum)
+  # Returns: Sound
   To Matrix
+  # Returns: Matrix
   Up to TextTier: text$
+  # Returns: TextTier
   Up to PitchTier: frequency
+  # Returns: PitchTier
   Up to IntensityTier: intensity
+  # Returns: IntensityTier
   To AmplitudeTier (point)
+  # Returns: AmplitudeTier
   To AmplitudeTier (period): from time, to time, shortest period, longest period, maximum period factor
+  # Returns: AmplitudeTier
   To H1minusH2Tier: from time, to time, shortest period, longest period, maximum period factor
+  # Returns: H1minusH2Tier
   To Ltas: maximum frequency, bandwidth, shortest period, longest period, maximum period factor
+  # Returns: Ltas
   To Ltas (only harmonics): maximum harmonic, shortest period, longest period, maximum period factor
+  # Returns: Ltas
 
   # Draw
   Draw: from time, to time, garnish?

@@ -1878,25 +1878,28 @@ endproc
 # channel handling choice without presenting any UI. For batch scripts
 # where the choice is made once in the settings dialog.
 # Arguments: .soundId (the Sound object ID)
-#            .channelHandling (1 = Mix to mono, 2 = Left channel,
-#                              3 = Right channel)
+#            .channelHandling$ (the option text: "Left channel only",
+#                               "Right channel only" or "Mix to mono")
 # Outputs: .resultId (the resulting Sound ID — may be same or new)
 #          .wasConverted (1 if conversion happened, 0 if already mono)
 # Note: Removes the original stereo Sound if conversion occurs.
+#       Matches the option text, so a dialog can list the options in any
+#       order. Any other text stops the script with an error naming it.
+# Provenance: PraatGen-only edit, 14 October 2026; not yet in the plugin source.
+#   Was a number (1 = Mix, 2 = Left, 3 = Right) with an unknown value mixed.
 # ----------------------------------------------------------------------------
-procedure emlApplyChannelChoice: .soundId, .channelHandling
+procedure emlApplyChannelChoice: .soundId, .channelHandling$
     selectObject: .soundId
     .nChannels = Get number of channels
     if .nChannels > 1
-        if .channelHandling = 1
-            .resultId = Convert to mono
-        elsif .channelHandling = 2
+        if .channelHandling$ = "Left channel only"
             .resultId = Extract one channel: 1
-        elsif .channelHandling = 3
+        elsif .channelHandling$ = "Right channel only"
             .resultId = Extract one channel: 2
-        else
-            # Fallback — treat unknown value as mix to mono
+        elsif .channelHandling$ = "Mix to mono"
             .resultId = Convert to mono
+        else
+            exitScript: "Unknown channel handling: " + .channelHandling$
         endif
         removeObject: .soundId
         .wasConverted = 1
@@ -1917,6 +1920,9 @@ endproc
 #          .wasConverted (1 if conversion happened, 0 if already mono)
 # Note: Removes the original stereo Sound if conversion occurs.
 #       Calls @emlApplyChannelChoice for the mechanical work.
+#       Options: Left channel only (default), Right channel only, Mix to mono.
+# Provenance: PraatGen-only edit, 14 October 2026; not yet in the plugin source.
+#   Was Mix to mono (default), Left, Right, passed to the worker by number.
 # ----------------------------------------------------------------------------
 procedure emlHandleStereo: .soundId, .fileName$
     selectObject: .soundId
@@ -1926,14 +1932,14 @@ procedure emlHandleStereo: .soundId, .fileName$
             comment: "The file """ + .fileName$ + """ has "
             ... + string$ (.nChannels) + " channels."
             optionmenu: "Channel handling", 1
-                option: "Mix to mono"
                 option: "Left channel only"
                 option: "Right channel only"
+                option: "Mix to mono"
         .clicked = endPause: "Quit", "Continue", 2, 0
         if .clicked = 1
             exitScript: "User quit."
         endif
-        @emlApplyChannelChoice: .soundId, channel_handling
+        @emlApplyChannelChoice: .soundId, channel_handling$
         .resultId = emlApplyChannelChoice.resultId
         .wasConverted = emlApplyChannelChoice.wasConverted
     else

@@ -2,6 +2,11 @@
 # Source: Praat C API (praatlib.h), June 2025
 # Additional commands: Session-verified via Paste Commands (Feb 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 # Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
 #   11 documented commands probed against a live Praat install by invoking each
 #   with excess arguments; Praat's "requires only N arguments" error reports the
@@ -32,11 +37,17 @@
 
   # Convert / Analyze
   To IntensityTier (peaks)
+  # Returns: IntensityTier
   To IntensityTier (valleys)
+  # Returns: IntensityTier
   To TextGrid (silences): silence threshold, minimum silence duration, minimum sounding duration, silence label$, sounding label$
+  # Returns: TextGrid
   Down to IntensityTier
+  # Returns: IntensityTier
   Down to Matrix
+  # Returns: Matrix
   To IntensityTier
+  # Returns: IntensityTier
 
   # Draw
   Draw: from time, to time, minimum, maximum, garnish?

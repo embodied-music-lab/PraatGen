@@ -2,6 +2,11 @@
 # Source: Praat C API (praatlib.h), June 2025
 # Additional commands: Session-verified via Paste Commands (Feb 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 # Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
 #   45 documented commands probed against a live Praat install by invoking each
 #   with excess arguments; Praat's "requires only N arguments" error reports the
@@ -78,15 +83,25 @@
 
   # Convert / Analyze
   To Sound (pulses)
+  # Returns: Sound
   To Sound (hum)
+  # Returns: Sound
   To Sound (sine): sampling frequency, cut voiceless stretches$
+  # Returns: Sound
   To TextGrid: tier names$, point tiers$
+  # Returns: TextGrid
   To PointProcess
+  # Returns: PointProcess
   Down to PitchTier
+  # Returns: PitchTier
   To Matrix
+  # Returns: Matrix
   To Pitch
+  # Returns: Pitch
   To PitchTier
+  # Returns: PitchTier
   To PitchTier: unvoiced strategy$
+  # Returns: PitchTier
 
   # Draw
   Draw (phonetogram): from frequency, to frequency, from intensity, to intensity, garnish?, drawing method$
@@ -109,11 +124,17 @@
   Play pulses
   Hum
   Tabulate candidates
+  # Returns: Table
   Tabulate candidates in frame: frame number
+  # Returns: Table
   Interpolate
+  # Returns: Pitch
   Smooth: bandwidth
+  # Returns: Pitch
   Subtract linear fit: unit i$
+  # Returns: Pitch
   Kill octave jumps
+  # Returns: Pitch
 
 ---
 

@@ -1,6 +1,11 @@
 # PRAAT COMMANDS: Picture Window
 # Source: Session-verified via Paste Commands (Feb 2026)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
 #
 # Format: CommandName: param1, param2 (if arguments)
 #         CommandName (no colon, if no arguments)
@@ -247,12 +252,14 @@
   # See BEST_PRACTICES_DRAWING.txt for the sprite approach.
 
   Create simple Photo: name$, nRows, nCols, redFormula$, greenFormula$, blueFormula$
+  # Returns: Photo
   # Verified: Create simple Photo: "test", 4, 4, ~0, ~0, ~1
   # NOTE: 6 parameters (not 7). Transparency defaults to 0 (opaque).
   # Set separately via Formula (transparency):.
   # Provenance: Empirical test, 21 Mar 2026
 
   Create Photo: name$, xmin, xmax, nCols, dx, x1, ymin, ymax, nRows, dy, y1, redFormula$, greenFormula$, blueFormula$
+  # Returns: Photo
   # Verified: Create Photo: "blue", 5, 8, 4, 0.75, 5.375, 2, 5, 4, 0.75, 2.375, ~0, ~0, ~1
   # NOTE: 14 parameters. Domain coordinates (xmin/xmax/ymin/ymax)
   # determine where Paint image: places the image.

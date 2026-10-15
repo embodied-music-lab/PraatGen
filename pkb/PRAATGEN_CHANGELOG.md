@@ -7,6 +7,102 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.0 — 15 October 2026 (ships Master Prompt 17.1.2)
+
+SCAFFOLD discussion turns skip the per-turn reread of the prompt, stereo
+dialogs default to the left channel, and EGG polarity follows the stronger
+derivative peak. Upgrade notes are in `RELEASE_NOTES_2.2.0.md`.
+
+### 17.1.2 — 15 October 2026
+
+**EGG polarity follows the stronger derivative peak.** The polarity test
+inverts the EGG whenever the derivative's negative peak is larger than its
+positive peak. When the two peaks are within a factor of 1.25 of each other,
+the script still applies that decision and warns that the signal is suspect.
+Before, it kept the recorded polarity in that range.
+
+**A variable name in single quotes inside a string is allowed.** The lint no
+longer blocks a line such as `writeInfoLine: "F0 is 'f0' Hz"`; Praat fills in
+the value. A free-standing `'name'` outside a string is still blocked as old
+syntax.
+
+### 17.1.1 — 14 October 2026
+
+**Stereo files default to the left channel.** Every stereo dialog lists Left
+channel only, Right channel only, Mix to mono, with Left as the default, in
+single-file and batch scripts alike. The script chooses the channel from the
+option's text, so the order of the options can't pick the wrong channel, and
+any other value stops the script with an error. Before, PraatGen's two
+patterns numbered the options differently, and a batch script could mix the
+channels when you chose Left.
+
+### 17.1.0 — 14 October 2026
+
+**Scaffold discussion skips the per-turn rules read.** While SCAFFOLD mode is
+on, turns that only discuss the task as a concept don't reread the prompt, so
+long design conversations use less context and compact less often. Those
+replies open with "Rules not read this turn: scaffold mode is on." The
+discussion stays with the research question, what is measured, the inputs and
+outputs, and the stages. If you ask for commands, settings or code, PraatGen
+asks you to end scaffold first.
+
+**The rules are read at every boundary.** PraatGen reads the full prompt on
+the first turn, on the turn that starts scaffold, on any scaffold turn that
+runs Praat in the sandbox, and on the turn that ends scaffold and every turn
+after. You end scaffold in your own words. If a proposal is on the table,
+PraatGen checks each decision from the discussion against the rules, asks you
+about any conflict, and presents the scaffold review. If PraatGen can't tell
+whether scaffold is on, it reads the rules.
+
+### 17.0.2 — 12 October 2026
+
+**The reference files say what each command creates.** Every command in the
+COMMANDS files that creates an object now has a `# Returns:` line naming the
+object type, taken from the Praat 6.6.30 source and checked on a sample in
+Praat. Commands that create several objects say so: Extract all intervals
+gives one Sound per interval, Read separate channels from sound file one
+Sound per channel. Some commands named like queries create objects: Get
+starting points and its relatives on a TextGrid return a PointProcess.
+
+**Commands that create several objects are captured with `selected#`.**
+`x = Command` stops with "Multiple objects selected" when a command creates
+more than one object. `COMMANDS_Universal.txt` now shows the capture: take
+`selected#`, read every name before the first `selectObject:`, then select.
+
+**Eigen (complex) and SVD.** `COMMANDS_Matrix.txt` adds Eigen (complex) and
+To SVD, which are hidden in Praat's menus and have no manual page, and the
+SVD commands. Eigen (complex) returns two Matrix objects: eigenvectors, then
+eigenvalues. Eigenvector k is row k, with each component's real and imaginary
+parts in adjacent columns. Extract right singular vectors returns a
+TableOfReal. "Get number of singular values" doesn't exist; the file says how
+to get the count.
+
+**Hidden commands go to the source.** When the catalogue lists a command and
+the manual has no page, PraatGen treats it as possibly hidden and checks
+Praat's source code (github.com/praat/praat; the previous link was wrong)
+and the sandbox. Paste Commands can't record a hidden command.
+
+**Probes check what a command leaves selected.** A sandbox probe of a command
+that creates objects confirms how many it leaves selected and their types, as
+well as that it exists and its argument count. A probe that fails because it
+assumed the wrong result proves only that the assumption was wrong.
+
+### 17.0.1 — 11 October 2026
+
+**Copied library procedures read each other's results.** Where one library
+procedure reads another's variables, such as `emlMedian.result`, the copy now
+reads the renamed name, `emlPGMedian.result`. Copies made since 16.1.0 kept the
+old name, which stopped the script with "Unknown variable", or, where a
+procedure writes another's variables, changed values nothing read. The
+linter's `--procedure` output includes every procedure whose variables the
+copies read and names any the script must call first, and the lint blocks a
+read of a library procedure's variables by its unprefixed name.
+
+**No praise or grading of what you say.** PraatGen doesn't open with or add
+agreement, praise or a verdict on your question or idea. It starts with the
+answer; if your point changes the work it states the change, and if it's wrong
+it says what's true and why.
+
 ### Release 2.1.0 — 10 October 2026 (ships Master Prompt 17.0.0)
 
 The whole prompt is read on every turn, and Opus 5 is the recommended model.

@@ -251,7 +251,7 @@ All `@emlWizardExplain*` helpers set `emlWizardExplain$`, consumed by the next `
 | `@emlSanitizeLabel` | Escape Praat special characters (%, #, ^, _) in display text | .raw$ | public |
 | `@emlDrawJitteredPoints` | Draw data points with horizontal jitter at categorical positions | .xCenter, .lineColor$, .markerSize, .jitterWidth | public |
 | `@emlAssertFullViewport` | Select full outer viewport from drawn extent globals | Select outer viewport: emlDrawnMinX, emlDrawnMaxX, | public |
-| `@emlApplyChannelChoice` | Batch-mode stereo handler — applies pre-selected channel handling without dialog | .soundId, .channelHandling | public |
+| `@emlApplyChannelChoice` | Batch-mode stereo handler — applies pre-selected channel handling without dialog | .soundId, .channelHandling$ | public |
 | `@emlHandleStereo` | Single-file stereo handler with beginPause dialog for channel choice | .soundId, .fileName$ | public |
 | `@emlCheckChannels` | Check Sound channel count; present dialog if stereo (wraps @emlHandleStereo) | .soundId | public |
 | `@emlCheckPlausibility` | Warn if acoustic measure falls outside expected range | .value, .lowerBound, .upperBound, .measureName$, .unit$ | public |
