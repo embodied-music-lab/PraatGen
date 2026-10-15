@@ -7,6 +7,13 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.1 — 15 October 2026 (ships Master Prompt 17.1.2)
+
+For maintainers, `tools/build_lint.py --check` compares the text inside
+`TOOL_PRAATGEN_LINT.zip` with a fresh build, so a zip uploaded through
+GitHub's web page passes. PraatGen itself is unchanged from 2.2.0. Upgrade
+notes are in `RELEASE_NOTES_2.2.1.md`.
+
 ### Release 2.2.0 — 15 October 2026 (ships Master Prompt 17.1.2)
 
 SCAFFOLD discussion turns skip the per-turn reread of the prompt, stereo
