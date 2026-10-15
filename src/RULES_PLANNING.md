@@ -1,6 +1,6 @@
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -228,15 +228,23 @@ The catalogue is the last fallback.
 - Extract parameters, cite URL in SELF-AUDIT
 - Flag for Paste Commands confirmation
 
-**B) Praat source repository** at `https://github.com/praat/praat.github.io`
+**B) Praat source repository** at `https://github.com/praat/praat`
 - Primary source for interpreter behavior (scoping, memory, argument
   passing, variable lifetime, procedure mechanics)
 - Key files: `sys/Interpreter.cpp` (procedure calls, variable handling),
   `sys/Formula.cpp` (expression evaluation, vector/matrix operations),
-  `fon/praat_[ObjectType].cpp` (command implementations)
+  `fon/praat_[ObjectType].cpp` (command registrations and handlers),
+  `dwtools/praat_David_init.cpp` (registrations for linear algebra,
+  multivariate statistics, Table and TableOfReal analyses, SVD, Eigen and
+  many other commands), `dwtools/*.cpp` (their implementations)
+- A registration line, `praat_addAction1 (classX, n, U"Title...", ...,
+  HANDLER)`, gives the command's exact title. `GuiMenu_HIDDEN` in it marks a
+  hidden command. The handler's name and its closing macro give what it
+  creates: `CONVERT_EACH_TO_ONE` creates one object per selected object,
+  `CONVERT_EACH_TO_MULTIPLE` several, `QUERY_` and `MODIFY_` none.
 - Use when: command behaves unexpectedly, manual is ambiguous or silent
-  on implementation details, or question concerns scripting engine
-  internals rather than command syntax
+  on implementation details, the command is hidden (below), or question
+  concerns scripting engine internals rather than command syntax
 - Search pattern: `site:github.com/praat/praat [search terms]`
 - Cite file path in SELF-AUDIT when used
 
@@ -246,16 +254,28 @@ that a command exists, never what its arguments are. The
 catalogue never verifies a command on its own. A command found only there is
 verified in the sandbox before it goes on the plan: a probe of the command on
 its object type, with Praat's output quoted, confirms that it exists and its
-argument count. Without a sandbox, request Paste Commands (Tier 3).
+argument count, and, for a command that creates objects, how many it leaves
+selected and their types. Without a sandbox, request Paste Commands (Tier 3).
+
+**Hidden commands.** When the catalogue lists a command and the Praat manual
+has no page for it, suspect a hidden registration (`GuiMenu_HIDDEN`) and go to
+the source repository (Tier 2B) for its title, arguments and result. A hidden
+command has no menu entry, so Paste Commands can't record it, and Tier 3
+can't verify it: verify it by the source plus a sandbox probe. Eigen
+(complex) and To SVD on a Matrix are hidden (`COMMANDS_Matrix.txt`).
 
 **Tier 3 (user action):** Request Paste Commands if Tier 1/2 fail, and for a
-catalogue-only command when there is no sandbox.
+catalogue-only command when there is no sandbox. Not for a hidden command
+(above).
 
 **Logic:** Tier 1 → Tier 2 (manual) → catalogue plus a sandbox probe → Tier 3. Never invent commands.
 
 A clean run of a script does not verify the commands in it (CHECKPOINTS).
-Sandbox probing can establish existence and argument count; meaning, order
-and defaults come from a reference file, a Tier 2 source or Paste Commands.
+Sandbox probing can establish existence, argument count, and what a command
+leaves selected; meaning, order and defaults come from a reference file, a
+Tier 2 source or Paste Commands. A `# Returns:` line in a COMMANDS file gives
+what the command creates; a command whose Returns line names several objects
+is captured with `selected#` (`COMMANDS_Universal.txt`), never with `x =`.
 
 ---
 
@@ -400,7 +420,10 @@ them. Before writing that Praat cannot do something:
    session probed `abs (m##)`, read the error as absence, and wrote a loop;
    `abs## (m##)` was documented and working the whole time.
 2. **Probe the catalogue's spelling**, where a sandbox is available. A probe
-   of your own spelling proves only that your spelling failed.
+   of your own spelling proves only that your spelling failed. Likewise, a
+   probe that assumes a return type proves only that the assumption failed:
+   `ev = Eigen (complex)` stops because the command creates two objects, not
+   because the command is missing or broken.
 3. **Check both surfaces.** Script-level operators and object `Formula:` /
    `Get` commands are separate. `min (m##)` is refused; `Get minimum` on a
    Matrix object returns it. Absence on one surface is not absence of the

@@ -1,6 +1,6 @@
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -188,8 +188,11 @@ Load reference files from Project Knowledge based on the task requirements. Load
     each procedure and its source file. Get the source from the linter, which
     carries an exact copy of every library procedure:
     `python3 <path>/TOOL_PRAATGEN_LINT.txt --procedure emlName ...` prints each
-    named procedure and every library procedure it calls, with its header
-    comment, renamed to `emlPG` and otherwise verbatim. Paste the output at
+    named procedure and every library procedure it calls or whose variables
+    it reads, with its header comment, renamed to `emlPG` and otherwise
+    verbatim. Its first lines name any procedure that the others read but
+    don't call; the script calls each of those before the procedures that
+    read it. Paste the output at
     the end of the script. A library source file is never read in full; the
     largest is over 240 KB. A Project Knowledge search is not a route to
     procedure source: it ranks by similarity, and on 9 October 2026 it
@@ -202,11 +205,15 @@ Load reference files from Project Knowledge based on the task requirements. Load
     **Rename every copied procedure to the `emlPG` prefix (hard).** Replace
     the leading `eml` of the library name: `@emlDrawViolinPlot` becomes
     `@emlPGDrawViolinPlot`, `@eml_fixed` becomes `@emlPG_fixed`. Rewrite the
-    definition and every call site in the same pass, including calls that
-    one copied procedure makes to another. **This is the only exception to
+    definition, every call site, and every place one procedure reads or
+    writes another's variables (`emlMedian.result` becomes
+    `emlPGMedian.result`), in the same pass. **This is the only exception to
     verbatim copying under step 11.** The body, the parameter list and the
-    local `.names` stay exactly as the source has them; the procedure's own
-    name is the single thing that changes.
+    local `.names` stay exactly as the source has them; library procedure
+    names are the single thing that changes. A renamed procedure sets its
+    variables under its new name, so a read left unrenamed stops the script
+    (Praat 6.6.30: `Unknown variable: emlMedian.result`), and a write left
+    unrenamed changes variables nothing reads, with no error.
 
     The reason is a collision you cannot see coming. A user who owns the
     plugin may write a script that `include`s library files and paste

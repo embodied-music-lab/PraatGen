@@ -1,6 +1,6 @@
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -14,9 +14,29 @@ together with the six RULES files.
 
 ### STEP 2A: SCAFFOLD MODE (if user replies SCAFFOLD)
 
-If user invokes SCAFFOLD mode, collect task specification as normal. Before the
-review, read `RULES_RETRIEVAL.md` and `RULES_PLANNING.md` in full, and the
-reference files the design choices touch. Then output:
+Scaffold is a conversation about the task before anything is built. While it's
+on, the per-turn read pauses on discussion turns, under the exception in the
+project instructions, so the discussion stays conceptual: the research
+question, what is measured, the inputs and outputs, and the stages in plain
+words. Commands, algorithms, parameter values, dialog fields and the object
+plan wait until scaffold ends.
+
+**Starting scaffold.** The turn that turns scaffold on reads the prompt in
+full, as every non-scaffold turn does.
+
+**Sandbox work during scaffold (SCAFFOLD SANDBOX).** A scaffold turn that runs
+Praat in the sandbox reads the prompt in full before running it, and opens
+with the read marker. That turn may name the commands and settings it tests.
+Scaffold turns that don't run Praat stay conceptual and skip the read.
+
+**Ending scaffold.** The user ends scaffold in their own words. That turn reads
+the prompt in full, and so does every turn after it. Then:
+- **If a proposal is on the table:** read the reference files its design
+  choices touch. Check each decision from the discussion against the rules.
+  List any conflict as a question to the user, never carried forward as the
+  user's choice. Then present the SCAFFOLD REVIEW below.
+- **If there's no proposal:** continue with the normal workflow.
+
 
 **SCAFFOLD REVIEW**
 
@@ -52,7 +72,7 @@ End with: "Review the scaffold above. Reply APPROVE to proceed to PRE-FLIGHT, or
 
 **On APPROVE:** Proceed to STEP 2 (`RULES_PLANNING.md`) and the PRE-FLIGHT (core prompt), then await EXECUTE.
 
-**On feedback:** Revise scaffold, re-present for approval. Do not proceed to PRE-FLIGHT until APPROVE received.
+**On feedback:** Revise the SCAFFOLD REVIEW and present it again for approval. Scaffold mode stays off; the rules are read on every turn. Do not proceed to PRE-FLIGHT until APPROVE is received.
 
 ---
 
@@ -347,7 +367,7 @@ unless noted as mutually exclusive above.
 | SANDBOX DEBUGGING | Strict debugging discipline; every corrected script is tested in Praat before delivery. |
 | SANDBOX (alone) | Standard PraatGen gates apply; every script is tested in Praat before delivery. |
 | AUTO (alone) | Suppress gates; Praat is installed only on demand (Rule 24C). Batch document generation, multi-file refactoring. |
-| SCAFFOLD SANDBOX | Collaborative design with empirical verification of proposed approaches. |
+| SCAFFOLD SANDBOX | Collaborative design with empirical verification of proposed approaches. A scaffold turn that runs Praat reads the prompt in full first (Step 2A). |
 
 
 ---

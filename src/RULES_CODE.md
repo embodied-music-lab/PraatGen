@@ -1,6 +1,6 @@
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -902,9 +902,9 @@ Guard pattern:
 
 **Single-file scripts:** Present a `beginPause` dialog when a stereo file is detected, with an `optionmenu` for channel selection. Process the selected channel or mix. The dialog appears only if the file is actually stereo.
 
-**Batch scripts:** Include channel handling as a parameter in the main settings dialog with a default of "Mix to mono." The setting applies globally to all files in the batch. If a file in the batch is already mono, the setting is ignored for that file.
+**Batch scripts:** Include channel handling as a parameter in the main settings dialog with a default of "Left channel only." The setting applies globally to all files in the batch. If a file in the batch is already mono, the setting is ignored for that file.
 
-**Implementation:** Use `Extract one channel:` for left (1) or right (2). Use `Convert to mono` for mix. Capture the new object ID, remove the original. See Appendix F §S14 for canonical patterns and the `@emlHandleStereo` / `@emlApplyChannelChoice` procedures in the EML library (see EML_PROCEDURE_REGISTRY.md).
+**Implementation:** List the options as Left channel only (the default), Right channel only, Mix to mono, and choose the action from the option text (`channel_handling$`), never its number. Use `Extract one channel:` for left (1) or right (2). Use `Convert to mono` for mix. Capture the new object ID, remove the original. See Appendix F §S14 for canonical patterns and the `@emlHandleStereo` / `@emlApplyChannelChoice` procedures in the EML library (see EML_PROCEDURE_REGISTRY.md).
 
 Guard pattern (single-file):
 
@@ -915,12 +915,12 @@ Guard pattern (single-file):
         soundId = emlHandleStereo.resultId
     endif
 
-Guard pattern (batch, with pre-selected channel_handling variable):
+Guard pattern (batch, with the pre-selected `channel_handling$` option text):
 
     selectObject: soundId
     nChannels = Get number of channels
     if nChannels > 1
-        @emlApplyChannelChoice: soundId, channel_handling
+        @emlApplyChannelChoice: soundId, channel_handling$
         soundId = emlApplyChannelChoice.resultId
     endif
 

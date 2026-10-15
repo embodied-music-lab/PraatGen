@@ -1,6 +1,6 @@
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -93,8 +93,10 @@ Composable with any other mode.
 
 **Usage contexts (non-exhaustive):**
 - Plugin development and refactoring
-- PraatGen debugging (probe a command's existence and argument count
-  empirically instead of requesting user verification via Rule 24B snippets)
+- PraatGen debugging (probe a command's existence, argument count, and,
+  for a command that creates objects, how many it leaves selected and their
+  types, empirically instead of requesting user verification via Rule 24B
+  snippets)
 - Running Rule 24B verification snippets directly
 - Testing generated scripts before delivery
 - Verifying editor commands, GUI rendering, or encoding behavior

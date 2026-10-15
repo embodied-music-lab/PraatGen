@@ -1,6 +1,6 @@
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -192,7 +192,8 @@ attest "compliant."
        path (`../graphs/…`, `preferencesDirectory$`, any absolute path)
        appears anywhere in the delivered artifact; every copied procedure
        is renamed to the `emlPG` prefix, with no bare library name surviving
-       at a definition or a call site; and the transitive closure is
+       at a definition, a call site or a read of another procedure's
+       variables; and the transitive closure is
        complete, i.e. every `@emlPG…` call in what is being delivered
        resolves to a definition also being delivered]
 
