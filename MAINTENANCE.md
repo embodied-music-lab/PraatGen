@@ -107,6 +107,10 @@ catalogue, and check that it is current before a release:
     python3 tools/build_lint.py
     python3 tools/build_lint.py --check
 
+The check compares the text inside the zip with a fresh build. It ignores the
+zip's own bytes, because GitHub's web upload compresses the file differently
+from Python, and both copies hold the same text.
+
 The lint reads a `COMMANDS_<Type>.txt` file's entries as commands on `<Type>`.
 A line `## Object type: X` switches the entries after it, to the end of that
 file, to type X. `COMMANDS_Matrix.txt` uses it for the SVD commands. A section
