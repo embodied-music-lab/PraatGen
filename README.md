@@ -17,7 +17,7 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 2.2.0
+**Version:** 2.2.1
 **Release:** 15 October 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
@@ -189,7 +189,7 @@ PraatGen cannot reliably tell from the inside that anything happened.
 | `PROJECT_INSTRUCTIONS.txt` | The project instructions: they tell PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns. |
 | `src/` | The sources of `PRAATGEN_RULES_FULL.md`: the core (`MASTER_PROMPT_CORE_v17_0_0.md`) and the six `RULES_*.md` files. Edit these, then rebuild with `tools/build_rules_full.py`. Don't upload them to a project. Master Prompt content version: 17.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_2.2.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.0 GitHub Release. |
+| `RELEASE_NOTES_2.2.1.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.1 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -305,14 +305,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 2.2.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Release** | 2.2.1 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
 | **Master Prompt** | 17.1.2 | The system instructions. Bumped when rules, workflow, or protocols change. |
 | **PKB Snapshot** | 2026-10-15 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **2.2.0 (15 October 2026)** is the current stable release. It ships Master Prompt 17.1.2. SCAFFOLD discussion turns skip the per-turn reread of the prompt, and the rules are read again before anything procedural. Stereo dialogs list Left, Right, Mix with Left as the default. EGG polarity follows the stronger derivative peak. The reference files say what object each command creates, and add Eigen (complex) and SVD. Copied library procedures read each other's results under their renamed names. PraatGen doesn't praise or grade what you say.
+- **2.2.1 (15 October 2026)** is the current stable release. It ships Master Prompt 17.1.2, unchanged from 2.2.0. For maintainers, the linter check compares the text inside the linter zip, so a zip uploaded through GitHub's web page passes.
+- **2.2.0 (15 October 2026)** shipped Master Prompt 17.1.2. SCAFFOLD discussion turns skip the per-turn reread of the prompt, and the rules are read again before anything procedural. Stereo dialogs list Left, Right, Mix with Left as the default. EGG polarity follows the stronger derivative peak. The reference files say what object each command creates, and add Eigen (complex) and SVD. Copied library procedures read each other's results under their renamed names. PraatGen doesn't praise or grade what you say.
 - **2.1.0 (10 October 2026)** shipped Master Prompt 17.0.0: the whole prompt is read again at the start of every turn, because the Claude app doesn't re-send project instructions. It also carries the 16.1.0 to 16.5.0 changes: canonical pitch limits unless signal would be lost, the plan quoting your task, library procedures supplied by the linter, the independent review on by default with NOREVIEW to skip it, American spelling, and Opus 5 as the recommended model.
 - **2.0.0 (9 October 2026)** shipped Master Prompt 16.0.0, restructured for sessions that work through tools: a short core prompt, six rules files read in full at the step that needs them, a file for each workflow step, a linter run on every script, and a fresh Opus review before delivery.
 - **1.2.1 (8 October 2026)** kept Master Prompt 15.0.0 and fixes `@emlDrawLTAS`, which left its curve, poles and speckles blank on a reversed frequency or level axis.
