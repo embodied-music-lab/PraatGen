@@ -5,8 +5,9 @@ Usage:  python3 praatgen_lint.py SCRIPT.praat [PLAN.md] [PKB_FOLDER]
         python3 praatgen_lint.py --procedure NAME [NAME ...]
 
 --procedure prints EML library procedures ready to paste at the end of a
-script: each named procedure and every library procedure it calls, with its
-header comment, renamed to the emlPG prefix and otherwise verbatim. NAME may
+script: each named procedure and every library procedure it calls or whose
+variables it reads, with its header comment, renamed to the emlPG prefix and
+otherwise verbatim. NAME may
 carry @, the eml prefix or the emlPG prefix. Exit status 1 names any NAME the
 library doesn't have.
 
@@ -35,16 +36,21 @@ Checks:
                        blocks; elsewhere it is a note, except inside a
                        library copy that matches its source.
   Plugin includes      include only from a relative folder named *_lib.
-  Library prefix       eml library procedures are copied as emlPG<Name>.
-  Procedure calls      Every @name call has a procedure definition.
+  Library prefix       eml library procedures are copied as emlPG<Name>, and
+                       reads of their variables use emlPG<Name>.variable.
+  Procedure calls      Every @name call has a procedure definition, and every
+                       emlPG<Name>.variable read names a procedure the script
+                       defines.
   Library copies       Every emlPG procedure, in the script or an included
                        *_lib file, matches its EML library source line for
-                       line, apart from the emlPG prefix on procedure names.
+                       line, apart from the emlPG prefix on procedure names
+                       and on reads of their variables.
   Reserved names       No assignment, loop variable or procedure parameter
                        named e, pi or undefined.
   Old syntax           No do ( / do$ ( / call / select / plus / minus / echo /
                        printline / fileappend, no "Command... arguments"
-                       form, and no 'variable' interpolation.
+                       form, and no free-standing 'variable' interpolation
+                       outside a string ('name' inside a string is allowed).
   Pause dialogs        endPause: ends with 0, the cancel-button index.
   Hardcoded paths      No absolute path, file:// URL or UNC path in a string.
   Overwrite guard      A script that writes files checks fileReadable or
@@ -302,8 +308,13 @@ def name_list(names):
 
 # ------------------------------------------------------ command references
 
+OBJECT_TYPE_HEADER = re.compile(r'^## Object type: ([A-Z]\w*)')
+
+
 def load_curated(pkb):
-    """name -> list of (type, arity, file, line)."""
+    """name -> list of (type, arity, file, line). A COMMANDS file's type comes
+    from its name; a "## Object type: X" line sets it to X for the entries
+    after it in that file (the SVD section of COMMANDS_Matrix.txt)."""
     ref = defaultdict(list)
     for fn in sorted(os.listdir(pkb)):
         if not (fn.startswith('COMMANDS_') and fn.endswith('.txt')):
@@ -314,6 +325,10 @@ def load_curated(pkb):
             raw_lines = f.read().split('\n')
         for n, raw in enumerate(raw_lines, 1):
             s = raw.strip()
+            header = OBJECT_TYPE_HEADER.match(raw)
+            if header:
+                otype = header.group(1)
+                continue
             if s.startswith('# Verified:'):
                 call = s[len('# Verified:'):].strip()
                 name, _, args = call.partition(':')
@@ -1008,6 +1023,15 @@ def check_prefix(lines):
         if re.match(r'eml[A-Z]', name) and not name.startswith(LIB_PREFIX):
             findings.append(('BLOCKING', n,
                              f'procedure {name} -- library procedures are copied as {LIB_PREFIX}<Name>'))
+    for ln in lines:
+        for m in LIB_QUALIFIED.finditer(ln.code):
+            name = m.group(1)
+            if re.match(r'eml(?:[A-Z]|_[a-z])', name) and not name.startswith(LIB_PREFIX):
+                var = re.match(r'\.([\w$#]+)', ln.code[m.end():]).group(1)
+                findings.append(('BLOCKING', ln.line_at(m.start()),
+                                 f'{name}.{var} reads a library procedure by its unprefixed '
+                                 f'name; the copy is {LIB_PREFIX}{name[3:]}, so read '
+                                 f'{LIB_PREFIX}{name[3:]}.{var}'))
     return sorted(findings, key=lambda f: f[1])
 
 
@@ -1045,22 +1069,35 @@ def load_procedures(pkb):
 
 
 LIB_NAME = re.compile(r'(@|^procedure\s+)(eml\w+)', re.M)
-PG_NAME = re.compile(r'(@|^procedure\s+)emlPG(?=\w)', re.M)
+# A qualified read of another procedure's variables: emlMedian.result
+LIB_QUALIFIED = re.compile(r'(?<![\w.@$#])(eml\w+)(?=\.[A-Za-z_])')
+PG_NAME = re.compile(r'(?<!\w)emlPG(?=\w)')
 
 
 def to_pg(text, names):
-    """Rename library procedures to the emlPG prefix, at definitions and calls."""
-    return LIB_NAME.sub(lambda m: m.group(1) + LIB_PREFIX + m.group(2)[3:]
+    """Rename library procedures to the emlPG prefix: at definitions, at calls,
+    and where one procedure reads another's variables (emlMedian.result), so the
+    read finds the variables the renamed procedure sets."""
+    text = LIB_NAME.sub(lambda m: m.group(1) + LIB_PREFIX + m.group(2)[3:]
                         if m.group(2) in names else m.group(0), text)
+    return LIB_QUALIFIED.sub(lambda m: LIB_PREFIX + m.group(1)[3:]
+                             if m.group(1) in names else m.group(0), text)
 
 
 def from_pg(text):
     """Undo to_pg. The library has no emlPG names, so this is its exact inverse."""
-    return PG_NAME.sub(r'\1eml', text)
+    return PG_NAME.sub('eml', text)
+
+
+def reads_of(body, procs, own):
+    """Library procedures whose variables the body reads by qualified name."""
+    return [m.group(1) for m in LIB_QUALIFIED.finditer(body)
+            if m.group(1) in procs and m.group(1) != own]
 
 
 def with_callees(names, procs):
-    """The requested procedures, then every library procedure they call, in turn."""
+    """The requested procedures, then every library procedure they call or whose
+    variables they read, in turn."""
     order, queue = [], list(names)
     while queue:
         n = queue.pop(0)
@@ -1068,6 +1105,7 @@ def with_callees(names, procs):
             continue
         order.append(n)
         queue += [c for c in re.findall(r'@(eml\w+)', procs[n][2]) if c != n]
+        queue += reads_of(procs[n][2], procs, n)
     return order
 
 
@@ -1082,8 +1120,14 @@ def extract(names, procs):
         (wanted if n in procs else unknown).append(n)
     order = with_callees(wanted, procs)
     added = [n for n in order if n not in wanted]
+    called = {c for n in order for c in re.findall(r'@(eml\w+)', procs[n][2])}
+    read_only = [n for n in added if n not in called]
     out = [f'# EML library procedures: {", ".join(wanted) or "none"}'
-           + (f'; called by them: {", ".join(added)}' if added else '')]
+           + (f'; called or read by them: {", ".join(added)}' if added else '')]
+    if read_only:
+        out.append('# These are not called by the procedures above; those procedures read '
+                   'variables these set. Call each before the procedures that read it: '
+                   + ', '.join(LIB_PREFIX + n[3:] for n in read_only))
     for n in order:
         fn, header, body = procs[n]
         out.append('')
@@ -1174,6 +1218,11 @@ def check_calls(lines, script_dir):
             if name not in defined:
                 findings.append(('BLOCKING', ln.line_at(off),
                                  f'@{name} has no procedure definition'))
+        for m in LIB_QUALIFIED.finditer(ln.code):
+            if m.group(1).startswith(LIB_PREFIX) and m.group(1) not in defined:
+                findings.append(('BLOCKING', ln.line_at(m.start()),
+                                 f'{m.group(1)}. reads the variables of a procedure '
+                                 f'this script does not define'))
     return findings
 
 
@@ -1204,29 +1253,6 @@ def check_reserved(lines):
     return findings
 
 
-def known_variables(lines):
-    names = set()
-    for ln in lines:
-        if ln.in_form:
-            m = re.match(r'^\w+:\s*(.*)$', ln.text)
-            if m:
-                args = split_args(m.group(1))
-                if args and args[0].startswith('"'):
-                    v = form_variable(args[0].strip('"'))
-                    if v:
-                        names.update({v, v + '$'})
-            continue
-        target, _b = statement(ln.text)
-        if target:
-            names.add(target)
-        m = re.match(r'^for\s+([.\w]+)', ln.text)
-        if m:
-            names.add(m.group(1))
-        m = re.match(r'^procedure\s+[\w.]+:\s*(.*)$', ln.text)
-        if m:
-            names.update(a.strip() for a in split_args(m.group(1)))
-    return names
-
 
 INTERP = re.compile(r"'([A-Za-z_.][\w.]*[$#]?)(?::\d+)?'")
 # Outside strings, interpolation glued to a name builds a variable name
@@ -1239,7 +1265,6 @@ DOT_FORM = re.compile(r'^[A-Z][^:"]*?\.\.\.(?:\s|$)')
 
 def check_old_syntax(lines):
     findings = []
-    known = known_variables(lines)
     for ln in lines:
         if ln.in_form:
             continue
@@ -1257,9 +1282,9 @@ def check_old_syntax(lines):
         if DOT_FORM.match(body):
             findings.append(('BLOCKING', ln.n,
                              f'old "Command... arguments" form -- {short(ln.text)}'))
+        # A 'name' inside a string literal is allowed: Praat fills it in, and
+        # a script may print it that way.
         hits = [m for m in INTERP_FREE.finditer(code)]
-        for start, lit in ln.strings:
-            hits += [m for m in INTERP.finditer(lit) if m.group(1) in known]
         if hits:
             findings.append(('BLOCKING', ln.n,
                              f"'{hits[0].group(1)}' interpolation -- {short(ln.text)}"))

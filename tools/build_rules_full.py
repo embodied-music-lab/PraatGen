@@ -43,7 +43,8 @@ def build():
         'followed by the six RULES files. At the start of every turn, before any '
         'other tool call or any text, read this entire file with project_read. '
         'Then open your reply with the line "Rules read this turn: " followed by '
-        "the marker on this file's last line.\n\n"
+        "the marker on this file's last line. The one exception is scaffold "
+        'discussion, set out in the project instructions and Step 2A.\n\n'
         'Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, '
         'RULES_PLANNING.md, RULES_AUDIT.md, RULES_CODE.md, RULES_MODES.md, '
         'RULES_SANDBOX.md), that file is the section of the same name below, which '
@@ -54,7 +55,8 @@ def build():
             body = f.read()
         parts.append(f'\n\n{RULE}\n=== SECTION: {os.path.basename(p)}\n{RULE}\n\n{body}')
     parts.append(f'\n\n{RULE}\nEnd of PRAATGEN_RULES_FULL.md. Read this whole file '
-                 f'again at the start of the next turn.\nMarker: {MARKER}\n')
+                 f'again at the start of the next turn, except on a scaffold '
+                 f'discussion turn (Step 2A).\nMarker: {MARKER}\n')
     text = ''.join(parts)
     size = len(text.encode('utf-8'))
     if size >= APP_READ_LIMIT:
