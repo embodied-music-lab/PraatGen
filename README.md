@@ -1,5 +1,7 @@
 **PraatGen has been redesigned to work with the new version of Claude.** Please send feedback to help improve it to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
 
+**New in 2.2: talk it through in SCAFFOLD mode.** The new Opus models take initiative, so PraatGen keeps them on its rules by rereading its whole prompt, about 256 KB, at the start of every turn. That costs tokens on every reply, including a reply to a question. In SCAFFOLD mode, turns that only discuss your project skip the reread: you talk about the research question, what to measure, and the inputs and outputs, and PraatGen holds off on commands, settings and code. When you're ready, tell it to leave scaffold. It reads its rules again, checks the plan you discussed against them, and continues with the usual pre-flight, plan and GO. Start a discussion with SCAFFOLD whenever you want to think a project through before building it.
+
 ⚠️ Best practice: PraatGen is structured to work within the claude.ai project framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected. 
 PraatGen was originally trained on Opus 4.6 with Extended Thinking. All signs indicate that Opus 4.8 at high effort excels. Opus 4.7 really wants to behave agentically, and has been superseded by Opus 5. Opus 5 is the current recommendation. Opus 5.5 is too agentic for this workflow, much like 4.7. Always keep the model you are using in mind. It is a variable.
 
@@ -15,8 +17,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 2.1.0
-**Release:** 10 October 2026
+**Version:** 2.2.0
+**Release:** 15 October 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -81,7 +83,7 @@ In Claude (claude.ai or the Claude app):
 ### 2. Set the System Prompt
 
 1. In your new project, click **instructions**
-2. Paste the entire contents of `PROJECT_INSTRUCTIONS.txt` into the instructions field. It holds one rule: at the start of every turn, read `PRAATGEN_RULES_FULL.md` in full.
+2. Paste the entire contents of `PROJECT_INSTRUCTIONS.txt` into the instructions field. It tells PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns.
 3. Save
 
 The Claude app doesn't re-send project instructions on every turn, so the whole prompt lives in `PRAATGEN_RULES_FULL.md`, which PraatGen reads again at the start of every turn. Every reply opens with `Rules read this turn: marsh-7316`. That line shows PraatGen read the file to its last line. The turn should also show the read of `PRAATGEN_RULES_FULL.md` before anything else, because a model can repeat the marker from an earlier turn.
@@ -128,7 +130,7 @@ PraatGen runs in **SPARSE mode by default** — compressed pre-flights, command 
 
 Reply with any of these in place of (or alongside) your task. Modes compose freely except where noted.
 
-- **SCAFFOLD** — collaborative design review *before* any code. PraatGen walks through the proposed workflow, GUI design, object lifecycle, and edge cases for your approval. Best for batch pipelines, multi-panel figures, and clinical analysis chains.
+- **SCAFFOLD** — collaborative design review *before* any code. PraatGen walks through the proposed workflow, GUI design, object lifecycle, and edge cases for your approval. While scaffold is on, PraatGen doesn't reread its rules on discussion turns, so the conversation stays with the idea; tell it when to leave scaffold, and it reads the rules and checks the design against them. Best for batch pipelines, multi-panel figures, and clinical analysis chains.
 - **DEBUGGING** — strict targeted-fix mode. Requires your approval for any change, declares the scope of each fix as a binding contract, and avoids elective refactoring. Use this for errors and refactors.
 - **SANDBOX** — makes PraatGen test every script in its own copy of Praat before delivering it, including running the script through its real dialogs. PraatGen can install Praat in any session when it needs to check something; SANDBOX makes testing required. It downloads Praat from `www.fon.hum.uva.nl`. Whether a session can reach that site depends on your plan and settings and isn't settled yet, so if PraatGen reports it unavailable, ask it to try the download once. If the download is refused, PraatGen offers a manual-upload fallback.
 - **NOREVIEW** — skips the independent check before delivery. By default a fresh Opus reviewer reads the code rules and the clinical defaults and checks the script's clinical parameters, pitch limits, file output, dialogs, drawing and task coverage. NOREVIEW is faster. You can add it in any message up to the GO for code.
@@ -184,10 +186,10 @@ PraatGen cannot reliably tell from the inside that anything happened.
 
 | File | Purpose |
 |------|---------|
-| `PROJECT_INSTRUCTIONS.txt` | The project instructions: one rule telling PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn. |
+| `PROJECT_INSTRUCTIONS.txt` | The project instructions: they tell PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns. |
 | `src/` | The sources of `PRAATGEN_RULES_FULL.md`: the core (`MASTER_PROMPT_CORE_v17_0_0.md`) and the six `RULES_*.md` files. Edit these, then rebuild with `tools/build_rules_full.py`. Don't upload them to a project. Master Prompt content version: 17.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_2.1.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.1.0 GitHub Release. |
+| `RELEASE_NOTES_2.2.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.0 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -303,14 +305,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 2.1.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 17.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. |
-| **PKB Snapshot** | 2026-10-10 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 2.2.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 17.1.2 | The system instructions. Bumped when rules, workflow, or protocols change. |
+| **PKB Snapshot** | 2026-10-15 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **2.1.0 (10 October 2026)** is the current stable release. It ships Master Prompt 17.0.0: the whole prompt is read again at the start of every turn, because the Claude app doesn't re-send project instructions. It also carries the 16.1.0 to 16.5.0 changes: canonical pitch limits unless signal would be lost, the plan quoting your task, library procedures supplied by the linter, the independent review on by default with NOREVIEW to skip it, American spelling, and Opus 5 as the recommended model.
+- **2.2.0 (15 October 2026)** is the current stable release. It ships Master Prompt 17.1.2. SCAFFOLD discussion turns skip the per-turn reread of the prompt, and the rules are read again before anything procedural. Stereo dialogs list Left, Right, Mix with Left as the default. EGG polarity follows the stronger derivative peak. The reference files say what object each command creates, and add Eigen (complex) and SVD. Copied library procedures read each other's results under their renamed names. PraatGen doesn't praise or grade what you say.
+- **2.1.0 (10 October 2026)** shipped Master Prompt 17.0.0: the whole prompt is read again at the start of every turn, because the Claude app doesn't re-send project instructions. It also carries the 16.1.0 to 16.5.0 changes: canonical pitch limits unless signal would be lost, the plan quoting your task, library procedures supplied by the linter, the independent review on by default with NOREVIEW to skip it, American spelling, and Opus 5 as the recommended model.
 - **2.0.0 (9 October 2026)** shipped Master Prompt 16.0.0, restructured for sessions that work through tools: a short core prompt, six rules files read in full at the step that needs them, a file for each workflow step, a linter run on every script, and a fresh Opus review before delivery.
 - **1.2.1 (8 October 2026)** kept Master Prompt 15.0.0 and fixes `@emlDrawLTAS`, which left its curve, poles and speckles blank on a reversed frequency or level axis.
 - **1.2.0 (8 October 2026)** shipped Master Prompt 15.0.0, which adapts PraatGen to the Claude app now that chat and Cowork are one environment: PraatGen tries the Praat download instead of reading a settings list, SANDBOX means every script is tested before delivery, commands use the working folder the shell reports, the install commands apply the 6.6.30 pin, files count as delivered only when sent, test results name their platform, re-checks of a rule read the whole file, the pre-flight report ends the turn, and subagents may take bounded tasks under an Opus session. The Table `Formula:` entry now takes the column name first.
@@ -335,7 +338,7 @@ PraatGen tracks three version numbers:
 
 **Sandbox prerequisites.** Sandbox Mode downloads Praat from `www.fon.hum.uva.nl`. Access to that site varies by Claude plan and isn't settled yet: an individual Max account reached it by default when tested on 8 October 2026, other plans are untested, and on Team and Enterprise plans the organization owner controls which domains are allowed. If PraatGen reports the site unavailable, ask it to try the download once before accepting that. If the download is refused, PraatGen offers a manual-upload fallback.
 
-**Context use.** PraatGen reads its whole prompt, about 256 KB, at the start of every turn. That keeps every rule in front of the model, but each turn uses more of your usage and the context fills sooner, so long sessions compact earlier than in 2.0.
+**Context use.** PraatGen reads its whole prompt, about 256 KB, at the start of every turn. That keeps every rule in front of the model, but each turn uses more of your usage and the context fills sooner, so long sessions compact earlier than in 2.0. SCAFFOLD discussion turns skip the reread; use SCAFFOLD for long conversations.
 
 **Context window limits.** Very long debugging sessions can exhaust the context window. PraatGen monitors this and offers handoff documents at the 3rd and 5th debugging iterations, but prevention (careful testing, exact error messages) is better than cure.
 

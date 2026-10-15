@@ -107,6 +107,17 @@ catalogue, and check that it is current before a release:
     python3 tools/build_lint.py
     python3 tools/build_lint.py --check
 
+The lint reads a `COMMANDS_<Type>.txt` file's entries as commands on `<Type>`.
+A line `## Object type: X` switches the entries after it, to the end of that
+file, to type X. `COMMANDS_Matrix.txt` uses it for the SVD commands. A section
+for another type without that line is read as the file's own type.
+
+A `# Returns:` line under an entry names the object type the command creates.
+These lines came from the Praat 6.6.30 source (each command's registration and
+its handler's closing macro), with a sample checked in Praat. When adding a
+command that creates objects, add its Returns line from the same sources. The
+lint ignores Returns lines.
+
 ## 2D. The catalogue
 
 The catalogue is in the PKB as two parts, `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt`

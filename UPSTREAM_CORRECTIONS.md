@@ -235,6 +235,36 @@ renders carry the same ink as ascending (speckles 15012 vs 15014 px; curve
 categorical axis (`.axisXMin = 0.5`, `.axisXMax = nGroups + 0.5`), so no library
 path reaches it with a reversed x. Exposed only to a direct caller.
 
+## 4. Stereo channel choice picked by option number
+
+**Procedures:** `@emlApplyChannelChoice`, `@emlHandleStereo`; the channel
+handling block in `eml-batch-process.txt`
+**Source:** `eml-graph-procedures.txt` lines 1876 to 1945, and
+`eml-batch-process.txt` lines 95 and 322 (as of 2.1.0)
+**Status: APPLIED to the PKB copies, 14 October 2026.** Reconcile with the
+plugin source.
+**Found:** 14 October 2026
+
+The worker took the dialog's option number as its action code (1 Mix, 2 Left,
+3 Right), and the dialogs listed Mix first as the default. PraatGen's own
+stereo pattern lists Left, Right, Mix, so a script that built its dialog in
+that order and called the worker extracted the wrong channel with no error:
+Left mixed the channels and Right extracted the left channel. An unknown
+number also mixed silently.
+
+**Fix (author ruling, 14 October 2026):** every dialog lists Left channel
+only, Right channel only, Mix to mono, with Left as the default. The worker
+takes the option text (`.channelHandling$`) and stops with an error on any
+other text. `@emlHandleStereo` passes `channel_handling$`. The batch template
+matches the text the same way.
+
+**Evidence:** Praat 6.6.30, a stereo sound with different signals in each
+channel. Old worker: value 2 returned the left channel, value 1 the mix. New
+worker: each option text returns its channel or the mix, and "Left" stops
+with "Unknown channel handling: Left". The `@emlHandleStereo` dialog was
+driven in the GUI: the default (Left channel only) and Right channel only
+each returned the matching channel.
+
 ---
 
 ## Praat-level behavior, not a library defect
