@@ -207,12 +207,18 @@ Single button, index 1, is default. Stop button shown.
 
 Two buttons; button 2 (OK) is default. Stop button shown.
 
-No Stop button:
+No Stop button (the house standard, APPENDIX_F S0A and S0B):
 
-    clicked = endPause: "Cancel", "OK", 2, 1
+    clicked = endPause: "Quit", "OK", 2, 0
 
-Two buttons; button 2 (OK) is default; button 1 (Cancel) is cancel button.
-No Stop button. Closing window = clicking Cancel.
+Two buttons; button 2 (OK) is default. No Stop button, and no button is the
+cancel button, so every button returns its index and the script handles it.
+
+With a cancel button instead (not preferred):
+
+    clicked = endPause: "Quit", "OK", 2, 1
+
+Button 1 is the cancel button. No Stop button. Closing window = clicking Quit.
 
 **Field-variable caveat:** When the cancel button is clicked (or the
 window is closed), field variables are NOT updated — they retain their

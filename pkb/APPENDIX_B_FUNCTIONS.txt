@@ -771,16 +771,24 @@
 # Linear solve A·X = Y (matrix RHS):
 #     X## = solve## (A##, Y##)
 #
+# solve# and solve## never stop on a singular or non-square A. They return
+# the least-squares solution with the smallest norm (Praat 6.6.30,
+# 22 Oct 2026: solve# ({{1, 2}, {2, 4}}, {3, 6}) returns 0.6 1.2, and a
+# 3 x 2 system returns its least-squares fit). So a
+# solve is not a singularity check. When a singular A would make the result
+# meaningless, test it first: put A in a Matrix object, To SVD, Get rank, and
+# compare the rank with n (COMMANDS_Matrix.txt).
+#
 # Matrix inverse — DO NOT compute explicitly. Use solve with identity:
 #     I## = zero## (n, n)
 #     for .i from 1 to n
 #         I## [.i, .i] = 1
 #     endfor
 #     invA## = solve## (A##, I##)
+# On a singular A this returns the pseudo-inverse, with no error.
 # Empirical speedup vs interpreted Cholesky inverse: 221× at n=30.
 #
-# Solve on triangular matrices works as forward/back substitution
-# (Praat detects triangular structure):
+# Solve on a triangular factor:
 #     # L is lower-triangular Cholesky factor
 #     z# = solve# (L##, y#)              # forward solve
 #     x# = solve# (transpose## (L##), z#) # back solve

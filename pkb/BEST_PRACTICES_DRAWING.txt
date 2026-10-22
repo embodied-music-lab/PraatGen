@@ -260,9 +260,9 @@
 #   normalized = rawStep / magnitude
 #   if normalized <= 1.5
 #       niceStep = 1 * magnitude
-#   elsif normalized <= 3.5
+#   elsif normalized <= 3
 #       niceStep = 2 * magnitude
-#   elsif normalized <= 7.5
+#   elsif normalized <= 7
 #       niceStep = 5 * magnitude
 #   else
 #       niceStep = 10 * magnitude
@@ -536,8 +536,7 @@
 # first two entries gets the worst available pair. Observed in delivered work.
 #
 #   K = 2   use 1 and 6   (0.00, 0.65)
-#   K = 3   use 1, 3, 6   (0.00, 0.55, 0.65 is too tight — prefer 0.00, 0.45,
-#                          0.70 by writing the values directly)
+#   K = 3   write 0.00, 0.45, 0.70 directly
 #   K >= 4  grey value alone cannot carry it. Style and width must separate
 #           the series; treat grey as decoration.
 #

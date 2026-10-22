@@ -244,25 +244,32 @@
 ---
 
 ## Save (common formats)
+# A script passes the file path. Praat 6.6.30 sandbox, 22 Oct 2026: each
+#   entry with ": file path$" wrote a file with one path argument.
 
-  Save as text file
-  Save as short text file
-  Save as binary file
-  Save as WAV file
-  Save as AIFF file
-  Save as FLAC file
-  Save as 24-bit WAV file
-  Save as 32-bit WAV file
+  Save as text file: file path$
+  Save as short text file: file path$
+  Save as binary file: file path$
+  Save as WAV file: file path$
+  Save as AIFF file: file path$
+  Save as FLAC file: file path$
+  Save as 24-bit WAV file: file path$
+  Save as 32-bit WAV file: file path$
   Save as stereo WAV file
-  Save as highest quality MP3 file
-  Save as headerless spreadsheet file
+  # Path argument not verified.
+  Save as highest quality MP3 file: file path$
+  Save as headerless spreadsheet file: file path$
   Save as Xwaves label file
+  # Path argument not verified.
   Save as raw text file
-  Save as tab-separated file
-  Save as comma-separated file
-  Save as semicolon-separated file
+  # Path argument not verified.
+  Save as tab-separated file: file path$
+  Save as comma-separated file: file path$
+  Save as semicolon-separated file: file path$
   Save as text file without Sound
+  # Path argument not verified.
   Save as binary file without Sound
+  # Path argument not verified.
 
 ---
 

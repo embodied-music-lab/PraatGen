@@ -87,7 +87,7 @@ Generated: 8 April 2026 | **Updated 29 July 2026 (PraatGen v14.1.0) directly fro
 | `@emlRepeatVector` | Repeat a vector nReps times | .v#, .nReps | public |
 
 ## Stats: Extraction
-**File:** `stats/eml-extract.praat` (v1.4) — 16 procedures (13 public, 3 internal)
+**File:** `stats/eml-extract.praat` (v1.4) — 17 procedures (13 public, 4 internal)
 
 | Procedure | Purpose | Parameters | Scope |
 |-----------|---------|------------|-------|
@@ -107,6 +107,7 @@ Generated: 8 April 2026 | **Updated 29 July 2026 (PraatGen v14.1.0) directly fro
 | `@eml_getGroupPairedData` | Extract two numeric columns for one group, keeping only rows where BOTH | .tableId, .colX$, .colY$, .groupCol$, .groupLabel$ | internal |
 | `@eml_kwScan` | (internal helper) | .colName$, .kwList$ | internal |
 | `@emlGuessColumnRoles` | string columns get baseline group score 5. | .tableId | public |
+| `@eml_isMissingToken` | 1 if a trimmed cell is a missing-value marker (NA, ?, ., --undefined--, and others) | .s$ | internal |
 
 ## Stats: Output
 **File:** `stats/eml-output.praat` (v1.7) — 42 procedures
@@ -392,7 +393,7 @@ All `@emlWizardExplain*` helpers set `emlWizardExplain$`, consumed by the next `
 | `@emlTestSummary` | Print pass/fail summary and exit with status | (none) | public |
 
 ---
-**Total: 263 procedures** (255 public, 8 internal) across 15 files.
+**Total: 264 procedures** (255 public, 9 internal) across 15 files.
 
 **Withdrawn at 1.1:** `@emlEggSpectralThreshold`. Untested on real material — every figure behind it came from synthetic additive white Gaussian noise. Not distributed; do not reconstruct it. See `BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md` §4.
 

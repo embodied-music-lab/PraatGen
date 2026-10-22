@@ -91,6 +91,20 @@
   Get number of channels
   # Verified: Get number of channels
   # Provenance: Phonanium AVQI v02.06 script; Paste Commands 24 Feb 2026
+  Get number of samples
+  Get sample number from time: time
+  # Verified: Get sample number from time: 0.25
+  # At 1000 Hz it returns 250.5: the number is fractional.
+  Get time from sample number: sample number
+  # Verified: Get time from sample number: 250
+  # At 1000 Hz it returns 0.2495, the sample's center.
+  Get mean: channel, from time, to time
+  # Verified: Get mean: 1, 0, 0
+  # Channel 0 averages all channels; a channel above the count falls back to
+  #   channel 1. The two-argument form fails. The mean is time-weighted, with
+  #   partial samples at the edges: 255.8 over 0.2503-0.2603 s on a 1000 Hz
+  #   ramp whose samples there average 255.5.
+  # Provenance: Praat 6.6.30 sandbox, 22 Oct 2026 (these four entries).
 
   # Modify
   Formula: formula$
@@ -299,8 +313,6 @@
   Shift times to between zero and physical duration
   Reverse
   Subtract mean
-  Multiply: multiplication factor
-  # Verified: Multiply: 0.5
   Multiply by window: window shape$
   Scale peak: new absolute peak
   Scale intensity: new average intensity

@@ -392,8 +392,8 @@
 #
 # A config file stores the user's parameter choices so that subsequent
 # runs of the same script pre-populate with previous values. The config
-# file is per-script, not cross-script. It lives alongside the script
-# or in the output folder.
+# file is per-script, not cross-script. Where it lives depends on the
+# script's scope (S3C).
 #
 # S3B: FILE FORMAT
 #
@@ -410,8 +410,22 @@
 #
 # S3C: CONFIG FILE LOCATION
 #
-# Default location: same directory as the script file, named
-# [scriptBaseName]_config.txt. The script discovers its own directory
+# Where the file goes depends on the script's scope. When a script keeps
+# settings, ask in the PRE-FLIGHT.
+#
+#   A short, single-file script: beside the script, named
+#   [scriptBaseName]_config.txt.
+#   A multi-file plugin: its own subfolder of the apps folder in the Praat
+#   preferences folder, which survives a plugin update:
+#       createFolder: preferencesDirectory$ + "/apps"
+#       configDir$ = preferencesDirectory$ + "/apps/" + toolName$
+#       createFolder: configDir$
+#   Anything in between: the user decides.
+#
+# Source: the Praat manual's "preferences folder" page names the apps
+# subfolder for the preferences of scripts.
+#
+# A script kept beside its settings file discovers its own directory
 # using:
 #
 #   scriptPath$ = defaultDirectory$
@@ -590,7 +604,7 @@
 #
 #   snapshotPath$ = logDir$ + "/config_" + dateStamp$ + ".txt"
 #   writeFileLine: snapshotPath$, "# Run parameters - ", date$ ()
-#   appendFileLine: snapshotPath$, "formant_ceiling", tab$, string$ (formant_ceiling)ß∑
+#   appendFileLine: snapshotPath$, "formant_ceiling", tab$, string$ (formant_ceiling)
 #   # ... all parameters ...
 #
 # This is distinct from the config persistence file (S3). The config

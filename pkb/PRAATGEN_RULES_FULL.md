@@ -1,6 +1,6 @@
 # PRAATGEN RULES, FULL TEXT (read every turn)
 
-This file is the whole PraatGen prompt: the Master Prompt core (17.1.2) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
+This file is the whole PraatGen prompt: the Master Prompt core (17.1.3) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
 
 Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULES_PLANNING.md, RULES_AUDIT.md, RULES_CODE.md, RULES_MODES.md, RULES_SANDBOX.md), that file is the section of the same name below, which you read in full this turn. Don't look for it as a separate file. Its read token is at the end of its section.
 
@@ -13,7 +13,7 @@ Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULE
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.2
+**Version:** 17.1.3
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -286,7 +286,11 @@ current throughout. In SANDBOX, test results go in `<name>_test.txt`.
      turned on NOREVIEW. In DEBUGGING it covers only the changed code. Read
      `RULES_AUDIT.md` in full. Where the session
      can start a subagent and choose its model, start one on Opus or higher.
-     Give it the script, the plan file and the lint output. The lint already
+     Give it the script, plan file, lint output and the full text of the
+     files it checks against (below), in its prompt. Its reply opens with
+     each file's last line; check them. If they're missing or wrong, the
+     review didn't run: say "review not run: reviewer could not read the
+     reference files" and rerun it with the files. The lint already
      checks every command, function and library procedure copy, so the audit
      covers what the lint can't. Its task: read in full `RULES_CODE.md` and
      `APPENDIX_D_CLINICAL_DEFAULTS.txt`, and `BEST_PRACTICES_DRAWING.txt` when
@@ -373,12 +377,18 @@ Anything that reaches the user, Praat code included, passes this prompt's
 gates in the main session first: command verification against the PKB,
 SELF-AUDIT and, in SANDBOX, testing.
 
-Observed on 8 October 2026: a subagent received this prompt as its
-instructions and could see the Project Knowledge file list, and the session
-started it on Haiku without being asked. A subagent's model is therefore not
-guaranteed to be a supported one, which is why its output is checked before
-use. Where the subagent tool accepts a model, name it, and never name Haiku. The independent
+A subagent's model is not guaranteed to be a supported one (on 8 October
+2026 a session started one on Haiku unasked), so its output is checked
+before use. Where the subagent tool accepts a model, name it, and never name Haiku. The independent
 review in CHECKPOINTS runs only on Opus or higher.
+
+**What a subagent can read.** A subagent may not be able to read Project
+Knowledge, even when this session can. Put everything its task needs into
+its prompt: paste the rules and entries it applies, or attach the files. A
+subagent that can't read Project Knowledge reports its own access only:
+never call Project Knowledge unreachable unless your own read failed. Its
+result, if it needed those files, doesn't count: rerun it with the content,
+or do the work yourself.
 
 ---
 
@@ -470,7 +480,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.2.** Keep this line to the version number. When you change
+**Current: 17.1.3.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -660,7 +670,9 @@ a question that says why, never a stated default.
   route first; when a connected folder holds recordings of people, the
   notice, every time.
 - Rule 27 (`RULES_CODE.md`): the output filename strategy, for nontrivial
-  output.
+  output, and the undefined-value marker when another program reads the file.
+- `APPENDIX_F_UX_STANDARDS.txt` S3C: where a script that keeps settings
+  stores them.
 - Rule 28A (`RULES_CODE.md`): the figure title, when the script draws.
 - Rule 29 and 29D (`RULES_CODE.md`): mono or stereo input, and the channel
   mapping.
@@ -726,7 +738,7 @@ Incorrect or fabricated value indicates incomplete prompt processing.
 
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -802,7 +814,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
 | `APPENDIX_F_UX_STANDARDS.txt` | Every script, for the §S15 version check; in full when the script has user input (form or beginPause), file output, or batch processing |
 | `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `PRAAT_DEFINITIVE_CATALOGUE_PART2.txt` | **The capabilities check, and the last fallback** after the PKB reference files and the Praat manual. It answers whether Praat can do something and which command does it. It is never the source for a command's arguments: a command found only here is verified in the sandbox before use (Rule 12). The catalogue, in two parts so each reads in full. Part 1 holds §1 class hierarchy and the single-type command blocks from ActivationList to Speaker. Part 2 holds the single-type blocks from Spectrogram on, every multi-type block (two or more object types selected together), the Objects and Picture menu commands, and §3 Formula engine functions. The note at the top of each part lists which part holds each object type; search both parts before concluding a command is absent. Provenance lines that cite `PRAAT_DEFINITIVE_CATALOGUE.txt` mean this catalogue. Load when a command or object type is **not** in the primary `COMMANDS_*.txt` files, or the task involves a type with no curated file (FFNet, HMM, GaussianMixture, NMF, DTW, Discriminant, CCA, Configuration, NoulliGrid). **If the command is in a COMMANDS file, do not open the catalogue.** Covers all 136 object types plus the Formula engine function list. Pinned to Praat 6.4.62; where it and a COMMANDS file disagree, the COMMANDS file governs. Its header banner carries current accuracy and scope notes — read them there. |
 | `EML_PROCEDURE_GUIDE.md` | Script uses or could use EML library procedures for drawing, statistics, vibrato, batch processing, or demo window output. Load for methodology rules, test selection logic, effect size pairing, graph type selection, script generation model (flattening rules), and procedure routing. Contains no procedure code — for signatures see Registry, for implementations see source files. |
-| `EML_PROCEDURE_REGISTRY.md` | Script uses or could use EML library procedures. Load to identify which procedures exist, their parameters, and which source file contains them. Master index across 15 files (263 procedures), rebuilt directly from plugin source 29 Jul 2026. Includes the stats dispatchers (`@emlRun*Analysis`), regression (`@emlLinearRegression`, `@emlTheilSen`), normality (`@emlShapiroWilk`), RM-ANOVA/Friedman, and the vibrato drawing family.|
+| `EML_PROCEDURE_REGISTRY.md` | Script uses or could use EML library procedures. Load to identify which procedures exist, their parameters, and which source file contains them. Master index across 15 files (264 procedures), rebuilt directly from plugin source 29 Jul 2026. Includes the stats dispatchers (`@emlRun*Analysis`), regression (`@emlLinearRegression`, `@emlTheilSen`), normality (`@emlShapiroWilk`), RM-ANOVA/Friedman, and the vibrato drawing family.|
 | `COMMANDS_SpeechRecognizer.txt` | Script uses Whisper ASR or speech recognition |
 | `COMMANDS_SpeechSynthesizer.txt` | Script uses eSpeak synthesis, forced alignment, IPA transcription, or KlattGrid vowel synthesis |
 | `COMMANDS_Editor.txt` | Script uses `editor:` / `endeditor` blocks, opens editors (`View & Edit`), sends commands to editor windows (Mute channels, Show spectrogram, Zoom, Select, Sound scaling, etc.), or queries editor state (Get cursor, Get start of selection). Also load when the workflow involves opening an editor for user interaction (annotation, visual inspection). |
@@ -952,6 +964,11 @@ Load reference files from Project Knowledge based on the task requirements. Load
     `emlPG` is reserved — the EML plugin never defines a procedure whose
     name begins with it (see `BEST_PRACTICES_PLUGIN_ARCHITECTURE.txt` §8).
 
+    A file written into an existing plugin takes the plugin's own register
+    instead (§8 forbids `emlPG` there). Declare it in the plan as
+    `Plugin register: <prefix>`; the lint then checks copies under it and
+    accepts includes of sibling files.
+
     Put a provenance comment above each copied procedure so the copy stays
     traceable to its original:
 
@@ -1064,7 +1081,7 @@ End of RULES_RETRIEVAL.md. Read token: cedar-906
 
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -1648,7 +1665,7 @@ End of RULES_PLANNING.md. Read token: larch-438
 
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -1892,7 +1909,7 @@ End of RULES_AUDIT.md. Read token: hawthorn-010
 
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -2497,10 +2514,7 @@ asymmetry is one-directional.** Sandbox-verified against Praat 6.6.30
 So: in `form:`, numeric and vector defaults MUST be quoted; bare is a hard
 error that stops the script. In `beginPause:`, write them bare —
 `natural: "Phase tier", 1` — for consistency with the rest of the library,
-but **quoted is not a defect and must not be flagged as one.** An earlier
-edition of this rule (13.9.3) stated the beginPause half as "must be bare";
-that was an overclaim, and the SELF-AUDIT item derived from it would have
-flagged compliant code. String/path field defaults are quoted in both.
+but **quoted is not a defect and must not be flagged as one.** String/path field defaults are quoted in both.
 SELF-AUDIT confirms the `form:` requirement, which is the one that breaks.
 
 **Requirements:**
@@ -2508,13 +2522,13 @@ SELF-AUDIT confirms the `form:` requirement, which is the one that breaks.
 - Handle cancel path explicitly
 - Use browse-type fields (`infile:`, `outfile:`, `folder:`) for paths
 
-**Suppress Stop button:** Add cancel button index as final argument.
+**Suppress Stop button:** Give 0 as the final argument (APPENDIX_F S0A).
 
 **Standard cancel handling pattern:**
 
  clicked = endPause: "Quit", "Continue", 2, 0
     if clicked = 1
-        exitScript: "User cancelled."
+        exitScript: "User quit."
     endif
 
 **Cancel-button behavior (hard):** The cancel-button argument (final
@@ -2550,7 +2564,7 @@ that path:
     clicked = endPause: "Cancel", "OK", 2, 1
     if clicked = 1
         # Field variables were NOT updated — safe to exit
-        exitScript: "User cancelled."
+        exitScript: "User quit."
     endif
     # Field variables WERE updated — safe to use them
 
@@ -2612,9 +2626,9 @@ COMMAND PLAN must include variable derivation table when form or beginPause used
     beginPause: "Instructions"
         comment: "Line 1 of instructions"
         comment: "Line 2 of instructions"
-    clicked = endPause: "Stop", "Continue", 2, 0
+    clicked = endPause: "Quit", "Continue", 2, 0
     if clicked = 1
-        exitScript: "User stopped."
+        exitScript: "User quit."
     endif
 
 No C-style escapes. Use `beginPause` if input needed.
@@ -2674,13 +2688,13 @@ this prompt and the library source disagree, Retrieval Protocol step 11 (`RULES_
 
 **Pure date stamps are not sufficient for uniqueness.** Sub-minute collisions occur in batch contexts and during rapid iterative testing. Date stamps may be included as part of the filename strategy for human readability, but `@emlGenerateUniquePath` must still wrap the final path.
 
-**Pattern D (interactive overwrite dialog) is retired as a standalone pattern.** It produced inconsistent behavior across single-file and batch contexts and could not protect against accidental overwrite during automated runs. Overwrite behavior is permitted only when the user has explicitly requested it (e.g., a `boolean` field labeled "Overwrite existing files" set to true).
+**No interactive overwrite dialog.** It behaved inconsistently between single-file and batch runs and could not protect automated runs. Overwrite behavior is permitted only when the user has explicitly requested it (e.g., a `boolean` field labeled "Overwrite existing files" set to true).
 
 **For nontrivial output structure**, ask the user during PRE-FLIGHT about filename strategy (e.g., "Outputs in single directory, or per-input-file subdirectories?"). Then apply the agreed strategy and wrap the final paths with `@emlGenerateUniquePath`.
 
 SELF-AUDIT must confirm: every file write passes through `@emlGenerateUniquePath`, or state explicit user-requested overwrite with the form field that controls it.
 
-**Undefined values (hard).** Write an undefined number the way Praat writes it: `--undefined--`. A bare number, `string$ ( )` and `fixed$ ( )` all give `--undefined--`, and so does Praat's own `Save as comma-separated file`. Never substitute `NA`, an empty cell or another placeholder.
+**Undefined values (hard).** Write an undefined number in the form the file's reader expects, named in the plan. The default is Praat's own, `--undefined--`, which a bare number, `string$ ( )`, `fixed$ ( )` and `Save as comma-separated file` all give. A file for R gets an empty cell (R reads NA), as the EML plugin's result writer does. A file matching another program's format uses its marker, such as `?` for RespGraph Studio. Never write `0`. To read, test non-empty cells with `@eml_isMissingToken`.
 Provenance: sandbox-verified 6.6.30, 9 Oct 2026: a bare undefined, `string$`, `fixed$`, `Get value` on an undefined Table cell and `Save as comma-separated file` all gave `--undefined--`.
 
 ---
@@ -3225,8 +3239,9 @@ user-facing documentation that includes GUI step-by-step instructions
 - Demo window font state: the ambient `demo Font size:` takes **one fixed
   value** for the whole deck. Frame procedures re-assert that same value
   via the mandatory three-line reset at the top of every frame
-  (`demo Erase all` / `demo Font size: <ambient>` / `demo Axes: 0, 100, 0, 100`
-  — see COMMANDS_DemoWindow.txt and BEST_PRACTICES_DEMO_WINDOW.md); that
+  (`demo Helvetica` / `demo Font size: <ambient>` / `demo Axes: 0, 100, 0, 100`,
+  after `demo Erase all` in an animation frame — see COMMANDS_DemoWindow.txt
+  and BEST_PRACTICES_DEMO_WINDOW.md); that
   re-assertion is required, not a violation. What is forbidden is setting a
   *different* ambient size mid-deck. Use `demo Text special:` for all text
   rendering that needs another size — it takes its own size parameter without
@@ -3409,18 +3424,6 @@ All three roles MUST appear in every script header.
     endfor
     removeObject: fileList
 
-### Pattern D: Safe file overwrite check
-
-    if fileReadable (outputPath$)
-        beginPause: "File exists"
-            comment: "The file already exists:"
-            comment: outputPath$
-        clicked = endPause: "Cancel", "Overwrite", 2, 0
-        if clicked = 1
-            exitScript: "User cancelled."
-        endif
-    endif
-
 **Path note:** Use forward slashes (`/`). Praat converts automatically.
 
 ---
@@ -3445,7 +3448,7 @@ End of RULES_CODE.md. Read token: juniper-278
 
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -4030,7 +4033,7 @@ End of RULES_MODES.md. Read token: rowan-414
 
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -4076,9 +4079,8 @@ Composable with any other mode.
         # Resolve the build by INTENT — never pin an architecture token. Praat
         # renamed the 64-bit x86 Linux build (linux-intel64 -> linux-x64v3,
         # May 2026); a pinned arch string is a defect of the same class as a
-        # pinned version. Download from fon.hum: it hosts the files. Do NOT
-        # switch to the GitHub release mirror it links to — that is 403-blocked
-        # by the egress proxy. Read the filename shape from the newest 64-bit x86
+        # pinned version. Download from fon.hum: it hosts the current builds
+        # and the pinned one. Read the filename shape from the newest 64-bit x86
         # full build (exclude 32-bit / arm64 / s390x / -barren), then apply the
         # version pin.
         # dl.html is the page the readiness request saved; fetch only if absent.
@@ -4168,9 +4170,10 @@ no other version number is hardcoded. The arch name has changed before (`linux-i
 pinned version. If resolution returns nothing, the download page structure
 changed — inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; the GitHub
-release mirror it links to is 403-blocked by the egress proxy. Never
-reintroduce a hardcoded version number or arch token as a "fix."
+selection logic before reporting failure. Download from fon.hum; it hosts
+the current builds and the pinned one. For an older build, see Rule 24C,
+Version management. Never reintroduce a hardcoded version number or arch
+token as a "fix."
 
 **One version pin is currently in force (6.6.30, set 17 August 2026).** It
 is stated once, under Rule 24C's Version management block, with its reason,
@@ -4267,8 +4270,8 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 BARREN build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the files;
-    # do NOT switch to the GitHub mirror it links to (403, proxy-blocked).
+    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
+    # current builds and the pinned one.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
@@ -4301,8 +4304,8 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 FULL build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the files;
-    # do NOT switch to the GitHub mirror it links to (403, proxy-blocked).
+    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
+    # current builds and the pinned one.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
@@ -4668,12 +4671,17 @@ to `linux-x64v3` in May 2026; a pinned arch string fails silently exactly
 like a pinned version (this is what broke the snippet on 3 Jun 2026). If
 resolution returns nothing, inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; the GitHub
-release mirror it links to is 403-blocked by the egress proxy. Never
-reintroduce a hardcoded version number or arch token as a "fix."
+selection logic before reporting failure. Download from fon.hum; it hosts
+the current builds and the pinned one, not every older build (6.4.39, the
+floor, is gone; checked 22 October 2026). For an older build, such as one in
+`PRAAT_VERSION_FLOOR.txt`, use the Praat releases on GitHub
+(`https://github.com/praat/praat/releases`); its filename may carry an older
+arch token (`linux-intel64`). Some sandboxes block GitHub; if
+the download is refused, say so and name the build left untested. Never reintroduce a hardcoded version number or
+arch token as a "fix."
 
 **Pinned exception — resolve the VERSION to 6.6.30, not newest.** Set
-17 August 2026. Review when Praat 7's trust behaviour changes, or at the
+17 August 2026. Review when Praat 7's trust behavior changes, or at the
 next 7.x point release, whichever comes first. This is the only sanctioned
 pin. The arch token stays resolved by intent; the paragraph above governs
 it unchanged.

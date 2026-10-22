@@ -93,7 +93,7 @@
 #   demo Draw inner box
 #   demo Marks left: 5, "yes", "yes", "no"
 #   demo Select outer viewport: 0, 100, 50, 100
-#   demo Select inner viewport: 0, 100, 0, 100
+#   demo Select outer viewport: 0, 100, 0, 100
 #
 # Font family is set by name alone after demo:
 #   demo Helvetica
@@ -186,7 +186,9 @@
 # as a wide rectangle.
 #
 # Provenance: Diagnostic test, 1 April 2026. Pixel dimensions from
-# Retina screenshot measurement.
+# Retina screenshot measurement. 1.726 was measured on one 16:9 screen
+# and is not a constant: the window follows the display's proportions.
+# See the closing section of BEST_PRACTICES_DEMO_WINDOW.md.
 #
 # VIEWPORT PARAMETER ORDER:
 # demo Select outer viewport: and demo Select inner viewport: take
@@ -199,9 +201,13 @@
 #   demo Select outer viewport: 0, 100, 50, 100
 #
 # Restore full viewport:
-#   demo Select inner viewport: 0, 100, 0, 100
+#   demo Select outer viewport: 0, 100, 0, 100
 #
 # Provenance: Four-corner Viewport text test, 1 April 2026.
+# Restore: Praat 6.6.30, 22 Oct 2026: after an outer viewport of 0, 100,
+# 0, 100, a square at 0-10 lands where it does in a freshly opened window;
+# after an inner viewport of 0, 100, 0, 100 it lands against the window's
+# corner, with no margins, and every later coordinate moves with it.
 #
 # Font size scaling for projection:
 # A font at size 35 in the default 1344×756 window looks the same
@@ -214,8 +220,7 @@
 # These functions exist only for the Demo window. They handle user input,
 # display control, and window management.
 #
-# NOTE: These functions are listed in APPENDIX_B_FUNCTIONS.txt
-# (errata section) and documented in detail in Section 13 below.
+# NOTE: These functions are listed in APPENDIX_B_FUNCTIONS.txt.
 
   # --- Input: Blocking ---
 
@@ -670,7 +675,7 @@
 #   demo Draw: .startTime, .endTime, -.ampBound, .ampBound, "no", "Curve"
 #
 #   # CRITICAL: Restore coordinate system after viewport drawing
-#   demo Select inner viewport: 0, 100, 0, 100
+#   demo Select outer viewport: 0, 100, 0, 100
 #   demo Axes: 0, 100, 0, 100
 #
 # VIEWPORT RESTORATION IS MANDATORY:
@@ -742,13 +747,13 @@
 # Show an informative final screen so the user knows the script ended:
 #
 #   demo Erase all
+#   demo Helvetica
+#   demo Font size: 11
 #   demo Axes: 0, 100, 0, 100
 #   demo Colour: "{0.25, 0.45, 0.70}"
-#   demo Font size: 20
-#   demo Text: 50, "centre", 55, "half", "Session complete."
+#   demo Text special: 50, "centre", 55, "half", "Helvetica", 20, "0", "Session complete."
 #   demo Colour: "{0.5, 0.5, 0.5}"
-#   demo Font size: 11
-#   demo Text: 50, "centre", 45, "half", "You may close this window."
+#   demo Text special: 50, "centre", 45, "half", "Helvetica", 11, "0", "You may close this window."
 #
 # ESCAPE KEY RECOMMENDATION:
 # Map Escape to "return to menu" rather than "exit script" to avoid
@@ -866,31 +871,11 @@
 # See BEST_PRACTICES_DEMO_WINDOW.md §2.
 
 # ============================================================================
-# SECTION 13: APPENDIX_B_FUNCTIONS.txt ADDENDUM
+# SECTION 13: DEMO FUNCTIONS IN APPENDIX_B_FUNCTIONS.txt
 # ============================================================================
 #
-# The following demo-specific functions should be added to
-# APPENDIX_B_FUNCTIONS.txt (alphabetical position in the d section):
-#
-#  demo – execute a graphics command in the Demo window (keyword, not function)
-#  demoClicked ( ) – determine whether the user clicked in the Demo window
-#  demoClickedIn (xmin, xmax, ymin, ymax) – determine whether the user clicked in a rectangular region in the Demo window
-#  demoCommandKeyPressed ( ) – determine whether the user pressed the Command key when they typed into the Demo window
-#  demoInput (characters$) – determine whether the user typed (or clicked) the specified characters into the Demo window
-#  demoKey$ ( ) – determine the key that the user typed into the Demo window
-#  demoKeyPressed ( ) – determine whether the user typed anything into the Demo window
-#  demoOptionKeyPressed ( ) – determine whether the user pressed the Option key when they typed into the Demo window
-#  demoPeekInput ( ) – see whether a user event (click or key press) is available in the Demo window
-#  demoShiftKeyPressed ( ) – determine whether the user pressed the Shift key when they typed into the Demo window
-#  demoShow ( ) – make all deferred drawing commands immediately visible in the Demo window
-#  demoWaitForInput ( ) – wait for a user event (click or key press) in the Demo window
-#  demoWindowTitle (newTitle$) – change the title of the Demo window
-#  demoX ( ) – the horizontal position of a mouse click in the Demo window
-#  demoY ( ) – the vertical position of a mouse click in the Demo window
-#
-# Also absent from APPENDIX_B but used in Demo window patterns:
-#  clearinfo – clear the Info window
-#  createFolder (folderPath$) – create a new folder, or do nothing if it already exists
+# Every demo function, plus clearinfo and createFolder, is listed in
+# APPENDIX_B_FUNCTIONS.txt. Section 3 above documents their use.
 
 # ============================================================================
 # SECTION 14: PREFERENCES AND STATE PERSISTENCE
@@ -989,7 +974,7 @@
 #
 # BEST_PRACTICES_DEMO_WINDOW.md covers canonical patterns for
 # animation rendering, audio sync, matrix-buffered waveforms,
-# session state machines, click-to-pause, button rendering,
+# session state machines, pausing animations, button rendering,
 # keyboard navigation, playback controls, and more.
 # Always co-load with this file for Demo window tasks.
 

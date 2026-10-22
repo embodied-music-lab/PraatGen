@@ -401,11 +401,12 @@
 # (NOT inches). Parameter order: left, right, BOTTOM, TOP.
 # Y-UP (matching demo coordinates), opposite of Picture window.
 #
-# Restore full viewport: `demo Select inner viewport: 0, 100, 0, 100`
+# Restore full viewport: `demo Select outer viewport: 0, 100, 0, 100`
 #
 # 3.3 ASPECT RATIO
 #
-# Demo window: ~1.726:1 (2686 x 1556 px on Retina).
+# Demo window: ~1.726:1 (2686 x 1556 px on Retina), measured on one 16:9
+# screen. The ratio follows the display; see BEST_PRACTICES_DEMO_WINDOW.md.
 # 1 vertical unit ~ 58% the physical size of 1 horizontal unit.
 # Vertical spacing values must account for this. A "square" from
 # (0,0) to (20,20) renders as a wide rectangle.

@@ -48,6 +48,11 @@
   # Returns: SVD. Hidden command: no menu entry or manual page, so Paste
   #   Commands can't record it. Works on a non-square Matrix (4 x 3 tested).
 
+  Get sum
+  # Verified: Get sum
+  # It returned 5000 on a 2 x 50 Matrix of 50s, and the Matrix stays
+  #   selected. Praat 6.6.30 sandbox, 22 Oct 2026.
+
 ## Object type: SVD (the object To SVD creates)
 # Source: Praat 6.6.30 source (dwtools/praat_David_init.cpp) and a sandbox run
 #   in 6.6.30, 12 Oct 2026. These SVD commands are in the menus.

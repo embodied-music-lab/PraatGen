@@ -97,7 +97,6 @@ BEST_PRACTICES_DEMO_WINDOW.md
 #   # Animation loop
 #   stopwatch                    # reset timer
 #   totalElapsed = resumeElapsed # 0 for first play, >0 after resume
-#   paused = 0
 #
 #   repeat
 #       frameDelta = stopwatch
@@ -113,9 +112,9 @@ BEST_PRACTICES_DEMO_WINDOW.md
 #       # ... draw scene ...
 #       demoShow ()
 #
-#       # [check for click-to-pause — see §8]
+#       # No input check here: see §8.
 #
-#   until totalElapsed >= duration or paused
+#   until totalElapsed >= duration
 #
 # KEY DETAILS:
 #   - `stopwatch` (no parentheses) returns elapsed time since last call
@@ -392,10 +391,9 @@ BEST_PRACTICES_DEMO_WINDOW.md
 #   while sessionState$ <> "quit"
 #
 #       if sessionState$ = "play"
-#           # Start audio, run animation loop
-#           # demoPeekInput + demoClicked for click-to-pause
-#           # On pause: set sessionState$ = "paused"
-#           # On completion: set sessionState$ = "finished"
+#           # Start audio, run one animation segment (no input checks)
+#           # At the segment's end: set sessionState$ = "paused", or
+#           # "finished" after the last segment
 #       endif
 #
 #       if sessionState$ = "paused"
@@ -413,34 +411,31 @@ BEST_PRACTICES_DEMO_WINDOW.md
 #
 #   endwhile
 #
-# KEY PRINCIPLE: Non-blocking input (demoPeekInput) during animation,
-# blocking input (demoWaitForInput) during interactive states. Never
-# use demoWaitForInput during animation — it halts the script.
+# KEY PRINCIPLE: No input checks during animation; blocking input
+# (demoWaitForInput) between segments and in interactive states.
+# demoPeekInput during animation is unsafe (COMMANDS_DemoWindow.txt §6).
 #
 # Source: oscilloscope v6 (lines 260–538, complete implementation).
 
 # ============================================================================
-# §8  CLICK-TO-PAUSE DURING ANIMATION
+# §8  PAUSING AN ANIMATION
 # ============================================================================
 #
-# Click detection during animation uses the non-blocking pair:
+# Don't check for input inside an animation loop. demoPeekInput while
+# the script runs can crash Praat on macOS, and no click can be read
+# without it (COMMANDS_DemoWindow.txt §6, errata of 1 March 2026).
 #
-#   demoPeekInput ()
-#   if demoClicked ()
-#       paused = 1
-#   endif
+# To let the user pause, split the animation into short segments
+# (0.5-1 s) and wait for input between them with demoWaitForInput.
+# The script is waiting there, not running, so input is safe. Draw a
+# visible cue at each pause, such as "Click to continue, Q to stop".
+# Audio started with asynchronous Play keeps playing while the script
+# waits; for audio-synced animation, pause at a natural break or stop and
+# resume the audio (§3, RESUME).
 #
-# This is CONFIRMED STABLE for mouse clicks per COMMANDS_DemoWindow.txt
-# Section 6A. Keyboard detection (demoKeyPressed) during animation is
-# NOT safe and may cause crashes or dead-code behavior — do not check
-# keyboard during animation loops.
-#
-# Place the click check at the END of the frame-drawing code, after
-# demoShow(). Click coordinates are not needed for pause — just the
-# boolean.
-#
-# Source: oscilloscope v6 (lines 444–448, with stability comment
-# referencing Section 6A).
+# Keep unbroken animations short (2-5 s), and offer replay from the
+# event loop after they finish (COMMANDS_DemoWindow.txt §6, REPLAY
+# PATTERN).
 
 # ============================================================================
 # §9  BUTTON RENDERING AND CLICK DETECTION

@@ -7,6 +7,66 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.2 — 22 October 2026 (ships Master Prompt 17.1.3)
+
+Subagents get the files their task needs in their prompt, and the review
+proves it read them. Plugin builds lint cleanly under the plugin's own
+register. Undefined values follow the file's reader, and settings files follow
+the script's scope. Upgrade notes are in `RELEASE_NOTES_2.2.2.md`.
+
+### 17.1.3 — 22 October 2026
+
+**Subagents and Project Knowledge.** A subagent may not be able to read
+Project Knowledge. PraatGen puts everything a subagent's task needs into its
+prompt. A subagent that can't read the files speaks only for itself:
+PraatGen keeps reading them and never calls Project Knowledge unreachable
+unless its own read failed.
+
+**The independent review proves it read its files.** The reviewer receives
+`RULES_CODE.md`, `APPENDIX_D_CLINICAL_DEFAULTS.txt` and, for a drawing,
+`BEST_PRACTICES_DRAWING.txt` in its prompt, and opens its reply with each
+file's last line. Without them, the review counts as not run and runs again.
+
+**Files inside a plugin.** A plan line `Plugin register: <prefix>` marks a file
+that lives inside a plugin. The lint then accepts the plugin's own procedure
+names and its includes of sibling files, and verifies library copies made
+under the plugin's register. A file that writes `info$ ()` to disk gets a
+note, since the Info window text can carry non-ASCII from other procedures.
+Each check with nothing to report now prints "no findings", and a verified
+command names every listing that matches it.
+
+**Undefined values follow the file's reader.** `--undefined--` stays the
+default. A file for R gets an empty cell, and a file that must match another
+program uses that program's marker, such as `?` for RespGraph Studio. Reading
+uses `@eml_isMissingToken`, now in `eml-extract.txt`.
+
+**Settings files follow the script's scope.** A short single-file script keeps
+its settings beside it; a multi-file plugin keeps them in its own subfolder of
+the apps folder in the Praat preferences folder; anything in between is the user's call. The
+PRE-FLIGHT asks.
+
+**Older Praat builds come from GitHub.** The Praat site no longer has 6.4.39.
+PraatGen downloads older builds from the Praat releases on GitHub and names any
+build a blocked download left untested.
+
+**`solve#` and `solve##` don't detect singular matrices.** They return the
+least-squares solution with the smallest norm, and the inverse made with
+`solve##` is a pseudo-inverse on a singular matrix. Test with To SVD and Get
+rank first.
+
+**Demo window.** Restore the full window with `demo Select outer viewport:
+0, 100, 0, 100`; the inner form drops the margins and moves every later
+coordinate. No input checks run during an animation; pause between short
+segments instead. The three-line reset is `demo Helvetica`, `demo Font size`,
+`demo Axes` everywhere. The 1.726 aspect ratio is one screen's measurement.
+
+**Reference corrections.** Sound gains Get mean, Get number of samples, Get
+sample number from time and Get time from sample number; Matrix gains Get sum;
+the Save commands take a file path; the duplicate Multiply entry is gone. The
+flattened tick example matches `@emlComputeNiceStep`, and three gray series
+use 0.00, 0.45 and 0.70. Rule 19 suppresses the Stop button with 0, Rule 21's
+example uses Quit, and the retired overwrite-dialog pattern is removed.
+
 ### Release 2.2.1 — 15 October 2026 (ships Master Prompt 17.1.2)
 
 For maintainers, `tools/build_lint.py --check` compares the text inside

@@ -1333,3 +1333,51 @@ procedure emlGuessColumnRoles: .tableId
 
     label GUESS_ROLES_DONE
 endproc
+
+
+# Provenance: PraatGen-only addition, 22 October 2026; copied verbatim from
+#   the plugin source stats/eml-extract.praat (9 September 2026 version).
+#   Its comments name plugin procedures this PKB copy does not carry.
+#   The rest of this file is the v1.4 copy.
+# ============================================================================
+# @eml_isMissingToken (internal helper)
+# ============================================================================
+# THE missing-value token list, stated ONCE (9 Sep 2026,
+# RULING_MISSING_VALUE_TOKENS): a non-empty cell whose text is on this list is
+# missing, exactly as an empty cell is -- excluded and disclosed, never
+# refused. Case-insensitive, and only these exact tokens: a cell reading "no
+# data recorded" is a note, not a placeholder, and silently treating it as
+# missing would destroy information.
+#
+# `--undefined--` and `undefined` (added 9 Sep 2026) are what Praat itself
+# writes for an undefined value: a Table cell set to undefined saves as
+# `--undefined--` in a tab-separated file, and Praat's own numeric grammar
+# already reads an empty string as undefined -- both are what Praat is
+# already telling the reader "there is no value here", not new information.
+#
+# @emlRepairClassify (below, the data-check/repair advisor) and
+# @eml_classifyCell (the read-time classifier every analysis door goes
+# through) both ask HERE rather than each spelling the list out, so the
+# canon cannot drift between the two call sites. The committed copy for the
+# R side, validate/canon/missing_tokens.tsv, is checked against THIS list by
+# validate/v171_missing_value_tokens.R, in the v105 pattern.
+#
+# Arguments:
+#   .s$ — the cell's contents, ALREADY TRIMMED of surrounding whitespace
+#
+# Output:
+#   .isMissing — 1 if .s$ (case-insensitively) is one of the tokens, 0
+#                otherwise. A genuinely empty string is NOT tested here --
+#                callers already have their own "empty" branch, tested
+#                before or alongside this one.
+# ============================================================================
+procedure eml_isMissingToken: .s$
+    .isMissing = 0
+    .low$ = replace_regex$ (.s$, "([A-Z])", "\l\1", 0)
+    if .low$ = "na" or .low$ = "n/a" or .low$ = "n.a." or .low$ = "nan"
+    ... or .low$ = "null" or .low$ = "nil" or .low$ = "-" or .low$ = "--"
+    ... or .low$ = "." or .low$ = "?" or .low$ = "missing"
+    ... or .low$ = "--undefined--" or .low$ = "undefined"
+        .isMissing = 1
+    endif
+endproc
