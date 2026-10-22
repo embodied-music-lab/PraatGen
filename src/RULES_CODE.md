@@ -1,6 +1,6 @@
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -605,10 +605,7 @@ asymmetry is one-directional.** Sandbox-verified against Praat 6.6.30
 So: in `form:`, numeric and vector defaults MUST be quoted; bare is a hard
 error that stops the script. In `beginPause:`, write them bare —
 `natural: "Phase tier", 1` — for consistency with the rest of the library,
-but **quoted is not a defect and must not be flagged as one.** An earlier
-edition of this rule (13.9.3) stated the beginPause half as "must be bare";
-that was an overclaim, and the SELF-AUDIT item derived from it would have
-flagged compliant code. String/path field defaults are quoted in both.
+but **quoted is not a defect and must not be flagged as one.** String/path field defaults are quoted in both.
 SELF-AUDIT confirms the `form:` requirement, which is the one that breaks.
 
 **Requirements:**
@@ -616,13 +613,13 @@ SELF-AUDIT confirms the `form:` requirement, which is the one that breaks.
 - Handle cancel path explicitly
 - Use browse-type fields (`infile:`, `outfile:`, `folder:`) for paths
 
-**Suppress Stop button:** Add cancel button index as final argument.
+**Suppress Stop button:** Give 0 as the final argument (APPENDIX_F S0A).
 
 **Standard cancel handling pattern:**
 
  clicked = endPause: "Quit", "Continue", 2, 0
     if clicked = 1
-        exitScript: "User cancelled."
+        exitScript: "User quit."
     endif
 
 **Cancel-button behavior (hard):** The cancel-button argument (final
@@ -658,7 +655,7 @@ that path:
     clicked = endPause: "Cancel", "OK", 2, 1
     if clicked = 1
         # Field variables were NOT updated — safe to exit
-        exitScript: "User cancelled."
+        exitScript: "User quit."
     endif
     # Field variables WERE updated — safe to use them
 
@@ -720,9 +717,9 @@ COMMAND PLAN must include variable derivation table when form or beginPause used
     beginPause: "Instructions"
         comment: "Line 1 of instructions"
         comment: "Line 2 of instructions"
-    clicked = endPause: "Stop", "Continue", 2, 0
+    clicked = endPause: "Quit", "Continue", 2, 0
     if clicked = 1
-        exitScript: "User stopped."
+        exitScript: "User quit."
     endif
 
 No C-style escapes. Use `beginPause` if input needed.
@@ -782,13 +779,13 @@ this prompt and the library source disagree, Retrieval Protocol step 11 (`RULES_
 
 **Pure date stamps are not sufficient for uniqueness.** Sub-minute collisions occur in batch contexts and during rapid iterative testing. Date stamps may be included as part of the filename strategy for human readability, but `@emlGenerateUniquePath` must still wrap the final path.
 
-**Pattern D (interactive overwrite dialog) is retired as a standalone pattern.** It produced inconsistent behavior across single-file and batch contexts and could not protect against accidental overwrite during automated runs. Overwrite behavior is permitted only when the user has explicitly requested it (e.g., a `boolean` field labeled "Overwrite existing files" set to true).
+**No interactive overwrite dialog.** It behaved inconsistently between single-file and batch runs and could not protect automated runs. Overwrite behavior is permitted only when the user has explicitly requested it (e.g., a `boolean` field labeled "Overwrite existing files" set to true).
 
 **For nontrivial output structure**, ask the user during PRE-FLIGHT about filename strategy (e.g., "Outputs in single directory, or per-input-file subdirectories?"). Then apply the agreed strategy and wrap the final paths with `@emlGenerateUniquePath`.
 
 SELF-AUDIT must confirm: every file write passes through `@emlGenerateUniquePath`, or state explicit user-requested overwrite with the form field that controls it.
 
-**Undefined values (hard).** Write an undefined number the way Praat writes it: `--undefined--`. A bare number, `string$ ( )` and `fixed$ ( )` all give `--undefined--`, and so does Praat's own `Save as comma-separated file`. Never substitute `NA`, an empty cell or another placeholder.
+**Undefined values (hard).** Write an undefined number in the form the file's reader expects, named in the plan. The default is Praat's own, `--undefined--`, which a bare number, `string$ ( )`, `fixed$ ( )` and `Save as comma-separated file` all give. A file for R gets an empty cell (R reads NA), as the EML plugin's result writer does. A file matching another program's format uses its marker, such as `?` for RespGraph Studio. Never write `0`. To read, test non-empty cells with `@eml_isMissingToken`.
 Provenance: sandbox-verified 6.6.30, 9 Oct 2026: a bare undefined, `string$`, `fixed$`, `Get value` on an undefined Table cell and `Save as comma-separated file` all gave `--undefined--`.
 
 ---
@@ -1333,8 +1330,9 @@ user-facing documentation that includes GUI step-by-step instructions
 - Demo window font state: the ambient `demo Font size:` takes **one fixed
   value** for the whole deck. Frame procedures re-assert that same value
   via the mandatory three-line reset at the top of every frame
-  (`demo Erase all` / `demo Font size: <ambient>` / `demo Axes: 0, 100, 0, 100`
-  — see COMMANDS_DemoWindow.txt and BEST_PRACTICES_DEMO_WINDOW.md); that
+  (`demo Helvetica` / `demo Font size: <ambient>` / `demo Axes: 0, 100, 0, 100`,
+  after `demo Erase all` in an animation frame — see COMMANDS_DemoWindow.txt
+  and BEST_PRACTICES_DEMO_WINDOW.md); that
   re-assertion is required, not a violation. What is forbidden is setting a
   *different* ambient size mid-deck. Use `demo Text special:` for all text
   rendering that needs another size — it takes its own size parameter without
@@ -1516,18 +1514,6 @@ All three roles MUST appear in every script header.
         endif
     endfor
     removeObject: fileList
-
-### Pattern D: Safe file overwrite check
-
-    if fileReadable (outputPath$)
-        beginPause: "File exists"
-            comment: "The file already exists:"
-            comment: outputPath$
-        clicked = endPause: "Cancel", "Overwrite", 2, 0
-        if clicked = 1
-            exitScript: "User cancelled."
-        endif
-    endif
 
 **Path note:** Use forward slashes (`/`). Praat converts automatically.
 

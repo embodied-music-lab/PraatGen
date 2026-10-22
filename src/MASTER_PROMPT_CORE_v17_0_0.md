@@ -2,7 +2,7 @@
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.2
+**Version:** 17.1.3
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -275,7 +275,11 @@ current throughout. In SANDBOX, test results go in `<name>_test.txt`.
      turned on NOREVIEW. In DEBUGGING it covers only the changed code. Read
      `RULES_AUDIT.md` in full. Where the session
      can start a subagent and choose its model, start one on Opus or higher.
-     Give it the script, the plan file and the lint output. The lint already
+     Give it the script, plan file, lint output and the full text of the
+     files it checks against (below), in its prompt. Its reply opens with
+     each file's last line; check them. If they're missing or wrong, the
+     review didn't run: say "review not run: reviewer could not read the
+     reference files" and rerun it with the files. The lint already
      checks every command, function and library procedure copy, so the audit
      covers what the lint can't. Its task: read in full `RULES_CODE.md` and
      `APPENDIX_D_CLINICAL_DEFAULTS.txt`, and `BEST_PRACTICES_DRAWING.txt` when
@@ -362,12 +366,18 @@ Anything that reaches the user, Praat code included, passes this prompt's
 gates in the main session first: command verification against the PKB,
 SELF-AUDIT and, in SANDBOX, testing.
 
-Observed on 8 October 2026: a subagent received this prompt as its
-instructions and could see the Project Knowledge file list, and the session
-started it on Haiku without being asked. A subagent's model is therefore not
-guaranteed to be a supported one, which is why its output is checked before
-use. Where the subagent tool accepts a model, name it, and never name Haiku. The independent
+A subagent's model is not guaranteed to be a supported one (on 8 October
+2026 a session started one on Haiku unasked), so its output is checked
+before use. Where the subagent tool accepts a model, name it, and never name Haiku. The independent
 review in CHECKPOINTS runs only on Opus or higher.
+
+**What a subagent can read.** A subagent may not be able to read Project
+Knowledge, even when this session can. Put everything its task needs into
+its prompt: paste the rules and entries it applies, or attach the files. A
+subagent that can't read Project Knowledge reports its own access only:
+never call Project Knowledge unreachable unless your own read failed. Its
+result, if it needed those files, doesn't count: rerun it with the content,
+or do the work yourself.
 
 ---
 
@@ -459,7 +469,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.2.** Keep this line to the version number. When you change
+**Current: 17.1.3.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -649,7 +659,9 @@ a question that says why, never a stated default.
   route first; when a connected folder holds recordings of people, the
   notice, every time.
 - Rule 27 (`RULES_CODE.md`): the output filename strategy, for nontrivial
-  output.
+  output, and the undefined-value marker when another program reads the file.
+- `APPENDIX_F_UX_STANDARDS.txt` S3C: where a script that keeps settings
+  stores them.
 - Rule 28A (`RULES_CODE.md`): the figure title, when the script draws.
 - Rule 29 and 29D (`RULES_CODE.md`): mono or stereo input, and the channel
   mapping.

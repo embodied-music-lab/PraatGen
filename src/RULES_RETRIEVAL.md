@@ -1,6 +1,6 @@
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -76,7 +76,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
 | `APPENDIX_F_UX_STANDARDS.txt` | Every script, for the §S15 version check; in full when the script has user input (form or beginPause), file output, or batch processing |
 | `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `PRAAT_DEFINITIVE_CATALOGUE_PART2.txt` | **The capabilities check, and the last fallback** after the PKB reference files and the Praat manual. It answers whether Praat can do something and which command does it. It is never the source for a command's arguments: a command found only here is verified in the sandbox before use (Rule 12). The catalogue, in two parts so each reads in full. Part 1 holds §1 class hierarchy and the single-type command blocks from ActivationList to Speaker. Part 2 holds the single-type blocks from Spectrogram on, every multi-type block (two or more object types selected together), the Objects and Picture menu commands, and §3 Formula engine functions. The note at the top of each part lists which part holds each object type; search both parts before concluding a command is absent. Provenance lines that cite `PRAAT_DEFINITIVE_CATALOGUE.txt` mean this catalogue. Load when a command or object type is **not** in the primary `COMMANDS_*.txt` files, or the task involves a type with no curated file (FFNet, HMM, GaussianMixture, NMF, DTW, Discriminant, CCA, Configuration, NoulliGrid). **If the command is in a COMMANDS file, do not open the catalogue.** Covers all 136 object types plus the Formula engine function list. Pinned to Praat 6.4.62; where it and a COMMANDS file disagree, the COMMANDS file governs. Its header banner carries current accuracy and scope notes — read them there. |
 | `EML_PROCEDURE_GUIDE.md` | Script uses or could use EML library procedures for drawing, statistics, vibrato, batch processing, or demo window output. Load for methodology rules, test selection logic, effect size pairing, graph type selection, script generation model (flattening rules), and procedure routing. Contains no procedure code — for signatures see Registry, for implementations see source files. |
-| `EML_PROCEDURE_REGISTRY.md` | Script uses or could use EML library procedures. Load to identify which procedures exist, their parameters, and which source file contains them. Master index across 15 files (263 procedures), rebuilt directly from plugin source 29 Jul 2026. Includes the stats dispatchers (`@emlRun*Analysis`), regression (`@emlLinearRegression`, `@emlTheilSen`), normality (`@emlShapiroWilk`), RM-ANOVA/Friedman, and the vibrato drawing family.|
+| `EML_PROCEDURE_REGISTRY.md` | Script uses or could use EML library procedures. Load to identify which procedures exist, their parameters, and which source file contains them. Master index across 15 files (264 procedures), rebuilt directly from plugin source 29 Jul 2026. Includes the stats dispatchers (`@emlRun*Analysis`), regression (`@emlLinearRegression`, `@emlTheilSen`), normality (`@emlShapiroWilk`), RM-ANOVA/Friedman, and the vibrato drawing family.|
 | `COMMANDS_SpeechRecognizer.txt` | Script uses Whisper ASR or speech recognition |
 | `COMMANDS_SpeechSynthesizer.txt` | Script uses eSpeak synthesis, forced alignment, IPA transcription, or KlattGrid vowel synthesis |
 | `COMMANDS_Editor.txt` | Script uses `editor:` / `endeditor` blocks, opens editors (`View & Edit`), sends commands to editor windows (Mute channels, Show spectrogram, Zoom, Select, Sound scaling, etc.), or queries editor state (Get cursor, Get start of selection). Also load when the workflow involves opening an editor for user interaction (annotation, visual inspection). |
@@ -225,6 +225,11 @@ Load reference files from Project Knowledge based on the task requirements. Load
     makes the two name sets disjoint, so the question never arises.
     `emlPG` is reserved — the EML plugin never defines a procedure whose
     name begins with it (see `BEST_PRACTICES_PLUGIN_ARCHITECTURE.txt` §8).
+
+    A file written into an existing plugin takes the plugin's own register
+    instead (§8 forbids `emlPG` there). Declare it in the plan as
+    `Plugin register: <prefix>`; the lint then checks copies under it and
+    accepts includes of sibling files.
 
     Put a provenance comment above each copied procedure so the copy stays
     traceable to its original:

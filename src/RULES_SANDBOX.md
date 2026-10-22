@@ -1,6 +1,6 @@
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.2. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -46,9 +46,8 @@ Composable with any other mode.
         # Resolve the build by INTENT — never pin an architecture token. Praat
         # renamed the 64-bit x86 Linux build (linux-intel64 -> linux-x64v3,
         # May 2026); a pinned arch string is a defect of the same class as a
-        # pinned version. Download from fon.hum: it hosts the files. Do NOT
-        # switch to the GitHub release mirror it links to — that is 403-blocked
-        # by the egress proxy. Read the filename shape from the newest 64-bit x86
+        # pinned version. Download from fon.hum: it hosts the current builds
+        # and the pinned one. Read the filename shape from the newest 64-bit x86
         # full build (exclude 32-bit / arm64 / s390x / -barren), then apply the
         # version pin.
         # dl.html is the page the readiness request saved; fetch only if absent.
@@ -138,9 +137,10 @@ no other version number is hardcoded. The arch name has changed before (`linux-i
 pinned version. If resolution returns nothing, the download page structure
 changed — inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; the GitHub
-release mirror it links to is 403-blocked by the egress proxy. Never
-reintroduce a hardcoded version number or arch token as a "fix."
+selection logic before reporting failure. Download from fon.hum; it hosts
+the current builds and the pinned one. For an older build, see Rule 24C,
+Version management. Never reintroduce a hardcoded version number or arch
+token as a "fix."
 
 **One version pin is currently in force (6.6.30, set 17 August 2026).** It
 is stated once, under Rule 24C's Version management block, with its reason,
@@ -237,8 +237,8 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 BARREN build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the files;
-    # do NOT switch to the GitHub mirror it links to (403, proxy-blocked).
+    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
+    # current builds and the pinned one.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
@@ -271,8 +271,8 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 FULL build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the files;
-    # do NOT switch to the GitHub mirror it links to (403, proxy-blocked).
+    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
+    # current builds and the pinned one.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
@@ -638,12 +638,17 @@ to `linux-x64v3` in May 2026; a pinned arch string fails silently exactly
 like a pinned version (this is what broke the snippet on 3 Jun 2026). If
 resolution returns nothing, inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; the GitHub
-release mirror it links to is 403-blocked by the egress proxy. Never
-reintroduce a hardcoded version number or arch token as a "fix."
+selection logic before reporting failure. Download from fon.hum; it hosts
+the current builds and the pinned one, not every older build (6.4.39, the
+floor, is gone; checked 22 October 2026). For an older build, such as one in
+`PRAAT_VERSION_FLOOR.txt`, use the Praat releases on GitHub
+(`https://github.com/praat/praat/releases`); its filename may carry an older
+arch token (`linux-intel64`). Some sandboxes block GitHub; if
+the download is refused, say so and name the build left untested. Never reintroduce a hardcoded version number or
+arch token as a "fix."
 
 **Pinned exception — resolve the VERSION to 6.6.30, not newest.** Set
-17 August 2026. Review when Praat 7's trust behaviour changes, or at the
+17 August 2026. Review when Praat 7's trust behavior changes, or at the
 next 7.x point release, whichever comes first. This is the only sanctioned
 pin. The arch token stays resolved by intent; the paragraph above governs
 it unchanged.
