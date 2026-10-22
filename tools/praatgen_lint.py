@@ -17,10 +17,16 @@ TOOL_PRAATGEN_LINT.txt, carries one). With neither, the pkb folder beside the
 folder that holds this file is used. PLAN.md holds the command plan: a
 markdown table whose header row has the columns Command and Source.
 
+A file that lives inside a plugin declares the plugin's procedure prefix in
+its plan, as a line "Plugin register: emlRt" (several, comma-separated, are
+allowed). Its library copies then carry that register in place of emlPG, it
+may include a sibling file by bare name, and only names that are EML library
+procedures count as unrenamed library copies.
+
 Each finding is BLOCKING or NOTE, with its script line. Resolve every
 BLOCKING finding before the script ships; a NOTE names what to check. The
 first output line is a summary; each check follows, with its findings or
-"none"; the last line is a one-line tally per severity.
+"no findings"; the last line is a one-line tally per severity.
 
 Checks:
   Command references   Every command call against the COMMANDS_*.txt files
@@ -34,17 +40,21 @@ Checks:
                        form ... endform have a quoted default (Rule 18).
   Non-ASCII text       Non-ASCII in a string on a line that writes a file
                        blocks; elsewhere it is a note, except inside a
-                       library copy that matches its source.
-  Plugin includes      include only from a relative folder named *_lib.
-  Library prefix       eml library procedures are copied as emlPG<Name>, and
-                       reads of their variables use emlPG<Name>.variable.
+                       library copy that matches its source. Writing
+                       info$ () to a file is a note: that text comes from
+                       procedures this check does not follow.
+  Plugin includes      include only from a relative folder named *_lib, or
+                       a sibling file by bare name inside a plugin.
+  Library prefix       eml library procedures are copied as emlPG<Name> (or
+                       the plugin register), and reads of their variables
+                       use the same name.
   Procedure calls      Every @name call has a procedure definition, and every
                        emlPG<Name>.variable read names a procedure the script
                        defines.
-  Library copies       Every emlPG procedure, in the script or an included
-                       *_lib file, matches its EML library source line for
-                       line, apart from the emlPG prefix on procedure names
-                       and on reads of their variables.
+  Library copies       Every emlPG (or plugin-register) copy, in the script
+                       or an included file, matches its EML library source
+                       line for line, apart from the prefix on procedure
+                       names and on reads of their variables.
   Reserved names       No assignment, loop variable or procedure parameter
                        named e, pi or undefined.
   Old syntax           No do ( / do$ ( / call / select / plus / minus / echo /
@@ -676,9 +686,9 @@ def where(e):
 def settle(arity, cur, cat, free):
     """Outcome for a call against the listings that apply to it: cur and
     cat for the selection's type, free for the type-free curated files."""
-    hit = next((e for e in cur if e[1] == arity), None)
-    if hit:
-        return 'VERIFIED', where(hit)
+    hits = [e for e in cur if e[1] == arity]
+    if hits:
+        return 'VERIFIED', ', '.join(where(e) for e in hits)
     for entries in (cur, None, free):
         if entries is None:
             hit = next((e for e in cat if e[1] == arity), None)
@@ -803,6 +813,27 @@ def read_plan(path):
             continue
         i += 1
     return rows
+
+
+def plugin_registers(plan_path):
+    """Prefixes from the plan's 'Plugin register:' line, longest first. A plan
+    with this line describes a file that lives inside a plugin."""
+    if plan_path is None:
+        return []
+    with open(plan_path, encoding='utf-8', errors='replace') as f:
+        m = re.search(r'^[\s*_>#-]*Plugin register:[\s*_]*(.+)$', f.read(), re.M | re.I)
+    if not m:
+        return []
+    regs = [r for r in re.findall(r'[A-Za-z_]\w*', m.group(1)) if r != LIB_PREFIX]
+    return sorted(set(regs), key=len, reverse=True)
+
+
+def copy_prefix(name, registers):
+    """The prefix a library copy carries: emlPG, or a declared plugin register."""
+    for p in [LIB_PREFIX] + list(registers):
+        if name.startswith(p) and len(name) > len(p):
+            return p
+    return None
 
 
 def check_checkpoint_files(script_path, plan_path):
@@ -964,6 +995,13 @@ def check_non_ascii(lines, skip=()):
     for ln in lines:
         _t, body = statement(ln.text)
         level = 'BLOCKING' if writes_file(body) else 'NOTE'
+        if level == 'BLOCKING' and re.search(r'\binfo\$\s*\(', ln.code):
+            findings.append(('NOTE', ln.n,
+                             'writes info$ () to a file -- the written text includes Info '
+                             'window output from every procedure this script calls, which '
+                             'this check does not follow. One non-ASCII character anywhere '
+                             'in that output makes Praat write the whole file UTF-16 BE '
+                             '(Rule 24C)'))
         if level == 'NOTE' and any(a <= ln.n <= b for a, b in skip):
             continue
         for start, lit in ln.strings:
@@ -983,13 +1021,19 @@ def include_target(ln):
     return m.group(1).strip() if m else None
 
 
-def check_includes(lines):
+def check_includes(lines, registers=()):
+    """A delivered script includes only from a relative *_lib folder. A file
+    inside a plugin (the plan declares a plugin register) may also include a
+    sibling file by bare name."""
     findings = []
     for ln in lines:
         path = include_target(ln)
         if path is None:
             continue
         p = path.replace('\\', '/')
+        if registers and '/' not in p and not p.startswith(('~', "'")) \
+                and not re.match(r'^[A-Za-z]:', p):
+            continue
         absolute = p.startswith(('/', '~')) or re.match(r'^[A-Za-z]:', p)
         parent = p.rsplit('/', 1)[0] if '/' in p else ''
         if absolute or not parent.split('/')[-1].endswith('_lib'):
@@ -1012,21 +1056,31 @@ def calls(ln):
             re.finditer(r'@([A-Za-z_][\w.]*?)(?=[\s:(]|$)', ln.code)]
 
 
-def check_prefix(lines):
+def check_prefix(lines, registers=(), procs=None):
+    """An eml name that is not a library copy. Inside a plugin (a plugin
+    register is declared), only names that are library procedures count:
+    the plugin's own procedures use its register."""
+    def flagged(name):
+        if name.startswith(LIB_PREFIX) and name != LIB_PREFIX:
+            return False
+        if registers and procs is not None:
+            return name in procs
+        return True
+    as_ = ' or '.join(f'{p}<Name>' for p in [LIB_PREFIX] + list(registers))
     findings = []
     for ln in lines:
         for name, off in calls(ln):
-            if re.match(r'eml[A-Z]', name) and not name.startswith(LIB_PREFIX):
+            if re.match(r'eml[A-Z]', name) and flagged(name):
                 findings.append(('BLOCKING', ln.line_at(off),
-                                 f'@{name} -- library procedures are copied as {LIB_PREFIX}<Name>'))
+                                 f'@{name} -- library procedures are copied as {as_}'))
     for name, n in procedures(lines).items():
-        if re.match(r'eml[A-Z]', name) and not name.startswith(LIB_PREFIX):
+        if re.match(r'eml[A-Z]', name) and flagged(name):
             findings.append(('BLOCKING', n,
-                             f'procedure {name} -- library procedures are copied as {LIB_PREFIX}<Name>'))
+                             f'procedure {name} -- library procedures are copied as {as_}'))
     for ln in lines:
         for m in LIB_QUALIFIED.finditer(ln.code):
             name = m.group(1)
-            if re.match(r'eml(?:[A-Z]|_[a-z])', name) and not name.startswith(LIB_PREFIX):
+            if re.match(r'eml(?:[A-Z]|_[a-z])', name) and flagged(name):
                 var = re.match(r'\.([\w$#]+)', ln.code[m.end():]).group(1)
                 findings.append(('BLOCKING', ln.line_at(m.start()),
                                  f'{name}.{var} reads a library procedure by its unprefixed '
@@ -1084,9 +1138,13 @@ def to_pg(text, names):
                              if m.group(1) in names else m.group(0), text)
 
 
-def from_pg(text):
-    """Undo to_pg. The library has no emlPG names, so this is its exact inverse."""
-    return PG_NAME.sub('eml', text)
+def from_pg(text, registers=()):
+    """Undo to_pg. The library has no emlPG names, so this is its exact inverse.
+    A declared plugin register is undone the same way."""
+    text = PG_NAME.sub('eml', text)
+    for r in registers:
+        text = re.sub(r'(?<!\w)' + re.escape(r) + r'(?=\w)', 'eml', text)
+    return text
 
 
 def reads_of(body, procs, own):
@@ -1138,9 +1196,10 @@ def extract(names, procs):
     return '\n'.join(out) + '\n', unknown
 
 
-def script_copies(path, seen=None):
-    """(file, line number, name, body) for every emlPG procedure in the script
-    and in the *_lib files it includes that exist on disk."""
+def script_copies(path, seen=None, registers=()):
+    """(file, line number, name, body) for every library copy (emlPG, or a
+    declared plugin register) in the script and in the files it includes
+    that exist on disk."""
     seen = set() if seen is None else seen
     path = os.path.normpath(path)
     if path in seen or not os.path.isfile(path):
@@ -1151,7 +1210,7 @@ def script_copies(path, seen=None):
     out = []
     for i, s in enumerate(raw):
         m = PROC_DEF.match(s.strip())
-        if m and m.group(1).startswith(LIB_PREFIX):
+        if m and copy_prefix(m.group(1), registers):
             j = i
             while j < len(raw) and not raw[j].strip().startswith('endproc'):
                 j += 1
@@ -1159,26 +1218,30 @@ def script_copies(path, seen=None):
     for ln in read_lines(path):
         target = include_target(ln)
         if target:
-            out += script_copies(os.path.join(os.path.dirname(path), target), seen)
+            out += script_copies(os.path.join(os.path.dirname(path), target), seen,
+                                 registers)
     return out
 
 
-def check_library_copies(script_path, procs):
-    """Every emlPG procedure matches its library source, apart from the prefix.
+def check_library_copies(script_path, procs, registers=()):
+    """Every library copy matches its library source, apart from the prefix.
     Returns (findings, verified names)."""
     findings, verified = [], []
     top = os.path.normpath(script_path)
-    for path, n, name, body in script_copies(script_path):
+    for path, n, name, body in script_copies(script_path, registers=registers):
         where_ = '' if path == top else f'{os.path.basename(path)} '
-        orig = 'eml' + name[len(LIB_PREFIX):]
+        prefix = copy_prefix(name, registers)
+        orig = 'eml' + name[len(prefix):]
         if orig not in procs:
+            if prefix != LIB_PREFIX:
+                continue  # the plugin's own procedure, not a copy
             findings.append(('BLOCKING', 0 if where_ else n,
                              f'{where_}{"line " + str(n) + ": " if where_ else ""}'
                              f'procedure {name}: the EML library has no {orig}; '
                              f'the {LIB_PREFIX} prefix is only for library copies'))
             continue
         lib = procs[orig][2].split('\n')
-        got = from_pg('\n'.join(body)).split('\n')
+        got = from_pg('\n'.join(body), registers).split('\n')
         if got == lib:
             verified.append(name)
             continue
@@ -1210,7 +1273,7 @@ def lib_procedures(lines, script_dir, seen=None):
     return out
 
 
-def check_calls(lines, script_dir):
+def check_calls(lines, script_dir, registers=()):
     defined = set(procedures(lines)) | set(lib_procedures(lines, script_dir))
     findings = []
     for ln in lines:
@@ -1219,7 +1282,7 @@ def check_calls(lines, script_dir):
                 findings.append(('BLOCKING', ln.line_at(off),
                                  f'@{name} has no procedure definition'))
         for m in LIB_QUALIFIED.finditer(ln.code):
-            if m.group(1).startswith(LIB_PREFIX) and m.group(1) not in defined:
+            if copy_prefix(m.group(1), registers) and m.group(1) not in defined:
                 findings.append(('BLOCKING', ln.line_at(m.start()),
                                  f'{m.group(1)}. reads the variables of a procedure '
                                  f'this script does not define'))
@@ -1533,10 +1596,11 @@ def main():
     cmd_findings, verified = check_commands(rows, curated, catalogue)
     fn_findings, fn_verified = check_functions(lines, functions)
     tok_findings, tok_verified = check_read_tokens(plan, token_hashes)
-    lib_findings, lib_verified = check_library_copies(script, procs)
+    registers = plugin_registers(plan)
+    lib_findings, lib_verified = check_library_copies(script, procs, registers)
     top_script = os.path.normpath(script)
     lib_ranges = [(n, n + len(body) - 1)
-                  for path, n, name, body in script_copies(script)
+                  for path, n, name, body in script_copies(script, registers=registers)
                   if path == top_script and name in lib_verified]
     task_findings, task_summary = check_task_coverage(plan)
     checks = [
@@ -1546,9 +1610,10 @@ def main():
         ('Checkpoint files', check_checkpoint_files(script, plan)),
         ('Form numeric defaults', check_form_defaults(lines)),
         ('Non-ASCII text', check_non_ascii(lines, lib_ranges)),
-        ('Plugin includes', check_includes(lines)),
-        ('Library procedure prefix', check_prefix(lines)),
-        ('Procedure calls resolve', check_calls(lines, os.path.dirname(os.path.abspath(script)))),
+        ('Plugin includes', check_includes(lines, registers)),
+        ('Library procedure prefix', check_prefix(lines, registers, procs)),
+        ('Procedure calls resolve', check_calls(lines, os.path.dirname(os.path.abspath(script)),
+                                                registers)),
         ('Library copies', lib_findings),
         ('Reserved names', check_reserved(lines)),
         ('Old syntax', check_old_syntax(lines)),
@@ -1565,7 +1630,7 @@ def main():
           f'{len(rows)} command calls ({len(verified)} verified)')
     for title, fs in checks:
         if not fs and not (title == 'Command references' and verified):
-            print(f'{title}: none')
+            print(f'{title}: no findings')
             continue
         nb = sum(1 for f in fs if f[0] == 'BLOCKING')
         print(f'{title}: {nb} BLOCKING, {len(fs) - nb} NOTE')
