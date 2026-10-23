@@ -474,6 +474,8 @@ def infer_type(name, argtext, selection_type, types):
     for verb in ('To ', 'Extract ', 'Create ', 'Down to ', 'Up to '):
         if name.startswith(verb):
             rest = name[len(verb):]
+            if verb == 'Create ':
+                rest = re.sub(r'^simple ', '', rest)  # Create simple Matrix
             base = re.sub(r'\s*\(.*\)\s*$', '', rest).strip()
             first = base.split(' ')[0]
             for cand in (base, first):
