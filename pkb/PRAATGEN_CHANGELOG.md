@@ -7,6 +7,18 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### PKB update — 23 October 2026 (Master Prompt 17.1.3, unchanged)
+
+**Matrix formulas.** `COMMANDS_Matrix.txt` adds `Formula:`, `Create simple
+Matrix`, `Create Matrix`, cell reads and writes, row and column extraction,
+and the statistics queries, each run in Praat 6.6.30. Its notes cover what a
+script needs: the formula rewrites cells in place, so a formula that reads
+neighbors reads a copy; a cell past the edge reads as 0; `Formula (part)`
+doesn't exist for a Matrix; and `Get maximum` and `Get minimum` skip undefined
+cells and return the largest finite numbers when every cell is undefined.
+The lint now knows that `Create simple <Type>` creates that type, so a
+`Formula:` after `Create simple Matrix` checks against the Matrix entry.
+
 ### Release 2.2.2 — 22 October 2026 (ships Master Prompt 17.1.3)
 
 Subagents get the files their task needs in their prompt, and the review
