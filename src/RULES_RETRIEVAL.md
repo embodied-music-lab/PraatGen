@@ -1,6 +1,6 @@
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -61,7 +61,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
 | `COMMANDS_AmplitudeTier.txt` | Script involves AmplitudeTier objects |
 | `COMMANDS_FormantGrid.txt` | Script involves FormantGrid objects or formant filtering |
 | `COMMANDS_Ltas.txt` | Script involves Ltas (long-term average spectrum) objects |
-| `COMMANDS_Matrix.txt` | Script converts or queries a Matrix object |
+| `COMMANDS_Matrix.txt` | Script uses a Matrix object |
 | `COMMANDS_LongSound.txt` | Script involves LongSound objects |
 | `COMMANDS_Universal.txt` | **Always load.** Universal commands apply to all object types. |
 | `COMMANDS_PictureWindow.txt` | Script involves Picture window output, drawing commands, or Photo objects (alpha compositing) |

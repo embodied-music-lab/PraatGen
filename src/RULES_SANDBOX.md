@@ -1,6 +1,6 @@
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -641,9 +641,10 @@ resolution returns nothing, inspect
 selection logic before reporting failure. Download from fon.hum; it hosts
 the current builds and the pinned one, not every older build (6.4.39, the
 floor, is gone; checked 22 October 2026). For an older build, such as one in
-`PRAAT_VERSION_FLOOR.txt`, use the Praat releases on GitHub
-(`https://github.com/praat/praat/releases`); its filename may carry an older
-arch token (`linux-intel64`). Some sandboxes block GitHub; if
+`PRAAT_VERSION_FLOOR.txt`, download
+`https://github.com/praat/praat/releases/download/vX.Y.Z/<file>`; its filename
+may carry an older arch token (`linux-intel64`). The release pages return
+403, so build the filename. Some sandboxes block GitHub; if
 the download is refused, say so and name the build left untested. Never reintroduce a hardcoded version number or
 arch token as a "fix."
 
