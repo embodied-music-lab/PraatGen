@@ -59,6 +59,7 @@
 # the returned values are RAW POWER, not dB. You must convert
 # manually or use Get peak: which returns dB directly.
 
+## Object type: PowerCepstrum
   # Query (session-verified)
   # ⚠️ THESE QUERIES RUN ON A PowerCepstrum, NOT A PowerCepstrogram
   #   (sandbox-verified, Praat 6.6.30, 29 Jul 2026). A Cepstrogram is a
@@ -97,6 +98,7 @@
   # NOTE: Parameters 3-4 are dB units. Use 0, 0 for auto-scale.
   # Provenance: Paste Commands 25 Feb 2026
 
+## Object type: PowerCepstrogram
   # Convert
   To Matrix
   # Returns: Matrix

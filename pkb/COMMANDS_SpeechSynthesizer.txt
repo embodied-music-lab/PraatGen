@@ -101,8 +101,10 @@
   Play text: text$
 
   # Other
-  Speech output settings
-  # Opens settings dialog (GUI only)
+  Speech output settings: sampling frequency, gap between words, pitch multiplier, pitch range multiplier, words per minute, output phoneme codes are$
+  # Verified: Speech output settings: 44100, 0.01, 1, 1, 175, "IPA"
+  # Output phoneme codes are: "Kirshenbaum_espeak" or "IPA".
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
   View & Edit
   SpeechSynthesizer help
@@ -111,10 +113,12 @@
 
 # Cross-type: SpeechSynthesizer & TextGrid (1 command)
 
+## Object type: SpeechSynthesizer & TextGrid
   To Sound: tier_number, interval_number, create_TextGrid_with_annotations$
   # Returns: Sound; with the TextGrid option on, a TextGrid first and then the Sound, both selected afterward; capture them with selected# (COMMANDS_Universal.txt)
   # Behavior: synthesizes the text in the specified interval
-  # Provenance: Catalogue, 5 April 2026.
+  # Verified: To Sound: 1, 1, "no"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
 ---
 
@@ -123,6 +127,7 @@
 # CRITICAL: These are the forced alignment commands. All three objects
 # must be selected simultaneously.
 
+## Object type: SpeechSynthesizer & Sound & TextGrid
   To TextGrid (align): tier_number, from_interval, to_interval, silence_threshold, minimum_silent_interval, minimum_sounding_interval
   # Returns: TextGrid
   # Verified signature from catalogue:
@@ -132,20 +137,26 @@
   #   silence threshold (dB) = -35.0
   #   minimum silent interval duration (s) = 0.1
   #   minimum sounding interval duration (s) = 0.1
+  # Verified: To TextGrid (align): 1, 1, 1, -35, 0.1, 0.1
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
   To TextGrid (align,trim): tier_number, from_interval, to_interval, silence_threshold, minimum_silent_interval, minimum_sounding_interval, silence_trim_duration
   # Returns: TextGrid
   # Same as above plus:
   #   silence trim duration (s) = 0.08
+  # Verified: To TextGrid (align,trim): 1, 1, 1, -35, 0.1, 0.1, 0.08
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
 ---
 
 # Standalone alignment command (alternative to the cross-type above):
 #
-# Align interval: tier_number, interval_number, language$, include_words$, include_phonemes$
+## Object type: Sound & TextGrid
+  Align interval: tier number, interval number, language$, include words?, include phonemes?
+  # Verified: Align interval: 1, 1, "English (America)", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: SpeechSynthesizer
 #
-# Verified: Align interval: 1, 1, "English (America)", "yes", "yes"
-# Provenance: Empirical testing, 25 March 2026.
 #
 # Requires: TextGrid AND Sound both selected
 # Does NOT require a SpeechSynthesizer to be selected — creates one internally
@@ -181,6 +192,7 @@
   # 12 parameters. Returns: KlattGrid ID.
   # Provenance: Showcase script, 21 Mar 2026
 
+## Object type: KlattGrid
   # On KlattGrid object:
   To Sound
   # Verified: To Sound

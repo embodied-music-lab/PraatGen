@@ -7,6 +7,42 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.4 — 17 November 2026 (Master Prompt 17.1.4, unchanged)
+
+Corrections to the command reference, each run in Praat 6.6.30 and 6.4.39 and
+compared with 7.0.03. Upgrade notes are in `RELEASE_NOTES_2.2.4.md`.
+
+**Argument lists.** Twelve entries had the wrong number of arguments or none
+listed: `Collapse rows`, `Rows to columns`, `Sort rows` and `To logistic
+regression` (Table), `Read TextGrid from Xwaves`, `Speech output settings`,
+`Add points`, `Extract channels`, Pitch's `Formula`, `Shift times to`, and the
+TextGrid and PitchTier `Draw` commands. FormantModeler's `Draw variances of
+shifted tracks` now has its arguments in Praat's order.
+
+**Object types.** Sections that hold another object type's commands now start
+with a `## Object type:` line, so the lint checks them against the right type.
+This covers FormantPath and FormantModeler, TableOfReal, PowerCepstrum, and
+the commands that need two or three objects selected together, such as Pitch
+and TextGrid, PointProcess and Sound, Sound and TextGrid, and the Manipulation
+replacements. The separated-file saves moved from the Universal file to Table,
+and `Save as raw text file` to Strings.
+
+**Editor commands.** Names follow Praat's current menus: `Add on tier 1` to
+`Add on tier 8`, `Add interval on tier 1` and `2`, `Paste before selection`
+and its pair, `Extend-select left` and `right`, `Remove`, `Remove entire tier`,
+`Extract entire selected tier`, `Move to nearest zero crossing`, and the spell
+check commands. `Widen or shrink selection`, `Extract selected sound for
+overlap`, `Show analyses`, `Log settings` and `Transcription settings` have
+their full argument lists. Jitter and shimmer queries run in the PointProcess
+editor.
+
+**Placeholder lines.** Lines that ended in `?` or started with `&` are now
+real entries or comments that say what the command is.
+
+**Lint.** Function names come only from the entry lines of
+`APPENDIX_B_FUNCTIONS.txt`, so words in its notes no longer count as functions.
+A `## Object type:` line can name a co-selection, such as `Pitch & TextGrid`.
+
 ### Release 2.2.3 — 1 November 2026 (ships Master Prompt 17.1.4)
 
 The Matrix reference covers formulas, and sessions load it for any script

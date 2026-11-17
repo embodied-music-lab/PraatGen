@@ -27,7 +27,9 @@
   # Extract / Combine
   Extract part: from time, to time, preserve times?
   # Returns: Sound
-  Concatenate?
+  # Concatenate? is a hint, not an action: with LongSound objects selected it says to
+  # select them and choose Save as WAV file, which writes them one after the other.
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   # Other
   Open long sound file: file name$
   # Returns: LongSound

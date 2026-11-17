@@ -97,7 +97,10 @@
   Get end time
   Get total duration
   Shift times by: shift
-  Shift times to: time
+  Shift times to: shift$, time
+  # Verified: Shift times to: "start time", 5
+  # The shift option is "start time", "centre time" or "end time".
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Scale times by: factor
   Scale times to: new start time, new end time
   # TimeTier queries (PitchTier, IntensityTier, DurationTier, AmplitudeTier)
@@ -261,11 +264,6 @@
   Save as headerless spreadsheet file: file path$
   Save as Xwaves label file
   # Path argument not verified.
-  Save as raw text file
-  # Path argument not verified.
-  Save as tab-separated file: file path$
-  Save as comma-separated file: file path$
-  Save as semicolon-separated file: file path$
   Save as text file without Sound
   # Path argument not verified.
   Save as binary file without Sound

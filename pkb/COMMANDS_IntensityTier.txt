@@ -47,7 +47,7 @@
   # Returns: IntensityTier
   # Other
   View & Edit
-  View & Edit with Sound?
+  # View & Edit with Sound: select the IntensityTier and a Sound together and choose View & Edit. It opens an editor window, which batch Praat refuses ("Cannot edit a IntensityTier from batch"), so no call is verified.
 
 ---
 

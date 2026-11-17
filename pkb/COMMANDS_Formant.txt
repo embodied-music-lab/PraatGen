@@ -86,6 +86,7 @@
 # These commands are listed here for reference but are executed on Sound
 # objects. They also appear in COMMANDS_Sound.txt.
 #
+## Object type: Sound
 # To FormantPath (burg): time step, maximum number of formants, middle
 #     formant ceiling, window length, pre emphasis frequency, ceiling
 #     step size, number of steps up down
@@ -119,6 +120,7 @@
 # ============================================================================
 # FORMANTPATH COMMANDS (on FormantPath objects)
 # ============================================================================
+## Object type: FormantPath
 # Object type: FormantPath
 # Created by: Sound: To FormantPath (burg):
 # Provenance: Empirical testing + diagnostic scripts, 21 Mar 2026
@@ -240,6 +242,7 @@
 # ============================================================================
 # FORMANT COMMANDS (on Formant objects)
 # ============================================================================
+## Object type: Formant
 # Object type: Formant
 # Created by: Sound: To Formant (burg):, FormantPath: Extract Formant,
 #             or Sound: To Formant (keep all/sl/robust):
@@ -347,6 +350,7 @@
 # ============================================================================
 # FORMANTMODELER COMMANDS (on FormantModeler objects)
 # ============================================================================
+## Object type: FormantModeler
 # Object type: FormantModeler
 # Created by: Formant: To FormantModeler:
 # Provenance: Session-verified 21 Mar 2026
@@ -455,11 +459,11 @@
   Draw cumulative chisq scores: from time, to time, left chisq, right chisq, garnish?
   # Verified: Draw cumulative chisq scores: 0, 0.5, 0, 0, "yes"
 
-  Draw variances of shifted tracks: from time, to time, left variance, right variance, left formant, right formant, shift tracks$, garnish?
-  # Verified: Draw variances of shifted tracks: 0, 0.5, 0, 0, 1, 3, "No", "yes"
+  Draw variances of shifted tracks: from time, to time, left variance range, right variance range, shift tracks$, left formant range, right formant range, garnish?
+  # Verified: Draw variances of shifted tracks: 0, 0.5, 0, 0, "No", 1, 3, "yes"
   # NOTE: 8 parameters. PRAAT_DEFINITIVE_CATALOGUE.txt shows only 7 —
   # missing OPTIONMENU "Shift tracks" with options "No", "Up", "Down".
-  # Provenance: Ian Paste Commands, 21 Mar 2026.
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
 # ============================================================================
 # BEHAVIORAL NOTES: Draw tracks vs. Speckle

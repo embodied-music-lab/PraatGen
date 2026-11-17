@@ -45,7 +45,7 @@
   # Returns: TableOfReal
   # Other
   View & Edit
-  View & Edit with Sound?
+  # View & Edit with Sound: select the AmplitudeTier and a Sound together and choose View & Edit. It opens an editor window, which batch Praat refuses ("Cannot edit a AmplitudeTier from batch"), so no call is verified.
 
 ---
 

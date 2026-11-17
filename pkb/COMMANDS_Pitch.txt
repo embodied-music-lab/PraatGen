@@ -80,7 +80,9 @@
   # Provenance: Successful execution, 22 April 2026.
 
   # Modify
-  Formula
+  Formula: formula$
+  # Verified: Formula: "self*2"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
   # Convert / Analyze
   To Sound (pulses)

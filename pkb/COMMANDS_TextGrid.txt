@@ -25,8 +25,11 @@
   # Create / Read
   Create TextGrid: start time, end time, all tier names$, which of these are point tiers$
   # Returns: TextGrid
-  Read TextGrid from Xwaves: sound file path$, tiers are point tiers?, override number of tiers, file name$
+  Read TextGrid from Xwaves: sound file path$, tiers are point tiers?, override number of tiers
   # Returns: TextGrid
+  # Reads an Xwaves label file; sound file path$ is the path of the label file.
+  # Example: Read TextGrid from Xwaves: "/path/to/file.lab", "no", 0
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
   # Query (API)
   List: include line number?, time decimals, include tier names?, include empty intervals?
@@ -93,12 +96,14 @@
   # Extract / Combine
   Append
   # Returns: TextGrid
+## Object type: Sound & TextGrid
   Extract all intervals: tier number, preserve times?
   # Returns: one Sound per interval (TextGrid and Sound selected); all selected afterward; capture them with selected# (COMMANDS_Universal.txt), not x = ...
   Extract non-empty intervals: tier number, preserve times?
   # Returns: one Sound per non-empty interval (TextGrid and Sound selected); all selected afterward; capture them with selected# (COMMANDS_Universal.txt), not x = ...
   Extract intervals where: tier number, preserve times?, extract every interval whose label$, the text$
   # Returns: one Sound per matching interval (TextGrid and Sound selected); all selected afterward; capture them with selected# (COMMANDS_Universal.txt), not x = ...
+## Object type: TextGrid
   Extract one tier: tier number
   # Returns: TextGrid
   Extract part: from time, to time, preserve times?
@@ -119,24 +124,65 @@
   #   lone TextGrid gives "Command requires only 5 arguments, not the 9 given".
   #   The same applies to `Extract all intervals`, `Extract non-empty
   #   intervals` and `Extract intervals where`, which need a Sound co-selected.
+## Object type: Pitch & TextGrid
   Draw: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  # Verified: Draw: 1, 0, 1, 0, 500, 10, "yes", "Centre", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw logarithmic: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  # Verified: Draw logarithmic: 1, 0, 1, 50, 500, 10, "yes", "Centre", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw semitones: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  # Verified: Draw semitones: 1, 0, 1, -10, 20, 10, "yes", "Centre", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw mel: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  # Verified: Draw mel: 1, 0, 1, 50, 500, 10, "yes", "Centre", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw erb: tier number, from time, to time, from frequency, to frequency, font size, use text styles?, text alignment$, garnish?
+  # Verified: Draw erb: 1, 0, 1, 50, 500, 10, "yes", "Centre", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Speckle: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Speckle: 1, 0, 1, 0, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Speckle logarithmic: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Speckle logarithmic: 1, 0, 1, 50, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Speckle semitones: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Speckle semitones: 1, 0, 1, -10, 20, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Speckle mel: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Speckle mel: 1, 0, 1, 50, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Speckle erb: tier number, from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Speckle erb: 1, 0, 1, 50, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw separately: from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Draw separately: 0, 1, 0, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw separately (logarithmic): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Draw separately (logarithmic): 0, 1, 50, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw separately (semitones): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Draw separately (semitones): 0, 1, -10, 20, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw separately (mel): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Draw separately (mel): 0, 1, 50, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Draw separately (erb): from time, to time, from frequency, to frequency, show boundaries?, use text styles?, garnish?
+  # Verified: Draw separately (erb): 0, 1, 50, 500, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: TextGrid
   Draw: from time, to time, show boundaries?, use text styles?, garnish?
-  Draw with Sound?
-  Draw with Pitch?
+  # Verified: Draw: 0, 1, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: Sound & TextGrid
+  Draw: from time, to time, show boundaries?, use text styles?, garnish?
+  # Verified: Draw: 0, 1, "yes", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  Align interval: tier number, interval number, language$, include words?, include phonemes?
+  # Verified: Align interval: 1, 1, "English (America)", "yes", "yes"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: TextGrid
+  # Draw with Pitch: no separate command exists. The Pitch & TextGrid Draw entries above draw a TextGrid with a Pitch; Sound, Pitch and TextGrid selected together have no Draw command.
 
   # Other
   View & Edit
@@ -144,11 +190,10 @@
   # Verified: Scale times: 0, 2
   # CORRECTION (29 Jul 2026): previously documented with no arguments. The bare
   # form fails with "Command Scale times not available for current selection".
-  Align interval: tier number, interval number, language$, include words?, include phonemes?
   Clone time domain
   Save as chronological text file: file name$
   View & Edit alone
-  View & Edit with Sound?
+  # View & Edit with Sound: select the TextGrid and a Sound together and choose View & Edit. It opens an editor window, which batch Praat refuses.
   Tabulate occurrences: search tiers#, list every label that$, the text$, case sensitive?
   # Returns: Table
   # Verified: Tabulate occurrences: {1}, "is equal to", "a", "no"

@@ -62,7 +62,11 @@
 
   # Other
   Save as raw text file: file name$
-  Equal?
+  # Verified: Save as raw text file: "/path/to/file.txt"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  # Equal? compares two Strings objects and reports "1 (equal)" or "0 (unequal)" in the Info window.
+  # It runs only with two Strings objects selected; with one selected it is not available.
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Randomize
   Sort
   Convert to backslash trigraphs

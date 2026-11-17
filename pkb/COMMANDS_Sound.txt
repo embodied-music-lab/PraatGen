@@ -114,8 +114,13 @@
   Set part to zero: from time, to time, cut$
 
   # Convert / Analyze
-  To Sound: longest period
-  # Returns: Sound
+  # To Sound: longest period
+  #   Not a command on any object type: Praat 6.6.30 and 6.4.39 have no To Sound
+  #   with a longest period argument. Plain To Sound takes no arguments on
+  #   Electroglottogram, Matrix and Spectrum. SpeechSynthesizer's To Sound is in
+  #   COMMANDS_SpeechSynthesizer.txt. KlattTable's takes 7 arguments:
+  #   To Sound: 16000, "Cascade", 5, 0.005, 0, "Impulsive", "Sound"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   To Sound (derivative): low-pass frequency, smoothing, new absolute peak
   # Returns: Sound
   # CORRECTED 30 Jul 2026 (sandbox, 6.6.30). The file previously read
@@ -258,8 +263,10 @@
   # Extract / Combine
   Extract one channel: channel
   # Returns: Sound
-  Extract channels
+  Extract channels: channel numbers#
   # Returns: Sound
+  # Verified: Extract channels: {1, 3}
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Extract part: from time, to time, window shape$, relative width, preserve times?
   # Returns: Sound
   Extract part for overlap: from time, to time, overlap

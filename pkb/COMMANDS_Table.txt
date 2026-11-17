@@ -111,8 +111,10 @@
   # Convert / Analyze
   To linear regression
   # Returns: LinearRegression
-  To logistic regression: dependent1$, dependent2$
+  To logistic regression: factors$#, dependent 1$, dependent 2$
   # Returns: LogisticRegression
+  # Verified: To logistic regression: {"h"}, "y", "x"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   To RealTier: column with times$, column with values$, start time, end time
   # Returns: RealTier
   Down to TableOfReal: column for row labels$
@@ -142,8 +144,14 @@
 
   # Other
   Save as tab-separated file: file name$
+  # Verified: Save as tab-separated file: "/path/to/file.Table"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Save as comma-separated file: file name$
+  # Verified: Save as comma-separated file: "/path/to/file.csv"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Save as semicolon-separated file: file name$
+  # Verified: Save as semicolon-separated file: "/path/to/file.csv"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   View & Edit
   Scatter plot: horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, marks column name$, font size, garnish?
   Scatter plot (mark): horizontal column name$, from horizontal, to horizontal, vertical column name$, from vertical, to vertical, mark size, garnish?, mark string$
@@ -204,7 +212,9 @@
   # Provenance: Paste Commands 2 Mar 2026. Hidden command. Reports to Info window.
   Report correlation (Pearson r): column1$, column2$, one tailed unconfidence
   Report correlation (Kendall tau): column1$, column2$, one tailed unconfidence
-  Sort rows
+  Sort rows: one or more column names for sorting$#
+  # Verified: Sort rows: {"g", "x"}
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   Randomize rows
   Reflect rows
   Formula: column$, formula$
@@ -222,76 +232,113 @@
   # Provenance: Used in @emlTukeyHSD, 4 March 2026. Renames unnamed column 1 in Tukey output table.
   Transpose
   # Returns: Table
-  Collapse rows
+  Collapse rows: columns with factors$#, columns to sum$#, columns to average$#, columns to medianize$#, columns to average logarithmically$#, columns to medianize logarithmically$#
   # Returns: Table
-  Rows to columns: column to transpose$
+  # Verified: Collapse rows: {"g"}, {"x"}, {"y"}, {"x"}, {"y"}, {"x"}
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  Rows to columns: columns with factors$#, column to transpose$, columns to expand$#
   # Returns: Table
+  # Verified: Rows to columns: {"g"}, "h", {"x"}
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
 ---
 
+## Object type: TableOfReal
 ## TableOfReal
 
   # TableOfReal is a distinct object type from Table. It has named rows
   # and named columns, and stores only numeric data. Created by various
   # analysis commands (e.g., PCA, Discriminant) or via Down to TableOfReal:
   # from a Table.
-  #
-  # Most commands below show Structure only — exact parameter syntax
-  # needs Paste Commands verification. Commands marked [Verified] have
-  # confirmed syntax.
 
   # Convert
-  To Table: rowColumnName$
+  To Table: label of first column$
   # Returns: Table
   # Verified: To Table: "Group"
   # Converts row labels to a named column. Essential bridge from
   # TableOfReal statistical output to Table for further processing.
   # NOTE: Missing from PRAAT_DEFINITIVE_CATALOGUE.txt — catalogue gap.
   # Provenance: User-verified, Convert menu, 26 Mar 2026
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
   # Statistical analysis (shown commands)
   # Provenance: Buttons menu screenshot, 26 Feb 2026
-  # [NEED PASTE for exact parameter syntax on all below]
   To Discriminant
   # Returns: Discriminant
+  # Verified: To Discriminant
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   To PCA
   # Returns: PCA
-  To SSCP...
+  # Verified: To PCA
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To SSCP: begin row, end row, begin column, end column
   # Returns: SSCP
-  To SSCP (row weights)...
+  # Verified: To SSCP: 1, 12, 1, 3
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To SSCP (row weights): begin row, end row, begin column, end column, weights column number
   # Returns: SSCP
+  # Verified: To SSCP (row weights): 1, 12, 1, 3, 4
+  # A weights column outside the selected block of columns is required.
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   To Covariance
   # Returns: Covariance
+  # Verified: To Covariance
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   To Correlation
   # Returns: Correlation
+  # Verified: To Correlation
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
   To Correlation (rank)
   # Returns: Correlation
-  To CCA...
+  # Verified: To Correlation (rank)
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To CCA: dimension of dependent variate
   # Returns: CCA
-  To TableOfReal (means by row labels)...
+  # Verified: To CCA: 1
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To TableOfReal (means by row labels): expand?
   # Returns: TableOfReal
-  To TableOfReal (medians by row labels)...
+  # Verified: To TableOfReal (means by row labels): "no"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To TableOfReal (medians by row labels): expand?
   # Returns: TableOfReal
-  To Configuration (pca)...
+  # Verified: To TableOfReal (medians by row labels): "no"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To Configuration (pca): number of dimensions
   # Returns: Configuration
-  To Configuration (lda)...
+  # Verified: To Configuration (pca): 2
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To Configuration (lda): number of dimensions
   # Returns: Configuration
+  # Verified: To Configuration (lda): 1
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
   # Hidden commands
-  # [NEED PASTE for exact parameter syntax on all below]
-  To GaussianMixture...
-  # Returns: GaussianMixture. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
-  To GaussianMixture (CEMM)...
+  # Hidden commands have no menu entry or manual page, so Paste Commands can't record them.
+  To GaussianMixture: number of components, tolerance of minimizer, maximum number of iterations, stability coefficient lambda, covariance matrices are$, criterion based on$
   # Returns: GaussianMixture
-  To GaussianMixture (row labels)...
-  # Returns: GaussianMixture. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
-  To TableOfReal (rank columns)...
-  # Returns: TableOfReal. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
+  # Verified: To GaussianMixture: 2, 1e-6, 100, 0, "Complete", "Likelihood"
+  # Criterion options include "Likelihood", "Message length" and "Bayes information".
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To GaussianMixture (CEMM): minimum number of components, maximum number of components, covariance matrices are$, maximum number of iterations, tolerance of minimizer, info
+  # Returns: GaussianMixture
+  # Verified: To GaussianMixture (CEMM): 1, 2, "Complete", 100, 1e-6, 0
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To GaussianMixture (row labels): covariance matrices are$
+  # Returns: GaussianMixture
+  # Verified: To GaussianMixture (row labels): "Complete"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To TableOfReal (rank columns): left column range, right column range
+  # Returns: TableOfReal
+  # Verified: To TableOfReal (rank columns): 1, 4
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
   # Cross-type (2 TableOfReal objects selected)
-  # [NEED PASTE for exact parameter syntax]
-  To TableOfReal (cross-correlations)...
+  # To TableOfReal (cross-correlations): correlations between$, center?, normalize?
   # Returns: TableOfReal
+  # It runs only with two TableOfReal objects selected; with one selected it is not
+  # available. With "Columns", "no", "no" it creates a TableOfReal named cc_by_cols.
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
 
 ---
 

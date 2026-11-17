@@ -23,6 +23,7 @@
 
 ---
 
+## Object type: Sound
   # Create (Sound command)
   Extract Electroglottogram: channel number, invert?
   # Returns: Electroglottogram
@@ -36,6 +37,7 @@
   #   the derivative peak test: BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md §3,
   #   Polarity.
 
+## Object type: Electroglottogram
   # Query
   # NONE. Every universal query is unavailable on this type — verified by
   #   execution: Get start time, Get end time, Get total duration, Get number

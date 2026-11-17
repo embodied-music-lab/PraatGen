@@ -348,6 +348,7 @@
  index_caseInsensitive (string$, part$) – look up a substring, or 0 if not found
  index_caseInsensitive (strings$#, s$) – look up whether and where s$ first occurs in strings$#
  index_regex (string$, regex$) – determine whether and where string$ first matches regex$
+ info$ ( ) – the text in the Info window (see the note at the top of this file)
  inner (a#, b#) – inner product (returns scalar)
  inner## (a##, b##) – inner product of matrices [F.cpp] [CATALOGUE GHOST — see top of file; use sum (a## * b##) or mul## (a##, b##)]
  invBinomialP (P, k, n) – inverse of binomialP
