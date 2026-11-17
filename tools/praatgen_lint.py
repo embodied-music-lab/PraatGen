@@ -318,7 +318,7 @@ def name_list(names):
 
 # ------------------------------------------------------ command references
 
-OBJECT_TYPE_HEADER = re.compile(r'^## Object type: ([A-Z]\w*)')
+OBJECT_TYPE_HEADER = re.compile(r'^## Object type: ([A-Z]\w*(?:\s*&\s*[A-Z]\w*)*)')
 
 
 def load_curated(pkb):
@@ -337,7 +337,7 @@ def load_curated(pkb):
             s = raw.strip()
             header = OBJECT_TYPE_HEADER.match(raw)
             if header:
-                otype = header.group(1)
+                otype = re.sub(r'\s*&\s*', ' & ', header.group(1))
                 continue
             if s.startswith('# Verified:'):
                 call = s[len('# Verified:'):].strip()
@@ -387,6 +387,7 @@ def load_token_hashes(pkb):
 
 FUNCTIONS_FILE = 'APPENDIX_B_FUNCTIONS.txt'
 FUNCTION_NAME = re.compile(r"(?<![\w.$#@'])([a-z][A-Za-z0-9_]*(?:\$#|\$|##|#)?)\s*\(")
+FUNCTION_ENTRY = re.compile(r"^ ([a-z][A-Za-z0-9_]*(?:\$#|\$|##|#)?)\s*\(")
 
 
 def load_functions(pkb):
@@ -397,7 +398,10 @@ def load_functions(pkb):
         return out
     with open(path, encoding='utf-8') as f:
         for n, raw in enumerate(f.read().split('\n'), 1):
-            for m in FUNCTION_NAME.finditer(raw):
+            # Entry lines only: a space, the name, then "(". Words followed
+            # by "(" in the notes are not function names.
+            m = FUNCTION_ENTRY.match(raw)
+            if m:
                 out.setdefault(m.group(1), n)
     return out
 
@@ -730,7 +734,8 @@ def check_commands(rows, curated, catalogue):
             verified.append(f'line {n}: {short(body)} -- {where(hit)} (any type)')
             continue
         want = set(sel_types)
-        cur = [e for e in cur_all if e[0] in want and e[0] not in TYPE_FREE]
+        cur = [e for e in cur_all if e[0] not in TYPE_FREE and (
+            e[0] in want or set(e[0].split(' & ')) == want)]
         cat = [e for e in cat_all if want and (
             e[0] in want or e[0] in TYPE_FREE or set(e[0].split(' & ')) == want)]
         if want and (cur or cat):
