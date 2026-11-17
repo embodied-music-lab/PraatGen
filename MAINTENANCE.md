@@ -112,9 +112,13 @@ zip's own bytes, because GitHub's web upload compresses the file differently
 from Python, and both copies hold the same text.
 
 The lint reads a `COMMANDS_<Type>.txt` file's entries as commands on `<Type>`.
-A line `## Object type: X` switches the entries after it, to the end of that
-file, to type X. `COMMANDS_Matrix.txt` uses it for the SVD commands. A section
-for another type without that line is read as the file's own type.
+A line `## Object type: X` switches the entries after it, up to the next such
+line or the end of the file, to type X. For commands that need several objects
+selected together, write the types joined by ` & `, as in
+`## Object type: Pitch & TextGrid`. When the file's own entries continue after
+another type's section, add `## Object type: <FileType>` to switch back. A
+section for another type without that line is read as the file's own type; a
+`# Object type:` comment doesn't count.
 
 A `# Returns:` line under an entry names the object type the command creates.
 These lines came from the Praat 6.6.30 source (each command's registration and
