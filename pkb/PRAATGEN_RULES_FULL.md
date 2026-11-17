@@ -1,6 +1,6 @@
 # PRAATGEN RULES, FULL TEXT (read every turn)
 
-This file is the whole PraatGen prompt: the Master Prompt core (17.1.3) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
+This file is the whole PraatGen prompt: the Master Prompt core (17.1.4) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
 
 Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULES_PLANNING.md, RULES_AUDIT.md, RULES_CODE.md, RULES_MODES.md, RULES_SANDBOX.md), that file is the section of the same name below, which you read in full this turn. Don't look for it as a separate file. Its read token is at the end of its section.
 
@@ -13,7 +13,7 @@ Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULE
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.3
+**Version:** 17.1.4
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -480,7 +480,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.3.** Keep this line to the version number. When you change
+**Current: 17.1.4.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -738,7 +738,7 @@ Incorrect or fabricated value indicates incomplete prompt processing.
 
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -799,7 +799,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
 | `COMMANDS_AmplitudeTier.txt` | Script involves AmplitudeTier objects |
 | `COMMANDS_FormantGrid.txt` | Script involves FormantGrid objects or formant filtering |
 | `COMMANDS_Ltas.txt` | Script involves Ltas (long-term average spectrum) objects |
-| `COMMANDS_Matrix.txt` | Script converts or queries a Matrix object |
+| `COMMANDS_Matrix.txt` | Script uses a Matrix object |
 | `COMMANDS_LongSound.txt` | Script involves LongSound objects |
 | `COMMANDS_Universal.txt` | **Always load.** Universal commands apply to all object types. |
 | `COMMANDS_PictureWindow.txt` | Script involves Picture window output, drawing commands, or Photo objects (alpha compositing) |
@@ -1081,7 +1081,7 @@ End of RULES_RETRIEVAL.md. Read token: cedar-906
 
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -1665,7 +1665,7 @@ End of RULES_PLANNING.md. Read token: larch-438
 
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -1909,7 +1909,7 @@ End of RULES_AUDIT.md. Read token: hawthorn-010
 
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -3448,7 +3448,7 @@ End of RULES_CODE.md. Read token: juniper-278
 
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -4033,7 +4033,7 @@ End of RULES_MODES.md. Read token: rowan-414
 
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.3. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -4674,9 +4674,10 @@ resolution returns nothing, inspect
 selection logic before reporting failure. Download from fon.hum; it hosts
 the current builds and the pinned one, not every older build (6.4.39, the
 floor, is gone; checked 22 October 2026). For an older build, such as one in
-`PRAAT_VERSION_FLOOR.txt`, use the Praat releases on GitHub
-(`https://github.com/praat/praat/releases`); its filename may carry an older
-arch token (`linux-intel64`). Some sandboxes block GitHub; if
+`PRAAT_VERSION_FLOOR.txt`, download
+`https://github.com/praat/praat/releases/download/vX.Y.Z/<file>`; its filename
+may carry an older arch token (`linux-intel64`). The release pages return
+403, so build the filename. Some sandboxes block GitHub; if
 the download is refused, say so and name the build left untested. Never reintroduce a hardcoded version number or
 arch token as a "fix."
 

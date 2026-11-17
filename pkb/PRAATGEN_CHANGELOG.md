@@ -7,6 +7,27 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.3 — 1 November 2026 (ships Master Prompt 17.1.4)
+
+The Matrix reference covers formulas, and sessions load it for any script
+that uses a Matrix. Two reference corrections. Upgrade notes are in
+`RELEASE_NOTES_2.2.3.md`.
+
+### 17.1.4 — 1 November 2026
+
+**Matrix trigger.** `RULES_RETRIEVAL.md` loads `COMMANDS_Matrix.txt` for any
+script that uses a Matrix. It had named only converting and querying, so a
+script that creates a Matrix or applies a formula to one could miss it.
+
+**Older Praat builds.** Rule 24C gives GitHub's release download path,
+`https://github.com/praat/praat/releases/download/vX.Y.Z/<file>`, and says to
+build the filename. It had pointed to the release pages, which return 403.
+
+**Unvoiced pitch frames.** `COMMANDS_Pitch.txt`: in the vector from `List
+values in all frames`, an unvoiced frame tests true for `= undefined`. The
+note had said it tests true for `<> undefined`, so a script that followed it
+kept the frames it meant to drop.
+
 ### PKB update — 23 October 2026 (Master Prompt 17.1.3, unchanged)
 
 **Matrix formulas.** `COMMANDS_Matrix.txt` adds `Formula:`, `Create simple

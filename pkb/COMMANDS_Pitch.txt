@@ -54,10 +54,11 @@
   # Assignable to a numeric vector:
   #   f0St# = List values in all frames: "semitones re 440 Hz"
   # Returns numeric vector of length nFrames. Unvoiced frames = undefined
-  # (displayed as "--undefined--" in Info window, but tests true for
-  # `<> undefined` in scripts). Accepts same unit strings as Get value
+  # (displayed as "--undefined--" in Info window; tests true for
+  # `= undefined` in scripts). Accepts same unit strings as Get value
   # in frame. Replaces per-frame query loops for bulk F0 extraction.
-  # Provenance: Paste Commands + vector assignment verified 25 Feb 2026
+  # Provenance: Paste Commands + vector assignment verified 25 Feb 2026;
+  #   unvoiced test verified 6.6.30, 31 Oct 2026
   Get mean: from time, to time, unit$
   # Verified: Get mean: 0, 0, "Hertz"
   Get minimum: from time, to time, unit$, interpolation$
