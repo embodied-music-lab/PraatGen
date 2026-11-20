@@ -9,7 +9,7 @@ PraatGen was originally trained on Opus 4.6 with Extended Thinking. All signs in
 
 # EML PraatGen
 
-**Generate Praat scripts through conversation.**
+**Generate powerful Praat scripts through conversation.**
 
 PraatGen is a Claude AI project that writes syntactically correct Praat scripts from plain-language descriptions. You describe what you want to accomplish — extract F0 contours, batch-process a folder of recordings, build a publication figure, or generate a complex plugin — and PraatGen generates a complete, runnable script with validated commands, proper object handling, and clinical-grade parameter defaults. It can help you ideate your studies, debug its own or your existing code, and collaborate on your research and analysis projects.
 
