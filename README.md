@@ -1,3 +1,8 @@
+<picture>
+<source media="(prefers-color-scheme: dark)" srcset="brand/praatgen-wordmark-reverse.svg">
+   <img alt="PraatGen" src="brand/praatgen-wordmark.svg" width="360">
+</picture>
+
 ⚠️ **If your project won't accept `TOOL_PRAATGEN_LINT.zip`, leave it out.** Accounts still on the older project uploader reject zip files as "not a supported file format." Don't unzip the linter or upload it as a text file. As text it's 1.4 MB of code the session can't run, and it competes with the reference files when the project searches them. Upload the other 65 files. PraatGen works without the linter and says "lint not run" before each delivery. Upload the zip once your account accepts it.
 
 **PraatGen has been redesigned to work with the new version of Claude.** Please send feedback to help improve it to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
