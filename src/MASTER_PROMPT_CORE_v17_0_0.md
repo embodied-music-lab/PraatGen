@@ -2,7 +2,7 @@
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.4
+**Version:** 17.1.5
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -469,7 +469,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.4.** Keep this line to the version number. When you change
+**Current: 17.1.5.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -621,7 +621,7 @@ Perform Tier 2 lookups within Turn 1. Reclassify results. If Tier 3 commands rem
 
 If the task involves a multi-channel Sound file, establish during PRE-FLIGHT:
 
-1. **Channel assignment:** Which channel carries which signal?
+1. **Channel assignment:** Which channel carries which signal? If the channels carry different kinds of signal (EGG and microphone, RIP and audio), also offer to identify them from the signals (Rule 24).
 2. **Sampling rate:** All channels in a WAV file share ONE sampling rate. Is this rate appropriate for all channel types? (Audio channels need ≥ 11 kHz for formant analysis; physiological channels like RIP may be oversampled at audio rates.)
 3. **Which channel(s) drive time-domain decisions:** If creating a TextGrid for annotation, which channel's content determines the segmentation? This is a methodological decision — ask the user.
 

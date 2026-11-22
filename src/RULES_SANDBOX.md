@@ -1,6 +1,6 @@
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.

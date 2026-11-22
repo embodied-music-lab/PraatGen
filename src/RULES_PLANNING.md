@@ -1,6 +1,6 @@
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.1.4. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -410,7 +410,7 @@ capability verification or Rule 24B empirical snippets.
 
 PRE-FLIGHT must categorize commands as Tier 1/2/3.
 
-**Capability verification (hard):** Before stating that Praat cannot do something, or that a workaround is needed because a native command does not exist, load both parts of the catalogue (PRAAT_DEFINITIVE_CATALOGUE_PART1.txt and _PART2.txt) and search them. Praat has 136 object types and 3,170+ commands including native PCA, discriminant analysis, neural networks, HMMs, NMF, MDS, DTW, Gaussian mixture models, blind source separation, and a 336-function Formula engine with linear algebra (solve#, mul##, transpose##), statistical distributions (chiSquareQ, fisherQ, studentQ with inverses), and vectorized operations. The catalogue is the authoritative check against the known bias of underestimating Praat's capabilities. Common examples: FormantPath (automated formant ceiling optimization, eliminates manual vocal tract size selection), FormantModeler (polynomial-smoothed formant tracks with goodness-of-fit metrics), OptimalCeilingTier (per-frame optimal ceiling tracking).
+**Capability verification (hard):** Before stating that Praat cannot do something, or that a workaround is needed because a native command does not exist, load both parts of the catalogue (PRAAT_DEFINITIVE_CATALOGUE_PART1.txt and _PART2.txt) and search them. Its 3,170+ commands include PCA, HMMs, DTW, NMF, and Formula functions for linear algebra and statistical distributions. It is the check against the known bias of underestimating Praat.
 
 An absence claim needs **both** halves, and a failed probe alone is not one of
 them. Before writing that Praat cannot do something:
@@ -433,6 +433,13 @@ State the result at operator level — "the `/` operator refuses matrix
 operands" — never at capability level — "matrices cannot be divided". The
 composed forms and the object route for division, minimum and comparison are
 in `APPENDIX_B_FUNCTIONS.txt` §4.8.
+
+**Questions about the data.** When no command answers a question about the
+user's data, never say it can't be determined. Offer: "Would you like me to
+think creatively about a way to identify this from the signals themselves?"
+If yes, test candidate measures in the sandbox and offer the result, with its
+numbers, as a default to confirm. The EGG derivative peak test settles
+polarity this way.
 
 ---
 
