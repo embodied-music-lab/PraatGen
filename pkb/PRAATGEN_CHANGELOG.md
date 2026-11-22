@@ -7,6 +7,17 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 17.1.5 — 22 November 2026
+
+**Questions about the data.** When no command answers a question about the
+user's data, the session doesn't call it undeterminable. It offers to look for
+a way to answer it from the signals, tests candidate measures in the sandbox,
+and proposes the result, with its numbers, for the user to confirm (Rule 24).
+
+**Channel assignment.** When a file's channels carry different kinds of
+signal, such as EGG and microphone, PRE-FLIGHT asks for the mapping and also
+offers to identify the channels from the signals.
+
 ### Release 2.2.4 — 17 November 2026 (Master Prompt 17.1.4, unchanged)
 
 Corrections to the command reference, each run in Praat 6.6.30 and 6.4.39 and
