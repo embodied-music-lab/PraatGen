@@ -15,15 +15,20 @@ findings. A fresh review thread reviews the script, writes the audit and
 delivers it. Each change after delivery gets its own build and review
 threads. AUTO and DEBUGGING still run in one thread.
 
-**The project chat dispatches.** It starts each thread from the script's
-`flow.md`, where every thread records what it did and what comes next. It
-writes no summaries and never passes on a gate itself.
+**The project chat dispatches.** Each thread adds a new numbered entry to the
+script's `flow/` folder when it stops, reporting what it did. Entries are
+never edited, and none names the next phase: the project chat starts the next
+thread in the fixed order. It points you to the thread that replied, asked or
+delivered, and never retells or answers for a thread. It never passes on a
+gate itself. A request for a different script after delivery starts a new
+planning thread.
 
 **Gates.** You can answer in the thread that asks, or in the project chat.
 Your message is passed on word for word, and a gate counts once.
 
 **Plugin.** The PraatGen plugin ships in the project files. The project chat
-shows it for install the first time.
+shows it for install the first time. After installing it, press Restart Claude
+in Project settings > Advanced, then send your request again.
 
 ### 18.0.0 — draft for PraatGen 3.0 (new Claude project format)
 
