@@ -7,6 +7,34 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 18.0.0 — draft for PraatGen 3.0 (new Claude project format)
+
+**Project chat and threads.** The project chat starts one thread per script
+and points you to it; PraatGen works only in the thread. The project chat
+never relays a GO or summarizes a delivery.
+
+**Tools and files.** The rules name what a step does, not a tool that exists
+only in the older format. Files are attached from
+`/mnt/project-files/praatgen/<name>/`.
+
+**What counts as a turn.** EXECUTE, GO, APPROVE, STOP and SCAFFOLD count only
+when you type them in the thread.
+
+**Delivery.** A script is delivered only when nothing PraatGen can still do
+is open. Questions only you can settle come before delivery.
+
+**After a compaction.** A thread that sees a conversation summary checks its
+output folder before anything else, without waiting for VERIFY YOUR STATE.
+
+**Sandbox test list.** In SANDBOX, PraatGen writes a test list before the
+first run, covering every menu option, setting, button, warning and skip path
+at least once, plus non-ASCII file names and a batch of 20 or more files. The
+lint blocks a script whose options, settings or buttons aren't on the list.
+
+**Independent review.** The reviewer gets a fixed prompt from the rules. It
+reports findings only, with no severity levels, and each one is fixed or put
+to you as a question before delivery.
+
 ### Release 2.2.6 — 26 November 2026 (Master Prompt 17.1.6, unchanged)
 
 For projects in the older Claude project format. Upgrade notes are in
