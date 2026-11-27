@@ -9,7 +9,7 @@
 
 PraatGen is a Claude AI project that writes syntactically correct Praat scripts from plain-language descriptions. You describe what you want to accomplish — extract F0 contours, batch-process a folder of recordings, build a publication figure, or generate a complex plugin — and PraatGen generates a complete, runnable script with validated commands, proper object handling, and clinical-grade parameter defaults. It can help you ideate your studies, debug its own or your existing code, and collaborate on your research and analysis projects.
 
-**Which version you need.** Release 2.2.6 is for projects in the older Claude project format, whose addresses start `claude.ai/project/`. A version for the new project format, with a project chat and threads, is in development.
+**Which version you need.** This page is PraatGen 3.0, for Claude projects with a project chat and threads. If your project's address starts `claude.ai/project/`, it's in the older format: use [release 2.2.6](https://github.com/embodied-music-lab/PraatGen/releases/tag/v2.2.6).
 
 Please send feedback to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
 
@@ -19,8 +19,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 2.2.6
-**Release:** 26 November 2026
+**Version:** 3.0.0 (in development)
+**Release:** not yet released
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -46,7 +46,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 
 ## Requirements
 
-- **Claude Pro, Team, Max, or Enterprise account** (Projects require a paid plan). PraatGen can burn tokens quickly on complex projects; for serious code production, the Max plan is recommended.
+- **Claude Pro or higher account.** PraatGen can burn tokens quickly on complex projects; for serious code production, a Max or Ultra plan is recommended.
 - **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees. PraatGen is structured to work within the Claude project framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected.
 - **Claude model:** Claude Opus 5 is the current recommendation. Opus 5.5 works; watch for over-agentic behavior. Opus 4.8 down to 4.6 (with Extended Thinking) works if you want to conserve tokens. Sonnet and Haiku are not supported. See "Choosing a model" below.
 - **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by pointing `PROJECT_INSTRUCTIONS.txt` and the file references in `PRAATGEN_RULES_FULL.md` at a local directory; you may also want to keep PraatGen's instructions separate from your `CLAUDE.md` file.
@@ -75,32 +75,29 @@ Please experiment with this setting and find what works best for your own workfl
 
 ## Setup
 
-### 1. Create a Claude Project
+PraatGen 3.0 is for Claude projects that have a project chat and threads. For projects in the older format, use release 2.2.6.
 
-In Claude (claude.ai or the Claude app):
-1. Open the sidebar and click **Projects**
-2. Click **Create project**
-3. Name it (e.g., "EML PraatGen")
+### 1. Create a Claude project
 
-### 2. Set the System Prompt
+In Claude, create a new project and name it (for example, "EML PraatGen").
 
-1. In your new project, click **instructions**
-2. Paste the entire contents of `PROJECT_INSTRUCTIONS.txt` into the instructions field. It tells PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns.
-3. Save
+### 2. Set the model for threads
 
-The Claude app doesn't re-send project instructions on every turn, so the whole prompt lives in `PRAATGEN_RULES_FULL.md`, which PraatGen reads again at the start of every turn. Every reply opens with `Rules read this turn: marsh-7316`. That line shows PraatGen read the file to its last line. The turn should also show the read of `PRAATGEN_RULES_FULL.md` before anything else, because a model can repeat the marker from an earlier turn.
+PraatGen works in threads. In **Project settings > General > Models**, set **Threads** to **Opus 5** with **High** effort. The setting applies to threads started after you change it, so set it before your first request. Each PraatGen thread's model menu should then read "Opus 5 High".
 
-### 3. Upload the Knowledge Base
+### 3. Set the project instructions
 
-1. In your project, click **add files**
-2. Upload all 66 files from the `pkb/` folder. They include `PRAATGEN_RULES_FULL.md`, which holds the whole prompt, the zipped linter `TOOL_PRAATGEN_LINT.zip` (upload the zip as it is; don't unzip it), and the verified reference files PraatGen uses to validate commands and functions
-3. Do not rename the files; the prompt references them by their exact filenames
+In **Project settings > Memory > Project instructions**, paste the entire contents of `PROJECT_INSTRUCTIONS.txt`. The project chat then starts one thread per script and points you to it. The thread reads `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns, and opens every reply with `Rules read this turn: ` and the marker. The tool activity should also show the file being read, because a model can repeat the marker from an earlier turn.
 
-If your project won't accept `TOOL_PRAATGEN_LINT.zip` (accounts on the older uploader reject zip files as "not a supported file format"), leave it out. Don't unzip it or upload it as a text file. Upload the other 65 files. PraatGen works without the linter and says "lint not run" before each delivery.
+### 4. Add the knowledge base
 
-### 4. Start a Conversation
+Add all 66 files from the `pkb/` folder to the project's files. They include `PRAATGEN_RULES_FULL.md`, which holds the whole prompt, the zipped linter `TOOL_PRAATGEN_LINT.zip` (add the zip as it is; don't unzip it), and the verified reference files PraatGen uses to validate commands and functions. Don't rename the files; the prompt references them by their exact filenames.
 
-Open a new conversation within the project. PraatGen will respond with its readiness message and ask you to describe your task.
+If your project won't accept `TOOL_PRAATGEN_LINT.zip`, leave it out. Don't unzip it or add it as a text file. PraatGen works without the linter and says "lint not run" before each delivery.
+
+### 5. Start a conversation
+
+In the project chat, describe your task. The project chat starts a PraatGen thread and tells you to talk to it there. Work with PraatGen in that thread.
 
 ---
 
@@ -170,8 +167,8 @@ reconciles by reading, and never regenerates delivered work from memory. In Sand
 Mode it also checks whether its Praat environment is still alive, since a reload can
 coincide with the container being recycled.
 
-Use it whenever you are unsure what landed. The command is yours to give, because
-PraatGen cannot reliably tell from the inside that anything happened.
+Use it whenever you are unsure what landed. After a compaction, PraatGen runs the
+same check by itself as soon as it sees the summary, before anything else.
 
 ### Tips for Best Results
 
@@ -310,7 +307,7 @@ PraatGen tracks three version numbers:
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
 | **Release** | 2.2.6 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 17.1.6 | The system instructions. Bumped when rules, workflow, or protocols change. Release 2.2.6 ships 17.1.6. |
+| **Master Prompt** | 18.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. This draft carries 18.0.0; release 2.2.6 ships 17.1.6. |
 | **PKB Snapshot** | 2026-11-26 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
