@@ -1,0 +1,7 @@
+{
+  "name": "praatgen",
+  "version": "0.2.0",
+  "description": "Checks that PraatGen reads its full rules file on every turn, and makes it read the file before a turn ends if it didn't. Acts only in Claude projects that contain PRAATGEN_RULES_FULL.md.",
+  "author": { "name": "Ian Howell, Embodied Music Lab" },
+  "license": "GPL-3.0-or-later"
+}
