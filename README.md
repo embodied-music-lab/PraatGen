@@ -9,7 +9,7 @@
 
 PraatGen is a Claude AI project that writes syntactically correct Praat scripts from plain-language descriptions. You describe what you want to accomplish — extract F0 contours, batch-process a folder of recordings, build a publication figure, or generate a complex plugin — and PraatGen generates a complete, runnable script with validated commands, proper object handling, and clinical-grade parameter defaults. It can help you ideate your studies, debug its own or your existing code, and collaborate on your research and analysis projects.
 
-**Which version you need.** This page is PraatGen 3.0, for Claude projects with a project chat and threads. If your project's address starts `claude.ai/project/`, it's in the older format: use [release 2.2.6](https://github.com/embodied-music-lab/PraatGen/releases/tag/v2.2.6).
+**Which version you need.** This page is PraatGen 3.0b, for Claude projects with a project chat and threads. If your project's address starts `claude.ai/project/`, it's in the older format: use [release 2.2.6](https://github.com/embodied-music-lab/PraatGen/releases/tag/v2.2.6).
 
 Please send feedback to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
 
@@ -75,7 +75,7 @@ Please experiment with this setting and find what works best for your own workfl
 
 ## Setup
 
-PraatGen 3.0 is for Claude projects that have a project chat and threads. For projects in the older format, use release 2.2.6.
+PraatGen 3.0b is for Claude projects that have a project chat and threads. For projects in the older format, use release 2.2.6.
 
 ### 1. Create a Claude project
 
@@ -83,21 +83,21 @@ In Claude, create a new project and name it (for example, "EML PraatGen").
 
 ### 2. Set the model for threads
 
-PraatGen works in threads. In **Project settings > General > Models**, set **Threads** to **Opus 5** with **High** effort. The setting applies to threads started after you change it, so set it before your first request. Each PraatGen thread's model menu should then read "Opus 5 High".
+PraatGen works in threads. In **Project settings > General > Models**, set **Threads** to **Opus 5** (under **More models**) with **High** effort. The setting applies to threads started after you change it, so set it before your first request. Each PraatGen thread's model menu should then read "Opus 5 High".
 
 ### 3. Set the project instructions
 
-In **Project settings > Memory > Project instructions**, paste the entire contents of `PROJECT_INSTRUCTIONS.txt`. The project chat then starts one thread per script and points you to it. The thread reads `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns, and opens every reply with `Rules read this turn: ` and the marker. The tool activity should also show the file being read, because a model can repeat the marker from an earlier turn.
+In **Project settings > Memory > Project instructions**, paste the entire contents of `PROJECT_INSTRUCTIONS.txt`. Each script then runs in three threads, which the project chat starts one after another: a planning thread, which talks with you through GO; a build thread, which writes and checks the script; and a review thread, which reviews it as a fresh reader and delivers it. Each thread reads `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns, and opens every reply with `Rules read this turn: ` and the marker. The tool activity should also show the file being read, because a model can repeat the marker from an earlier turn.
 
 ### 4. Add the knowledge base
 
-Add all 66 files from the `pkb/` folder to the project's files. They include `PRAATGEN_RULES_FULL.md`, which holds the whole prompt, the zipped linter `TOOL_PRAATGEN_LINT.zip` (add the zip as it is; don't unzip it), and the verified reference files PraatGen uses to validate commands and functions. Don't rename the files; the prompt references them by their exact filenames.
+Add all 67 files from the `pkb/` folder to the project's files. They include `PRAATGEN_RULES_FULL.md`, which holds the whole prompt, the zipped linter `TOOL_PRAATGEN_LINT.zip` (add the zip as it is; don't unzip it), the PraatGen plugin `praatgen.plugin`, and the verified reference files PraatGen uses to validate commands and functions. Don't rename the files; the prompt references them by their exact filenames.
 
 If your project won't accept `TOOL_PRAATGEN_LINT.zip`, leave it out. Don't unzip it or add it as a text file. PraatGen works without the linter and says "lint not run" before each delivery.
 
 ### 5. Start a conversation
 
-In the project chat, describe your task. The project chat starts a PraatGen thread and tells you to talk to it there. Work with PraatGen in that thread.
+In the project chat, describe your task. The first time, the project chat shows the PraatGen plugin as a card: install it from the card, then send your request again. The plugin makes sure each thread reads the rules in full. The project chat then starts the planning thread and names each thread as it starts. Answer PraatGen in the thread that asks you, or in the project chat, which passes your message on word for word.
 
 ---
 
@@ -142,7 +142,7 @@ Reply with any of these in place of (or alongside) your task. Modes compose free
 
 ### Work survives a long session: the output folder
 
-**PraatGen writes as it goes.** Each step leaves a file: the plan (`<name>_plan.md`, with an unedited copy as sent, `<name>_plan_sent.md`), the script, the linter output (`<name>_lint.txt`) and the audit (`<name>_audit.md`). The current script, test results, and open items are
+**PraatGen writes as it goes.** Each step leaves a file: the plan (`<name>_plan.md`, with an unedited copy as sent, `<name>_plan_sent.md`), the script, the linter output (`<name>_lint.txt`) and one audit per script version (`<name>_audit_v<version>.md`). The current script, test results, and open items are
 kept in its output folder and updated in the same turn as the work that changed them
 — not held in the conversation to be restated later. The folder survives both a
 context compaction and a page reload, so there is always a current copy to come back
@@ -293,6 +293,7 @@ Each PKB source carries the **plugin's** version number verbatim. If a PKB file'
 |------|---------|
 | `PRAATGEN_RULES_FULL.md` | The whole prompt, read in full at the start of every turn: the core (the workflow, its checkpoints, the pre-flight, the model rules and the rule index), then six sections holding the rest of the 37 rules. `RULES_RETRIEVAL` says which reference file to load for which task; `RULES_PLANNING` covers planning, command verification and the complexity gate; `RULES_CODE` is the Praat correctness contract; `RULES_AUDIT` holds output compression and the SELF-AUDIT templates; `RULES_MODES` covers SCAFFOLD, AUTO, DEBUGGING and modification requests; `RULES_SANDBOX` covers SANDBOX mode and sandbox verification |
 | `TOOL_PRAATGEN_LINT.zip` | A zipped Python 3 linter PraatGen runs on every script before delivery: commands against the reference files, functions against `APPENDIX_B_FUNCTIONS.txt`, copied library procedures against their source, the script against its plan, and the mechanical audit checks. It also supplies the EML library procedures a script copies |
+| `praatgen.plugin` | The PraatGen plugin. The project chat shows it for install the first time. It checks that each thread reads the rules file in full, and makes a thread read it before ending a turn that didn't. |
 | `HANDOFF_TEMPLATE.md` | Template for session handoff documents during long sessions and debugging |
 | `DEVELOPER_MODE_ADDON.md` | Developer-mode extensions for EML Tools contributors |
 | `praatgen_references_complete.md` | Full bibliographic reference list for all works cited across the prompt, appendices, and procedure libraries |
@@ -307,7 +308,7 @@ PraatGen tracks three version numbers:
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
 | **Release** | 2.2.6 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 18.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. This draft carries 18.0.0; release 2.2.6 ships 17.1.6. |
+| **Master Prompt** | 18.1.0 | The system instructions. Bumped when rules, workflow, or protocols change. This draft carries 18.1.0; release 2.2.6 ships 17.1.6. |
 | **PKB Snapshot** | 2026-11-26 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:

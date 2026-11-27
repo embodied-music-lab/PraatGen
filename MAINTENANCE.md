@@ -147,6 +147,17 @@ well as the sweep, so that sessions catch it before delivery.
 
 ---
 
+## 2E. The plugin
+
+`pkb/praatgen.plugin` is generated from `plugin/`. The project chat offers it
+for install, and its version must match the one the project instructions
+name ("PraatGen check (plugin X.Y.Z)"). After any change to `plugin/`, bump
+the version in `plugin/.claude-plugin/plugin.json` and in
+`PROJECT_INSTRUCTIONS.txt`, then rebuild and check:
+
+    python3 tools/build_plugin.py
+    python3 tools/build_plugin.py --check
+
 ## 3. Version and release discipline
 
 - The **release number** is incremented only when a release is cut.
