@@ -1,6 +1,6 @@
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.

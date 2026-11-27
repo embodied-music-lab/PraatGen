@@ -2,7 +2,7 @@
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.6
+**Version:** 17.1.7
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -469,7 +469,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.6.** Keep this line to the version number. When you change
+**Current: 17.1.7.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 

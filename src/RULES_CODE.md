@@ -1,6 +1,6 @@
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -735,10 +735,9 @@ No C-style escapes. Use `beginPause` if input needed.
 
 **Pattern:** `writeInfoLine:` once to clear, then `appendInfoLine:` for subsequent lines.
 
-**Formatting:**
-- `tab$` for columns
-- `string$()` or `fixed$()` for numeric conversion
-- Include header row with units
+**Formatting:** the house style in APPENDIX_F §S8D: header, titled
+sections, aligned label-value lines, units in labels. Convert numbers with
+`string$()` or `fixed$()`.
 
 **Output richness standard:** Info window output for analysis/extraction scripts should include all of the following that apply:
 1. Script identification line (what the script does)
