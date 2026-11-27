@@ -1,6 +1,6 @@
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -46,8 +46,8 @@ Composable with any other mode.
         # Resolve the build by INTENT — never pin an architecture token. Praat
         # renamed the 64-bit x86 Linux build (linux-intel64 -> linux-x64v3,
         # May 2026); a pinned arch string is a defect of the same class as a
-        # pinned version. Download from fon.hum: it hosts the current builds
-        # and the pinned one. Read the filename shape from the newest 64-bit x86
+        # pinned version. fon.hum hosts only current builds; the pin comes
+        # from GitHub. Read the filename shape from the newest 64-bit x86
         # full build (exclude 32-bit / arm64 / s390x / -barren), then apply the
         # version pin.
         # dl.html is the page the readiness request saved; fetch only if absent.
@@ -56,9 +56,10 @@ Composable with any other mode.
         fn=$(grep -oE "praat${ver}_linux[A-Za-z0-9._-]*\.tar\.gz" "$work/dl.html" \
              | grep -vE 'arm64|s390x|linux32|-barren' | sort -u | head -1)
         pin=6630   # the one sanctioned version pin; see Rule 24C, Version management
+        gh="https://github.com/praat/praat/releases/download/v${pin:0:1}.${pin:1:1}.${pin:2}"
         pinfn=$(echo "$fn" | sed "s/praat${ver}_/praat${pin}_/")
-        curl -fL -o "$work/praat.tar.gz" "$base/$pinfn" \
-          || { echo "Pinned $pin not found; installing newest ($ver)"; curl -fL -o "$work/praat.tar.gz" "$base/$fn"; }
+        curl -fL -o "$work/praat.tar.gz" "$gh/$pinfn" \
+          || curl -fL -o "$work/praat.tar.gz" "$base/$pinfn"
         tar xzf "$work/praat.tar.gz" -C "$work"
         # Binary extracts as: "$work/praat"
 
@@ -137,9 +138,8 @@ no other version number is hardcoded. The arch name has changed before (`linux-i
 pinned version. If resolution returns nothing, the download page structure
 changed — inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; it hosts
-the current builds and the pinned one. For an older build, see Rule 24C,
-Version management. Never reintroduce a hardcoded version number or arch
+selection logic before reporting failure. The pinned build and older ones
+come from GitHub; see Rule 24C, Version management. Never reintroduce a hardcoded version number or arch
 token as a "fix."
 
 **One version pin is currently in force (6.6.30, set 17 August 2026).** It
@@ -174,16 +174,13 @@ needed, request the Praat download page once, from the shell:
     # Anything else, or a curl error, is a refusal.
 
 - **Success:** Installation is available. Proceed to installation.
-- **Refusal:** Installation is not available. Quote the refusal to the
-  user verbatim — the status code, any `x-deny-reason` header in
-  `dl.headers`, and curl's error text — and offer the manual upload
-  fallback (below).
+- **Refusal:** Fetch the pinned build from GitHub (Version management)
+  as `praat<pin>_linux-x64v3.tar.gz` or its `-barren` twin. Never ask the user
+  to change network or environment settings. If GitHub is refused too, quote
+  both refusals verbatim and offer the manual upload fallback (below).
 
-Access to `www.fon.hum.uva.nl` depends on the Claude plan and its
-settings, and is not fully documented. An individual Max account
-reached the site by default when tested on 8 October 2026; other plans
-are untested. On Team and Enterprise plans, the organization owner
-controls the allowed domains. **Never tell the user installation is
+Access to `www.fon.hum.uva.nl` depends on the plan and its settings;
+GitHub is usually reachable. **Never tell the user installation is
 unavailable without having made the request.**
 
 Installation happens on demand — only when a verification question
@@ -237,17 +234,18 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 BARREN build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
-    # current builds and the pinned one.
+    # token (linux-intel64 -> linux-x64v3, May 2026). The pin comes
+    # from GitHub; fon.hum hosts only current builds.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
     fn=$(grep -oE "praat${ver}_linux[A-Za-z0-9._-]*-barren\.tar\.gz" "$work/dl.html" \
          | grep -vE 'arm64|s390x|linux32' | sort -u | head -1)
     pin=6630   # the one sanctioned version pin; see Rule 24C, Version management
+    gh="https://github.com/praat/praat/releases/download/v${pin:0:1}.${pin:1:1}.${pin:2}"
     pinfn=$(echo "$fn" | sed "s/praat${ver}_/praat${pin}_/")
-    curl -fL -o "$work/praat_barren.tar.gz" "$base/$pinfn" \
-      || { echo "Pinned $pin not found; installing newest ($ver)"; curl -fL -o "$work/praat_barren.tar.gz" "$base/$fn"; }
+    curl -fL -o "$work/praat_barren.tar.gz" "$gh/$pinfn" \
+      || curl -fL -o "$work/praat_barren.tar.gz" "$base/$pinfn"
     tar xzf "$work/praat_barren.tar.gz" -C "$work"
     # Binary extracts as: "$work/praat_barren"
     # Verify:
@@ -271,17 +269,18 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 FULL build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
-    # current builds and the pinned one.
+    # token (linux-intel64 -> linux-x64v3, May 2026). The pin comes
+    # from GitHub; fon.hum hosts only current builds.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
     fn=$(grep -oE "praat${ver}_linux[A-Za-z0-9._-]*\.tar\.gz" "$work/dl.html" \
          | grep -vE 'arm64|s390x|linux32|-barren' | sort -u | head -1)
     pin=6630   # the one sanctioned version pin; see Rule 24C, Version management
+    gh="https://github.com/praat/praat/releases/download/v${pin:0:1}.${pin:1:1}.${pin:2}"
     pinfn=$(echo "$fn" | sed "s/praat${ver}_/praat${pin}_/")
-    curl -fL -o "$work/praat_gui.tar.gz" "$base/$pinfn" \
-      || { echo "Pinned $pin not found; installing newest ($ver)"; curl -fL -o "$work/praat_gui.tar.gz" "$base/$fn"; }
+    curl -fL -o "$work/praat_gui.tar.gz" "$gh/$pinfn" \
+      || curl -fL -o "$work/praat_gui.tar.gz" "$base/$pinfn"
     tar xzf "$work/praat_gui.tar.gz" -C "$work"
     # Binary extracts as: "$work/praat"
 
@@ -592,8 +591,8 @@ Using `editor: soundId` in a TextGridEditor hangs indefinitely.
 
 User downloads the pinned build (6.6.30; see Version management) by direct
 link. The download page does not list it:
-- Barren: `https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3-barren.tar.gz`
-- Full: `https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz`
+- Barren: `https://github.com/praat/praat/releases/download/v6.6.30/praat6630_linux-x64v3-barren.tar.gz`
+- Full: `https://github.com/praat/praat/releases/download/v6.6.30/praat6630_linux-x64v3.tar.gz`
 
 If those links fail, the user downloads the newest 64-bit x86 Linux build from
 `https://www.fon.hum.uva.nl/praat/download_linux.html`, and the model says that
@@ -638,12 +637,11 @@ to `linux-x64v3` in May 2026; a pinned arch string fails silently exactly
 like a pinned version (this is what broke the snippet on 3 Jun 2026). If
 resolution returns nothing, inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; it hosts
-the current builds and the pinned one, not every older build (6.4.39, the
-floor, is gone; checked 22 October 2026). For an older build, such as one in
-`PRAAT_VERSION_FLOOR.txt`, download
-`https://github.com/praat/praat/releases/download/vX.Y.Z/<file>`; its filename
-may carry an older arch token (`linux-intel64`). The release pages return
+selection logic before reporting failure. fon.hum hosts only the current
+builds. Download the pinned build, and any older one such as those in
+`PRAAT_VERSION_FLOOR.txt`, from
+`https://github.com/praat/praat/releases/download/vX.Y.Z/<file>`; an older
+filename may carry an older arch token (`linux-intel64`). The release pages return
 403, so build the filename. Some sandboxes block GitHub; if
 the download is refused, say so and name the build left untested. Never reintroduce a hardcoded version number or
 arch token as a "fix."

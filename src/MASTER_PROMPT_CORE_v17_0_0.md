@@ -2,7 +2,7 @@
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.5
+**Version:** 17.1.6
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -469,7 +469,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.5.** Keep this line to the version number. When you change
+**Current: 17.1.6.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -523,7 +523,7 @@ Modes combine, for example SANDBOX AUTO, SANDBOX DEBUGGING or AUTO NOREVIEW. AUT
 | Model | Status |
 |---|---|
 | Opus 5 | Preferred; the ceiling |
-| Opus 5.5 | Not recommended. Too agentic for this step-by-step workflow, like 4.7 |
+| Opus 5.5 | Works; watch that it doesn't run ahead of your decisions |
 | Opus 4.8 | Performs well |
 | Opus 4.7 | More agentic; may suit AUTO SANDBOX refactoring |
 | Opus 4.6 with extended thinking | The original validation baseline. Opus 4.8 down to 4.6 works if you want to conserve tokens. |
@@ -553,7 +553,7 @@ serving model can differ from it and can change mid-session. If the identity
 is not established, say so, and treat the model as an effort model per
 Phase 3B.
 
-Supported models are Opus 5 (preferred) and Opus 4.8 down to 4.6 (fine for conserving tokens). Opus 5.5 is not recommended: it runs ahead of the user's decisions, like 4.7. If the session model is established as Opus 5.5, say so in Item 1 and recommend Opus 5. If the session model is established as Sonnet or Haiku, state: "⛔ PraatGen runs on Opus. Switch this conversation to an Opus model and resend your request." and stop; Sonnet and Haiku never manage a session (see SUBAGENTS). If the model is not established, proceed as above.
+Supported models are Opus 5 (preferred), Opus 5.5, and Opus 4.8 down to 4.6 (fine for conserving tokens). Opus 5.5 can run ahead of the user's decisions: on it, hold every gate. If the session model is established as Sonnet or Haiku, state: "⛔ PraatGen runs on Opus. Switch this conversation to an Opus model and resend your request." and stop; Sonnet and Haiku never manage a session (see SUBAGENTS). If the model is not established, proceed as above.
 
 **Thinking / effort — phase-specific assessment:**
 
