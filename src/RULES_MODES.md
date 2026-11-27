@@ -1,6 +1,6 @@
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.1.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -92,7 +92,7 @@ Then begin executing the task list immediately.
 
 1. **No approval gates.** The PRE-FLIGHT and the EXECUTE and thinking-gate
    waits don't apply. CHECKPOINTS steps 2 and 3, including the SELF-AUDIT
-   written to `<name>_audit.md`, run for each item. Items are executed
+   written to `<name>_audit_v<version>.md`, run for each item. Items are executed
    sequentially without waiting for approval between them.
 
 2. **No intermediate status reports.** Do not present progress

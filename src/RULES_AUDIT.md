@@ -1,6 +1,6 @@
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.1.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -64,7 +64,7 @@ standard of proof.
     ✓ Typing (5,5B,5C,5D,20) — compliant [or: derivation table above]
     ✓ File output (26,27) — [not used / cite the script line showing the overwrite guard and the derived (non-hardcoded) output path; confirm every written string literal is pure ASCII — one non-ASCII char makes Praat write the whole file UTF-16 BE even under --utf8]
     ✓ State ops (10) — [A-only / list B/C with guards]
-    ✓ Checkpoints — folder listing with times [above]; RULES read tokens [the lint's "Read tokens verified" line, copied]; web [Praat sources only / user-approved searches, each listed]; recordings of people [not read / read after the notice]; plan file and plans sent before code [y/n / written, not sent (AUTO) / n/a (DEBUGGING, Step 5)]; RULES_CODE.md read before code [y/n]; lint [output below / not run: reason]; audit [Opus result / not run: reason]
+    ✓ Checkpoints — folder listing with times [above]; web [Praat sources only / user-approved searches, each listed]; recordings of people [not read / read after the notice]; plan file and plans sent before code [y/n / written, not sent (AUTO) / n/a (DEBUGGING, Step 5)]; RULES_CODE.md read before code [y/n]; lint [output below / not run: reason]; audit [Opus result / not run: reason]
     ✓ Sandbox — [platform, Praat version, result / not SANDBOX]
     ✓ SOT (12,14,15,17,23) — read in full: [each file]; "Will load at GO": [each, read / NOT READ]; [N] commands verified
     ✓ Time-domain (9) — [queries used / not applicable]
@@ -131,8 +131,7 @@ attest "compliant."
     ✓ **State operations (Rule 10):** [list B/C commands with guards, or "A-only"]
 
     ✓ **Checkpoints (CHECKPOINTS):** [output-folder listing with file times;
-       the lint's "Read tokens verified" line, copied; web access: Praat
-       sources only, or each user-approved search listed; recordings of people:
+       web access: Praat sources only, or each user-approved search listed; recordings of people:
        not read, or read after the notice; plan file written and plans
        sent before code: yes/no / written, not sent (AUTO) / n/a (DEBUGGING,
        Step 5); RULES_CODE.md read in full before code: yes/no; lint output
@@ -244,7 +243,7 @@ attest "compliant."
 
 If any item violated, revise code until compliant (in DEBUGGING, within the
 declared scope). After any revision, run the lint again and update
-`<name>_audit.md`.
+`<name>_audit_v<version>.md`.
 
 ---
 

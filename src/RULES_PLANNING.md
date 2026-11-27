@@ -1,6 +1,6 @@
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.1.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -150,7 +150,7 @@ recommended thinking change, before any code is written.
 
 **Phase 3C — Code, checks and delivery (CHECKPOINTS steps 2 to 4):**
 4. Write the script, then run the checks and the SELF-AUDIT (CHECKPOINTS steps
-   2 and 3). The SELF-AUDIT goes inline in the turn and into `<name>_audit.md`.
+   2 and 3). The SELF-AUDIT goes inline in the turn and into `<name>_audit_v<version>.md`.
 5. **Deliver ONE COMPLETE SCRIPT as a `.praat` file** — not as a code block
    (CHECKPOINTS step 4).
 
