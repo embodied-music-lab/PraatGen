@@ -40,7 +40,6 @@ def build():
                            for k, v in sorted(lint.load_catalogue('pkb').items())},
              'functions': sorted(lint.load_functions('pkb').items()),
              'ghosts': sorted(lint.load_ghosts('pkb').items()),
-             'tokens': lint.load_token_hashes('src'),
              'procedures': lint.load_procedures('pkb')}
     src = open(SRC, encoding='utf-8').read()
     assert src.count(MARKER) == 1

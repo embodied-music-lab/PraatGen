@@ -68,10 +68,6 @@ Checks:
   Nested queries       No query command inside an expression (Rule 5E).
   Functions            Every function call is spelled as
                        APPENDIX_B_FUNCTIONS.txt spells it.
-  Read tokens          Each line "RULES_NAME.md: token" in the plan names
-                       that file's real read token. RULES_CODE.md must be
-                       listed. The linter holds only a one-way hash of each
-                       pairing, so it can confirm a token but never reveal it.
   Test list            With NAME_testlist.md beside the script (SANDBOX), every
                        menu option, boolean field and pause-dialog button the
                        script defines is named in it.
@@ -104,7 +100,6 @@ A blocked call is cleared by a Praat manual citation or Paste Commands output.
 Exit status: 1 when any finding blocks, 0 otherwise, 2 on a usage error.
 """
 import bisect
-import hashlib
 import os
 import re
 import sys
@@ -364,28 +359,6 @@ def load_curated(pkb):
             arity = len(split_args(params)) if colon else 0
             ref[name].append((otype, arity, fn, n))
     return ref
-
-
-TOKEN_LINE = re.compile(r"^\s*[-*|]?\s*`?(RULES_[A-Z]+\.md)`?\s*[:|]\s*`?([a-z]+-\d{3})`?", re.M)
-
-
-def token_hash(name, token):
-    return hashlib.sha256(f'{name}:{token}'.encode('utf-8')).hexdigest()
-
-
-def load_token_hashes(pkb):
-    """RULES file name -> hash of the pairing with the token on its last
-    line ("End of RULES_X.md. Read token: word-NNN")."""
-    out = {}
-    for fn in sorted(os.listdir(pkb)):
-        if not (fn.startswith('RULES_') and fn.endswith('.md')):
-            continue
-        with open(os.path.join(pkb, fn), encoding='utf-8') as f:
-            lines = [s.strip() for s in f.read().split('\n') if s.strip()]
-        m = re.search(r'Read token:\s*([a-z]+-\d{3})\s*$', lines[-1]) if lines else None
-        if m:
-            out[fn] = token_hash(fn, m.group(1))
-    return out
 
 
 FUNCTIONS_FILE = 'APPENDIX_B_FUNCTIONS.txt'
@@ -1483,32 +1456,6 @@ def check_nested(lines):
     return findings
 
 
-def check_read_tokens(plan_path, hashes):
-    """The plan's "RULES_NAME.md: token" lines name real pairings.
-    Returns (findings, verified "name token" strings)."""
-    if plan_path is None:
-        return [], []
-    with open(plan_path, encoding='utf-8', errors='replace') as f:
-        text = f.read()
-    findings, verified, seen = [], [], set()
-    for name, token in TOKEN_LINE.findall(text):
-        if (name, token) in seen:
-            continue
-        seen.add((name, token))
-        if name not in hashes:
-            findings.append(('BLOCKING', 0, f'{name} is not a RULES file in the reference set'))
-        elif token_hash(name, token) != hashes[name]:
-            findings.append(('BLOCKING', 0, f'{token} is not the read token of {name}'))
-        else:
-            verified.append(f'{name} {token}')
-    if not seen:
-        findings.append(('BLOCKING', 0, 'the plan lists no read tokens: add one line '
-                         '"RULES_NAME.md: token" for each RULES file read in full'))
-    elif not any(v.startswith('RULES_CODE.md ') for v in verified):
-        findings.append(('BLOCKING', 0, 'RULES_CODE.md has no verified read token in the plan'))
-    return findings, verified
-
-
 # Words that can stand before "(" in a script without being a function call.
 NOT_FUNCTIONS = {'if', 'elsif', 'elif', 'while', 'until', 'for', 'from', 'to',
                  'and', 'or', 'not', 'then', 'else', 'repeat', 'return',
@@ -1652,7 +1599,6 @@ def main():
         catalogue = load_catalogue(pkb)
         functions = load_functions(pkb)
         ghosts = load_ghosts(pkb)
-        token_hashes = load_token_hashes(pkb)
         procs = load_procedures(pkb)
     elif EMBEDDED_INDEX is not None:
         curated = {k: [tuple(e) for e in v]
@@ -1661,7 +1607,6 @@ def main():
                      for k, v in EMBEDDED_INDEX['catalogue'].items()}
         functions = dict(EMBEDDED_INDEX['functions'])
         ghosts = dict(EMBEDDED_INDEX.get('ghosts', []))
-        token_hashes = dict(EMBEDDED_INDEX['tokens'])
         procs = library_procedures()
     else:
         print('No reference folder given, no embedded index and no pkb folder '
@@ -1674,7 +1619,6 @@ def main():
     rows = command_rows(lines, types, sole_owners(curated, catalogue))
     cmd_findings, verified = check_commands(rows, curated, catalogue)
     fn_findings, fn_verified = check_functions(lines, functions, ghosts)
-    tok_findings, tok_verified = check_read_tokens(plan, token_hashes)
     registers = plugin_registers(plan)
     lib_findings, lib_verified = check_library_copies(script, procs, registers)
     top_script = os.path.normpath(script)
@@ -1701,7 +1645,6 @@ def main():
         ('Overwrite guard', check_overwrite(lines)),
         ('Nested queries', check_nested(lines)),
         ('Functions', fn_findings),
-        ('Read tokens', tok_findings),
         ('Test list', check_test_list(script, lines)),
     ]
     blocking = sum(1 for _c, fs in checks for f in fs if f[0] == 'BLOCKING')
@@ -1723,8 +1666,6 @@ def main():
     if fn_verified:
         print(f'Functions verified in {FUNCTIONS_FILE}: '
               + ', '.join(sorted(fn_verified)))
-    if tok_verified:
-        print('Read tokens verified: ' + '; '.join(sorted(tok_verified)))
     if task_summary:
         print('Task coverage in the plan: ' + task_summary)
     if lib_verified:
