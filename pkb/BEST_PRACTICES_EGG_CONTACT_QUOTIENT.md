@@ -504,7 +504,7 @@ Companion measure: Ternström (2019) also defines a normalised contact quotient 
 ## 8. Canonical workflow
 
 1. Read the file. Confirm channel count and sampling frequency.
-2. Identify the EGG channel if not specified. Derivative HNR is a usable discriminator — on a real stereo file ch2 (EGG) gave 21.5 dB against ch1 (audio) 17.7 dB, with waveform HNR 27.1 vs 22.1.
+2. Identify the EGG channel if not specified, with the derivative test (PraatGen practice): take `Derivative` of each channel and compare the HNR of the two derivatives. The EGG channel's is higher. This is the method; don't add a calibration or training step. In every option, plan, dialog and report, call it the HNR of each channel's derivative, never plain HNR or harmonicity, and report both values for each file so the user can check the choice. Example from a real stereo file: EGG (ch2) 21.5 dB against audio (ch1) 17.7 dB on the derivatives, and 27.1 against 22.1 dB on the waveforms.
 3. `Extract Electroglottogram: channel, "no"`, then the derivative peak polarity test (§3, Polarity). Re-extract with `"yes"` when the test finds the EGG inverted, unless the user fixed polarity.
 4. `To Sound` — keep this; it is the working object for every query.
 5. Measure EGG SNR (§2) on the Sound.

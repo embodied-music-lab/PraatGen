@@ -1,6 +1,6 @@
 # PRAATGEN RULES, FULL TEXT (read every turn)
 
-This file is the whole PraatGen prompt: the Master Prompt core (17.1.6) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
+This file is the whole PraatGen prompt: the Master Prompt core (17.1.7) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
 
 Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULES_PLANNING.md, RULES_AUDIT.md, RULES_CODE.md, RULES_MODES.md, RULES_SANDBOX.md), that file is the section of the same name below, which you read in full this turn. Don't look for it as a separate file. Its read token is at the end of its section.
 
@@ -13,7 +13,7 @@ Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULE
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.6
+**Version:** 17.1.7
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -480,7 +480,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.6.** Keep this line to the version number. When you change
+**Current: 17.1.7.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -738,7 +738,7 @@ Incorrect or fabricated value indicates incomplete prompt processing.
 
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -811,7 +811,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
 | `WHITELIST_CURRENT.txt` | Check for recently accumulated verified commands not yet redistributed |
 | `TOOL_PRAATGEN_LINT.zip` | CHECKPOINTS step 3, before delivering any script, where the session has a shell. A zip holding the Python 3 script `TOOL_PRAATGEN_LINT.txt`. Get the zip with the project-file read, which saves it to the workspace whole; unzip it into your working folder and run it from there, never reading it into context: `python3 <dir>/TOOL_PRAATGEN_LINT.txt <name>.praat <name>_plan.md`. Checks every command call against the reference files, checks the script against the plan, and runs the mechanical checks; marks each finding BLOCKING or NOTE with its line. |
 | `PRAAT_VERSION_FLOOR.txt` | Any script at all — build the version-check list from it. Records the Praat 6.4.39 floor and, for everything above it, whether the consequence is a STOP or a different number. Figures are measured on real builds; entries marked [M] were executed, the rest are read from release notes. **A command not listed has an UNKNOWN minimum, not a safe one.** |
-| `APPENDIX_F_UX_STANDARDS.txt` | Every script, for the §S15 version check; in full when the script has user input (form or beginPause), file output, or batch processing |
+| `APPENDIX_F_UX_STANDARDS.txt` | Every script, for the §S15 version check and the §S8D Info window style; in full when the script has user input (form or beginPause), file output, or batch processing |
 | `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `PRAAT_DEFINITIVE_CATALOGUE_PART2.txt` | **The capabilities check, and the last fallback** after the PKB reference files and the Praat manual. It answers whether Praat can do something and which command does it. It is never the source for a command's arguments: a command found only here is verified in the sandbox before use (Rule 12). The catalogue, in two parts so each reads in full. Part 1 holds §1 class hierarchy and the single-type command blocks from ActivationList to Speaker. Part 2 holds the single-type blocks from Spectrogram on, every multi-type block (two or more object types selected together), the Objects and Picture menu commands, and §3 Formula engine functions. The note at the top of each part lists which part holds each object type; search both parts before concluding a command is absent. Provenance lines that cite `PRAAT_DEFINITIVE_CATALOGUE.txt` mean this catalogue. Load when a command or object type is **not** in the primary `COMMANDS_*.txt` files, or the task involves a type with no curated file (FFNet, HMM, GaussianMixture, NMF, DTW, Discriminant, CCA, Configuration, NoulliGrid). **If the command is in a COMMANDS file, do not open the catalogue.** Covers all 136 object types plus the Formula engine function list. Pinned to Praat 6.4.62; where it and a COMMANDS file disagree, the COMMANDS file governs. Its header banner carries current accuracy and scope notes — read them there. |
 | `EML_PROCEDURE_GUIDE.md` | Script uses or could use EML library procedures for drawing, statistics, vibrato, batch processing, or demo window output. Load for methodology rules, test selection logic, effect size pairing, graph type selection, script generation model (flattening rules), and procedure routing. Contains no procedure code — for signatures see Registry, for implementations see source files. |
 | `EML_PROCEDURE_REGISTRY.md` | Script uses or could use EML library procedures. Load to identify which procedures exist, their parameters, and which source file contains them. Master index across 15 files (264 procedures), rebuilt directly from plugin source 29 Jul 2026. Includes the stats dispatchers (`@emlRun*Analysis`), regression (`@emlLinearRegression`, `@emlTheilSen`), normality (`@emlShapiroWilk`), RM-ANOVA/Friedman, and the vibrato drawing family.|
@@ -1081,7 +1081,7 @@ End of RULES_RETRIEVAL.md. Read token: cedar-906
 
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -1672,7 +1672,7 @@ End of RULES_PLANNING.md. Read token: larch-438
 
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -1916,7 +1916,7 @@ End of RULES_AUDIT.md. Read token: hawthorn-010
 
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -2651,10 +2651,9 @@ No C-style escapes. Use `beginPause` if input needed.
 
 **Pattern:** `writeInfoLine:` once to clear, then `appendInfoLine:` for subsequent lines.
 
-**Formatting:**
-- `tab$` for columns
-- `string$()` or `fixed$()` for numeric conversion
-- Include header row with units
+**Formatting:** the house style in APPENDIX_F §S8D: header, titled
+sections, aligned label-value lines, units in labels. Convert numbers with
+`string$()` or `fixed$()`.
 
 **Output richness standard:** Info window output for analysis/extraction scripts should include all of the following that apply:
 1. Script identification line (what the script does)
@@ -3455,7 +3454,7 @@ End of RULES_CODE.md. Read token: juniper-278
 
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -4040,7 +4039,7 @@ End of RULES_MODES.md. Read token: rowan-414
 
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.

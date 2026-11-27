@@ -7,6 +7,19 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 17.1.7 — 26 November 2026
+
+**EGG channel.** The EGG best-practices workflow states the derivative test as
+PraatGen's way to find the EGG channel: compare the HNR of each channel's
+derivative. It adds no calibration step, and options and reports name it as
+the derivative comparison.
+
+**Info window style.** Scripts write the Info window in one house style: a
+bordered header, titled sections, aligned label-value lines, progress bars for
+batches, and marks for passes, failures and warnings (Appendix F S8D). Data
+tables use padded columns when the data also goes to a file, and stay
+tab-separated when the Info window is the only output.
+
 ### Release 2.2.6 — 26 November 2026 (Master Prompt 17.1.6, unchanged)
 
 For projects in the older Claude project format. Upgrade notes are in
