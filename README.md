@@ -97,7 +97,7 @@ If your project won't accept `TOOL_PRAATGEN_LINT.zip`, leave it out. Don't unzip
 
 ### 5. Start a conversation
 
-In the project chat, describe your task. The first time, the project chat shows the PraatGen plugin as a card: install it from the card, then send your request again. The plugin makes sure each thread reads the rules in full. The project chat then starts the planning thread and names each thread as it starts. Answer PraatGen in the thread that asks you, or in the project chat, which passes your message on word for word.
+In the project chat, describe your task. The first time, the project chat shows the PraatGen plugin as a card: install it from the card, press **Restart Claude** in **Project settings > Advanced**, and send your request again. The plugin makes sure each thread reads the rules in full. The project chat then starts the planning thread and names each thread as it starts. Answer PraatGen in the thread that asks you, or in the project chat, which passes your message on word for word.
 
 ---
 
