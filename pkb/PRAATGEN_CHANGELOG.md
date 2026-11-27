@@ -7,6 +7,11 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.7 — 27 November 2026 (Master Prompt 17.1.7)
+
+For projects in the older Claude project format. Ships the Master Prompt
+17.1.7 changes below. Upgrade notes are in `RELEASE_NOTES_2.2.7.md`.
+
 ### 17.1.7 — 26 November 2026
 
 **EGG channel.** The EGG best-practices workflow states the derivative test as
