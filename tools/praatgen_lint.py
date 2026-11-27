@@ -386,8 +386,28 @@ def load_token_hashes(pkb):
 
 
 FUNCTIONS_FILE = 'APPENDIX_B_FUNCTIONS.txt'
-FUNCTION_NAME = re.compile(r"(?<![\w.$#@'])([a-z][A-Za-z0-9_]*(?:\$#|\$|##|#)?)\s*\(")
-FUNCTION_ENTRY = re.compile(r"^ ([a-z][A-Za-z0-9_]*(?:\$#|\$|##|#)?)\s*\(")
+FUNCTION_NAME = re.compile(r"(?<![\w.$#@'])([a-z][A-Za-z0-9_]*(?:\$##|\$#|\$|##|#)?)\s*\(")
+FUNCTION_ENTRY = re.compile(r"^ ([a-z][A-Za-z0-9_]*(?:\$##|\$#|\$|##|#)?)\s*\(")
+
+
+GHOST_MARK = re.compile(r"\[(?:CATALOGUE GHOST|MANUAL-LISTED, IMPLEMENTATION ABSENT[^\]—]*)(?:\s*[—-]+\s*(.*?))?\]")
+
+
+def load_ghosts(pkb):
+    """name -> advice for functions APPENDIX_B_FUNCTIONS.txt marks
+    [CATALOGUE GHOST] or [MANUAL-LISTED, IMPLEMENTATION ABSENT]: listed by
+    Praat, refused when run."""
+    out = {}
+    path = os.path.join(pkb, FUNCTIONS_FILE)
+    if not os.path.isfile(path):
+        return out
+    with open(path, encoding='utf-8') as f:
+        for raw in f.read().split('\n'):
+            m = FUNCTION_ENTRY.match(raw)
+            g = GHOST_MARK.search(raw) if m else None
+            if g:
+                out.setdefault(m.group(1), (g.group(1) or '').strip())
+    return out
 
 
 def load_functions(pkb):
@@ -1492,9 +1512,11 @@ NOT_FUNCTIONS = {'if', 'elsif', 'elif', 'while', 'until', 'for', 'from', 'to',
                  'mod', 'div'}
 
 
-def check_functions(lines, functions):
-    """Every function call must be spelled as APPENDIX_B_FUNCTIONS.txt spells it.
+def check_functions(lines, functions, ghosts=None):
+    """Every function call must be spelled as APPENDIX_B_FUNCTIONS.txt spells it,
+    and must not be one it marks [CATALOGUE GHOST].
     Returns (findings, verified names)."""
+    ghosts = ghosts or {}
     findings, verified = [], {}
     for ln in lines:
         if ln.in_form:
@@ -1513,7 +1535,12 @@ def check_functions(lines, functions):
             name = m.group(1)
             if name in NOT_FUNCTIONS:
                 continue
-            if name in functions:
+            if name in ghosts:
+                advice = ghosts[name].replace('see top of file; ', '')
+                findings.append(('BLOCKING', ln.line_at(m.start(1)),
+                                 f'{name} is a catalogue ghost: Praat refuses it when run'
+                                 + (f' ({advice})' if advice else '') + f' -- {short(ln.text)}'))
+            elif name in functions:
                 verified.setdefault(name, functions[name])
             else:
                 findings.append(('BLOCKING', ln.line_at(m.start(1)),
@@ -1581,6 +1608,7 @@ def main():
         curated = load_curated(pkb)
         catalogue = load_catalogue(pkb)
         functions = load_functions(pkb)
+        ghosts = load_ghosts(pkb)
         token_hashes = load_token_hashes(pkb)
         procs = load_procedures(pkb)
     elif EMBEDDED_INDEX is not None:
@@ -1589,6 +1617,7 @@ def main():
         catalogue = {k: [tuple(e) for e in v]
                      for k, v in EMBEDDED_INDEX['catalogue'].items()}
         functions = dict(EMBEDDED_INDEX['functions'])
+        ghosts = dict(EMBEDDED_INDEX.get('ghosts', []))
         token_hashes = dict(EMBEDDED_INDEX['tokens'])
         procs = library_procedures()
     else:
@@ -1601,7 +1630,7 @@ def main():
     lines = read_lines(script)
     rows = command_rows(lines, types, sole_owners(curated, catalogue))
     cmd_findings, verified = check_commands(rows, curated, catalogue)
-    fn_findings, fn_verified = check_functions(lines, functions)
+    fn_findings, fn_verified = check_functions(lines, functions, ghosts)
     tok_findings, tok_verified = check_read_tokens(plan, token_hashes)
     registers = plugin_registers(plan)
     lib_findings, lib_verified = check_library_copies(script, procs, registers)
