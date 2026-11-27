@@ -9,7 +9,7 @@
 
 PraatGen is a Claude AI project that writes syntactically correct Praat scripts from plain-language descriptions. You describe what you want to accomplish — extract F0 contours, batch-process a folder of recordings, build a publication figure, or generate a complex plugin — and PraatGen generates a complete, runnable script with validated commands, proper object handling, and clinical-grade parameter defaults. It can help you ideate your studies, debug its own or your existing code, and collaborate on your research and analysis projects.
 
-**Which version you need.** Release 2.2.6 is for projects in the older Claude project format, whose addresses start `claude.ai/project/`. A version for the new project format, with a project chat and threads, is in development.
+**Which version you need.** Release 2.2.7 is for projects in the older Claude project format, whose addresses start `claude.ai/project/`. A version for the new project format, with a project chat and threads, is in development.
 
 Please send feedback to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
 
@@ -19,8 +19,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 2.2.6
-**Release:** 26 November 2026
+**Version:** 2.2.7
+**Release:** 27 November 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -193,7 +193,7 @@ PraatGen cannot reliably tell from the inside that anything happened.
 | `PROJECT_INSTRUCTIONS.txt` | The project instructions: they tell PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns. |
 | `src/` | The sources of `PRAATGEN_RULES_FULL.md`: the core (`MASTER_PROMPT_CORE_v17_0_0.md`) and the six `RULES_*.md` files. Edit these, then rebuild with `tools/build_rules_full.py`. Don't upload them to a project. Master Prompt content version: 17.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_2.2.6.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.6 GitHub Release. |
+| `RELEASE_NOTES_2.2.7.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.7 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -309,14 +309,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 2.2.6 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 17.1.7 | The system instructions. Bumped when rules, workflow, or protocols change. On `main`, ahead of release 2.2.6, which ships 17.1.6. |
-| **PKB Snapshot** | 2026-11-26 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 2.2.7 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 17.1.7 | The system instructions. Bumped when rules, workflow, or protocols change. Shipped in release 2.2.7. |
+| **PKB Snapshot** | 2026-11-27 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **2.2.6 (26 November 2026)** is the current stable release, for projects in the older Claude project format. It keeps Master Prompt 17.1.6. The lint blocks functions Praat lists but refuses when run, such as `inner##`, and names the working alternative.
+- **2.2.7 (27 November 2026)** is the current stable release, for projects in the older Claude project format. It ships Master Prompt 17.1.7. Scripts write the Info window in one house style, with a bordered header, titled sections, aligned label and value lines, progress bars for batches, and marks for passes, failures and warnings. To find the EGG channel in a stereo file, PraatGen compares the HNR of each channel's derivative, names the test that way, and adds no calibration step.
+- **2.2.6 (26 November 2026)** kept Master Prompt 17.1.6. The lint blocks functions Praat lists but refuses when run, such as `inner##`, and names the working alternative.
 - **2.2.5 (26 November 2026)** ships Master Prompt 17.1.6. When a question about your data has no command that answers it, PraatGen offers to find an answer from the signals, and when a file's channels carry different kinds of signal it offers to identify them from the signals. The sandbox installs the pinned Praat from GitHub and never asks you to change network settings. A requested jitter or shimmer measure is never left out because another measure determines it. Opus 5.5 is supported.
 - **2.2.4 (17 November 2026)** kept Master Prompt 17.1.4 and corrected the command reference: argument lists, object types for commands that need several objects selected, and editor command names, each run in Praat 6.6.30 and 6.4.39.
 - **2.2.3 (1 November 2026)** shipped Master Prompt 17.1.4. The Matrix reference covers formulas, and sessions load it for any script that uses a Matrix. Unvoiced pitch frames test true for `= undefined`, and older Praat builds download from GitHub's release download path.
