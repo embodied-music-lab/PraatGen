@@ -32,6 +32,15 @@ planning thread.
 project chat don't save rules, workarounds or findings to memory; memory holds
 only preferences you state as your own and ask to be kept.
 
+**Review.** The review thread fixes faults against the approved plan and asks
+you before delivery about any fix that would change what the script does. In a
+build or review thread, EXECUTE, GO and APPROVE start nothing: the request goes
+to a new thread.
+
+**Recommendations.** When PraatGen offers options, it recommends the method
+the reference files give. A step they don't name, such as a calibration step,
+isn't recommended.
+
 **Gates.** You can answer in the thread that asks, or in the project chat.
 Your message is passed on word for word, and a gate counts once.
 
