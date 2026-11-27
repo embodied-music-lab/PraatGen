@@ -23,6 +23,10 @@ delivered, and never retells or answers for a thread. It never passes on a
 gate itself. A request for a different script after delivery starts a new
 planning thread.
 
+**Memory.** PraatGen's rules live only in the rules file. Threads and the
+project chat don't save rules, workarounds or findings to memory; memory holds
+only preferences you state as your own and ask to be kept.
+
 **Gates.** You can answer in the thread that asks, or in the project chat.
 Your message is passed on word for word, and a gate counts once.
 
