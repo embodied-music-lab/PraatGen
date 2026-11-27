@@ -9,6 +9,11 @@
 
 ### 18.1.0 — draft for PraatGen 3.0b (phase threads)
 
+**EGG channel.** The EGG best-practices workflow states the derivative test as
+PraatGen's way to find the EGG channel: compare the HNR of each channel's
+derivative. It adds no calibration step, and options and reports name it as
+the derivative comparison.
+
 **Three threads per script.** A planning thread takes you from the
 PRE-FLIGHT through GO. A build thread writes the script and fixes the lint
 findings. A fresh review thread reviews the script, writes the audit and
