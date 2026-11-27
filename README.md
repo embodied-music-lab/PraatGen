@@ -310,7 +310,7 @@ PraatGen tracks three version numbers:
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
 | **Release** | 2.2.6 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 17.1.6 | The system instructions. Bumped when rules, workflow, or protocols change. Release 2.2.6 ships 17.1.6. |
+| **Master Prompt** | 17.1.7 | The system instructions. Bumped when rules, workflow, or protocols change. On `main`, ahead of release 2.2.6, which ships 17.1.6. |
 | **PKB Snapshot** | 2026-11-26 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
