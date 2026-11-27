@@ -3,6 +3,8 @@
    <img alt="PraatGen" src="brand/praatgen-wordmark.svg" width="360">
 </picture>
 
+**Release 2.2.5 is for projects in the older Claude project format** (addresses that start `claude.ai/project/`). A version for the new project format is in development.
+
 ⚠️ **If your project won't accept `TOOL_PRAATGEN_LINT.zip`, leave it out.** Accounts still on the older project uploader reject zip files as "not a supported file format." Don't unzip the linter or upload it as a text file. As text it's 1.4 MB of code the session can't run, and it competes with the reference files when the project searches them. Upload the other 65 files. PraatGen works without the linter and says "lint not run" before each delivery. Upload the zip once your account accepts it.
 
 **PraatGen has been redesigned to work with the new version of Claude.** Please send feedback to help improve it to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
@@ -10,7 +12,7 @@
 **New in 2.2: talk it through in SCAFFOLD mode.** The new Opus models take initiative, so PraatGen keeps them on its rules by rereading its whole prompt, about 256 KB, at the start of every turn. That costs tokens on every reply, including a reply to a question. In SCAFFOLD mode, turns that only discuss your project skip the reread: you talk about the research question, what to measure, and the inputs and outputs, and PraatGen holds off on commands, settings and code. When you're ready, tell it to leave scaffold. It reads its rules again, checks the plan you discussed against them, and continues with the usual pre-flight, plan and GO. Start a discussion with SCAFFOLD whenever you want to think a project through before building it.
 
 ⚠️ Best practice: PraatGen is structured to work within the claude.ai project framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected. 
-PraatGen was originally trained on Opus 4.6 with Extended Thinking. All signs indicate that Opus 4.8 at high effort excels. Opus 4.7 really wants to behave agentically, and has been superseded by Opus 5. Opus 5 is the current recommendation. Opus 5.5 is too agentic for this workflow, much like 4.7. Always keep the model you are using in mind. It is a variable.
+PraatGen was originally trained on Opus 4.6 with Extended Thinking. All signs indicate that Opus 4.8 at high effort excels. Opus 4.7 really wants to behave agentically, and has been superseded by Opus 5. Opus 5 is the current recommendation. Opus 5.5 works; watch that it doesn't run ahead of your decisions. Always keep the model you are using in mind. It is a variable.
 
 # EML PraatGen
 
@@ -24,8 +26,8 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 2.2.4
-**Release:** 17 November 2026
+**Version:** 2.2.5
+**Release:** 26 November 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
 ---
@@ -53,7 +55,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 
 - **Claude Pro, Team, Max, or Enterprise account** (Projects require a paid plan). PraatGen can burn tokens quickly on complex projects; for serious code production, the Max plan is recommended.
 - **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees.
-- **Claude model:** Claude Opus 5 is the current recommendation. Opus 5.5 is not recommended: it is too agentic for this workflow, like 4.7. Opus 4.8 down to 4.6 (with Extended Thinking) works if you want to conserve tokens. Sonnet and Haiku are not supported. See "Choosing a model" below.
+- **Claude model:** Claude Opus 5 is the current recommendation. Opus 5.5 works; watch for over-agentic behavior. Opus 4.8 down to 4.6 (with Extended Thinking) works if you want to conserve tokens. Sonnet and Haiku are not supported. See "Choosing a model" below.
 - **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by pointing `PROJECT_INSTRUCTIONS.txt` and the file references in `PRAATGEN_RULES_FULL.md` at a local directory; you may also want to keep PraatGen's instructions separate from your `CLAUDE.md` file.
 - **Praat:** Version 6.4.39 or later. **Prefer 6.6.30** when installing Praat for writing and testing scripts; Sandbox Mode installs 6.6.30 (pinned) in Claude's own workspace. No PraatGen feature requires 7.0.02 or later. Praat 7.0.02 and later add a security feature that slows development: a script that writes a file or runs a system command stops to ask your permission, each run. Anything that runs on 6.6.30 also runs on the current version. Direct downloads for 6.6.30: [Mac](https://www.fon.hum.uva.nl/praat/praat6630_mac.dmg), [Windows](https://www.fon.hum.uva.nl/praat/praat6630_win-x64v3.zip) ([ARM](https://www.fon.hum.uva.nl/praat/praat6630_win-arm64.zip)), [Linux](https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz).
 
@@ -62,7 +64,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 The model is a variable — keep the one you're using in mind.
 
 - **Opus 5** is the current recommendation and the ceiling.
-- **Opus 5.5** is not recommended. Like 4.7, it is too agentic: it settles decisions itself that PraatGen's workflow puts to you.
+- **Opus 5.5** works. Watch for over-agentic behavior: it can settle decisions itself that PraatGen's workflow puts to you.
 - **Opus 4.8** also performs well.
 - **Opus 4.7** is fine but more agentic by default; it wants to take initiative. That suits large-scale refactors in AUTO SANDBOX mode, but in close collaborative work watch that it doesn't run ahead of your decisions. Superseded by Opus 5.
 - **Opus 4.6 + Extended Thinking** is the original development-and-validation baseline for PraatGen and remains solid, particularly if you are token-conscious.
@@ -139,7 +141,7 @@ Reply with any of these in place of (or alongside) your task. Modes compose free
 
 - **SCAFFOLD** — collaborative design review *before* any code. PraatGen walks through the proposed workflow, GUI design, object lifecycle, and edge cases for your approval. While scaffold is on, PraatGen doesn't reread its rules on discussion turns, so the conversation stays with the idea; tell it when to leave scaffold, and it reads the rules and checks the design against them. Best for batch pipelines, multi-panel figures, and clinical analysis chains.
 - **DEBUGGING** — strict targeted-fix mode. Requires your approval for any change, declares the scope of each fix as a binding contract, and avoids elective refactoring. Use this for errors and refactors.
-- **SANDBOX** — makes PraatGen test every script in its own copy of Praat before delivering it, including running the script through its real dialogs. PraatGen can install Praat in any session when it needs to check something; SANDBOX makes testing required. It downloads Praat from `www.fon.hum.uva.nl`. Whether a session can reach that site depends on your plan and settings and isn't settled yet, so if PraatGen reports it unavailable, ask it to try the download once. If the download is refused, PraatGen offers a manual-upload fallback.
+- **SANDBOX** — makes PraatGen test every script in its own copy of Praat before delivering it, including running the script through its real dialogs. PraatGen can install Praat in any session when it needs to check something; SANDBOX makes testing required. It downloads the pinned Praat 6.6.30 from Praat's GitHub releases, since the Praat website hosts only current builds. It never asks you to change network or environment settings. If GitHub is refused too, PraatGen offers a manual-upload fallback.
 - **NOREVIEW** — skips the independent check before delivery. By default a fresh Opus reviewer reads the code rules and the clinical defaults and checks the script's clinical parameters, pitch limits, file output, dialogs, drawing and task coverage. NOREVIEW is faster. You can add it in any message up to the GO for code.
 - **AUTO** (Autonomous) — suppresses the approval gates and intermediate status reports for batch work: task lists, multi-file refactors, or known sequences of changes. PraatGen executes the whole list and delivers once at the end, with a handoff document. Reply STANDARD or GATES ON to restore normal gating.
 - **NOINTRO** — put this in your *first* message to skip the opening menu. PraatGen goes straight to PRE-FLIGHT if you have supplied the four items (task, starting state, inputs, outputs), and otherwise asks only for what is missing. It suppresses the greeting and nothing else — every rule still applies.
@@ -196,7 +198,7 @@ PraatGen cannot reliably tell from the inside that anything happened.
 | `PROJECT_INSTRUCTIONS.txt` | The project instructions: they tell PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns. |
 | `src/` | The sources of `PRAATGEN_RULES_FULL.md`: the core (`MASTER_PROMPT_CORE_v17_0_0.md`) and the six `RULES_*.md` files. Edit these, then rebuild with `tools/build_rules_full.py`. Don't upload them to a project. Master Prompt content version: 17.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_2.2.4.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.4 GitHub Release. |
+| `RELEASE_NOTES_2.2.5.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.5 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -312,14 +314,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 2.2.4 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 17.1.5 | The system instructions. Bumped when rules, workflow, or protocols change. On `main`, ahead of release 2.2.4, which ships 17.1.4. |
-| **PKB Snapshot** | 2026-11-17 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 2.2.5 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 17.1.6 | The system instructions. Bumped when rules, workflow, or protocols change. Release 2.2.5 ships 17.1.6. |
+| **PKB Snapshot** | 2026-11-26 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **2.2.4 (17 November 2026)** is the current stable release. It keeps Master Prompt 17.1.4 and corrects the command reference: argument lists, object types for commands that need several objects selected, and editor command names, each run in Praat 6.6.30 and 6.4.39.
+- **2.2.5 (26 November 2026)** is the current stable release, for projects in the older Claude project format. It ships Master Prompt 17.1.6. When a question about your data has no command that answers it, PraatGen offers to find an answer from the signals, and when a file's channels carry different kinds of signal it offers to identify them from the signals. The sandbox installs the pinned Praat from GitHub and never asks you to change network settings. A requested jitter or shimmer measure is never left out because another measure determines it. Opus 5.5 is supported.
+- **2.2.4 (17 November 2026)** kept Master Prompt 17.1.4 and corrected the command reference: argument lists, object types for commands that need several objects selected, and editor command names, each run in Praat 6.6.30 and 6.4.39.
 - **2.2.3 (1 November 2026)** shipped Master Prompt 17.1.4. The Matrix reference covers formulas, and sessions load it for any script that uses a Matrix. Unvoiced pitch frames test true for `= undefined`, and older Praat builds download from GitHub's release download path.
 - **2.2.2 (22 October 2026)** shipped Master Prompt 17.1.3. Subagents get the files their task needs in their prompt, and the review proves it read them. Files inside a plugin lint cleanly under the plugin's register. Undefined values follow the file's reader, settings files follow the script's scope, and older Praat builds come from GitHub.
 - **2.2.1 (15 October 2026)** shipped Master Prompt 17.1.2, unchanged from 2.2.0. For maintainers, the linter check compares the text inside the linter zip, so a zip uploaded through GitHub's web page passes.
@@ -345,9 +348,9 @@ PraatGen tracks three version numbers:
 
 **Thinking / effort management.** Complex scripts benefit from deliberation, and the prompt includes gates that assess it — but the setting is yours to manage manually, and on 4.8+ the guidance is provisional (see "Choosing a model").
 
-**Model dependency.** PraatGen runs on Opus; on Sonnet or Haiku it stops and asks you to switch. Opus 5 is the current recommendation, and Opus 5.5 is not recommended because it is too agentic; Opus 4.8 down to 4.6 with Extended Thinking works if you want to conserve tokens. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
+**Model dependency.** PraatGen runs on Opus; on Sonnet or Haiku it stops and asks you to switch. Opus 5 is the current recommendation, and Opus 5.5 works if you watch for over-agentic behavior; Opus 4.8 down to 4.6 with Extended Thinking works if you want to conserve tokens. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
 
-**Sandbox prerequisites.** Sandbox Mode downloads Praat from `www.fon.hum.uva.nl`. Access to that site varies by Claude plan and isn't settled yet: an individual Max account reached it by default when tested on 8 October 2026, other plans are untested, and on Team and Enterprise plans the organization owner controls which domains are allowed. If PraatGen reports the site unavailable, ask it to try the download once before accepting that. If the download is refused, PraatGen offers a manual-upload fallback.
+**Sandbox prerequisites.** Sandbox Mode downloads the pinned Praat 6.6.30 from Praat's GitHub releases (`github.com/praat/praat/releases`). On Team and Enterprise plans the organization owner controls which domains are allowed. PraatGen never asks you to change network or environment settings. If the download is refused, it offers a manual-upload fallback.
 
 **Context use.** PraatGen reads its whole prompt, about 256 KB, at the start of every turn. That keeps every rule in front of the model, but each turn uses more of your usage and the context fills sooner, so long sessions compact earlier than in 2.0. SCAFFOLD discussion turns skip the reread; use SCAFFOLD for long conversations.
 
