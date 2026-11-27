@@ -9,6 +9,7 @@
 # Version: 1.2
 # Date: 26 February 2026
 # Revised: 29 July 2026 (PraatGen v14.0.0) — stale `EML_DRAWING_PROCEDURES.txt` references repointed to `eml-graph-procedures.txt`
+# Revised: 26 November 2026 — S8D Info window house style; S7A and S8 examples use it
 
 # ============================================================================
 # DESIGN PRINCIPLES
@@ -752,8 +753,11 @@
 #
 # Every batch iteration must report to the Info window:
 #
-#   appendInfoLine: "[", string$ (iFile), "/", string$ (nFiles), "] ",
-#   ... baseName$
+#   @infoBar: iFile, nFiles, 20
+#   appendInfoLine: "  [ ", string$ (iFile), " / ", string$ (nFiles), " ] ",
+#   ... infoBar.result$, "  ", baseName$
+#
+# (infoBar and the Info window characters: S8D.)
 #
 # This gives the user a running count and current file identity.
 #
@@ -808,29 +812,24 @@
 #
 # Minimum summary content:
 #
-#   appendInfoLine: ""
-#   appendInfoLine: "============================================"
-#   appendInfoLine: "COMPLETE"
-#   appendInfoLine: "============================================"
-#   appendInfoLine: "Files processed: ", string$ (nProcessed)
-#   appendInfoLine: "Files skipped:   ", string$ (nSkipped)
-#   appendInfoLine: "Warnings:        ", string$ (nWarnings)
-#   appendInfoLine: "Output:          ", csvPath$
-#   appendInfoLine: "============================================"
+#   @infoSection: "Complete"
+#   @infoLine: "Files processed", string$ (nProcessed)
+#   @infoLine: "Files skipped", string$ (nSkipped)
+#   @infoLine: "Warnings", string$ (nWarnings)
+#   @infoLine: "Output", csvPath$
+#   @infoRule
+#
+# (infoSection, infoLine, infoRule: S8D.)
 #
 # S8B: DATA RANGE SUMMARY
 #
 # For analysis scripts, include the range of key measures across all
 # processed files. This gives the researcher an immediate quality check:
 #
-#   appendInfoLine: ""
-#   appendInfoLine: "--- Measure ranges ---"
-#   appendInfoLine: "Mean F0:   ", fixed$ (minMeanF0, 1),
-#   ... " - ", fixed$ (maxMeanF0, 1), " Hz"
-#   appendInfoLine: "Jitter:    ", fixed$ (minJitter, 3),
-#   ... " - ", fixed$ (maxJitter, 3)
-#   appendInfoLine: "Shimmer:   ", fixed$ (minShimmer, 3),
-#   ... " - ", fixed$ (maxShimmer, 3)
+#   @infoSection: "Measure ranges"
+#   @infoLine: "Mean F0 (Hz)", fixed$ (minMeanF0, 1) + " - " + fixed$ (maxMeanF0, 1)
+#   @infoLine: "Jitter (%)", fixed$ (minJitter, 3) + " - " + fixed$ (maxJitter, 3)
+#   @infoLine: "Shimmer (%)", fixed$ (minShimmer, 3) + " - " + fixed$ (maxShimmer, 3)
 #
 # Outlier values in these ranges immediately alert the researcher to
 # potential data quality issues.
@@ -852,6 +851,88 @@
 #
 # SELF-AUDIT must confirm: "Post-completion summary: [implemented /
 # not applicable]."
+#
+# S8D: INFO WINDOW HOUSE STYLE (every script that writes to the Info window)
+#
+# Verified in the Info window of Praat 6.6.30 and 6.4.39 (Linux, default
+# fixed-width font, 26 Nov 2026): every character below renders and
+# padded columns align.
+#
+# Layout, 46 characters wide:
+#   - a header: a rule line, the script's title, date$ (), a rule line
+#   - titled sections, each preceded by a blank line
+#   - label-value lines: two-space indent, label padded to 22 characters,
+#     units in the label ("Pitch floor (Hz)")
+#   - the S8A summary as the last section, closed by a rule line
+#   - batch progress (S7A) as "[ 12 / 40 ] " + a 20-character bar + name
+#   - pass, fail and warning lines marked with the ok, fail and warn marks
+#   - a short distribution may show as a sparkline: "▁▂▃▄▅▆▇█", one
+#     character per value scaled from minimum to maximum
+#
+# Data tables: when the script also writes the data to a file, the Info
+# window table uses columns padded with spaces (tabs don't align in the
+# Info window). When the Info window is the only output, rows stay
+# tab-separated, with a header row carrying units, so they paste into a
+# spreadsheet.
+#
+# Characters are set once, at the top of the script. When the Info window
+# is mirrored to a file (S8C), use the ASCII set, because the file-output
+# encoding rule at the top of this appendix applies to that file.
+#
+#   # Info window characters: Unicode set; ASCII set when mirrored to a file
+#   infoWidth = 46
+#   infoRule$ = "═"
+#   infoDash$ = "─"
+#   infoFull$ = "█"
+#   infoEmpty$ = "░"
+#   infoOk$ = "✓"
+#   infoFail$ = "✗"
+#   infoWarn$ = "⚠"
+#   # ASCII set: "=", "-", "#", ".", "+", "x", "!"
+#
+#   procedure infoRule
+#       .line$ = ""
+#       for .i to infoWidth
+#           .line$ = .line$ + infoRule$
+#       endfor
+#       appendInfoLine: .line$
+#   endproc
+#
+#   procedure infoSection: .title$
+#       appendInfoLine: ""
+#       .line$ = "  " + infoDash$ + infoDash$ + " " + .title$ + " "
+#       while length (.line$) < infoWidth
+#           .line$ = .line$ + infoDash$
+#       endwhile
+#       appendInfoLine: .line$
+#   endproc
+#
+#   procedure infoLine: .label$, .value$
+#       .line$ = "  " + .label$
+#       while length (.line$) < 24
+#           .line$ = .line$ + " "
+#       endwhile
+#       appendInfoLine: .line$, .value$
+#   endproc
+#
+#   procedure infoBar: .done, .total, .width
+#       .filled = round (.width * .done / .total)
+#       .result$ = ""
+#       for .i to .width
+#           if .i <= .filled
+#               .result$ = .result$ + infoFull$
+#           else
+#               .result$ = .result$ + infoEmpty$
+#           endif
+#       endfor
+#   endproc
+#
+# Header:
+#   writeInfoLine: ""
+#   @infoRule
+#   appendInfoLine: "  ", scriptTitle$
+#   appendInfoLine: "  ", date$ ()
+#   @infoRule
 
 # ============================================================================
 # S9 AUTO-GENERATED OUTPUT FILENAMES

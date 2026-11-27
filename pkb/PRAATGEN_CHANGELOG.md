@@ -7,6 +7,24 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 18.1.0 — draft for PraatGen 3.0b (phase threads)
+
+**Three threads per script.** A planning thread takes you from the
+PRE-FLIGHT through GO. A build thread writes the script and fixes the lint
+findings. A fresh review thread reviews the script, writes the audit and
+delivers it. Each change after delivery gets its own build and review
+threads. AUTO and DEBUGGING still run in one thread.
+
+**The project chat dispatches.** It starts each thread from the script's
+`flow.md`, where every thread records what it did and what comes next. It
+writes no summaries and never passes on a gate itself.
+
+**Gates.** You can answer in the thread that asks, or in the project chat.
+Your message is passed on word for word, and a gate counts once.
+
+**Plugin.** The PraatGen plugin ships in the project files. The project chat
+shows it for install the first time.
+
 ### 18.0.0 — draft for PraatGen 3.0 (new Claude project format)
 
 **Project chat and threads.** The project chat starts one thread per script
@@ -23,6 +41,11 @@ when you type them in the thread.
 **Delivery.** A script is delivered only when nothing PraatGen can still do
 is open. Questions only you can settle come before delivery.
 
+**Read tokens and audit files.** The plan file no longer lists the rules
+files' read tokens, and the linter no longer checks them; the PraatGen plugin
+checks each turn's read instead. Each script version gets its own audit file,
+`<name>_audit_v<version>.md`, and earlier ones are never edited.
+
 **After a compaction.** A thread that sees a conversation summary checks its
 output folder before anything else, without waiting for VERIFY YOUR STATE.
 
@@ -34,6 +57,12 @@ lint blocks a script whose options, settings or buttons aren't on the list.
 **Independent review.** The reviewer gets a fixed prompt from the rules. It
 reports findings only, with no severity levels, and each one is fixed or put
 to you as a question before delivery.
+
+**Info window style.** Scripts write the Info window in one house style: a
+bordered header, titled sections, aligned label-value lines, progress bars for
+batches, and marks for passes, failures and warnings (Appendix F S8D). Data
+tables use padded columns when the data also goes to a file, and stay
+tab-separated when the Info window is the only output.
 
 ### Release 2.2.6 — 26 November 2026 (Master Prompt 17.1.6, unchanged)
 
