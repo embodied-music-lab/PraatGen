@@ -3,22 +3,15 @@
    <img alt="PraatGen" src="brand/praatgen-wordmark.svg" width="360">
 </picture>
 
-**Release 2.2.5 is for projects in the older Claude project format** (addresses that start `claude.ai/project/`). A version for the new project format is in development.
-
-⚠️ **If your project won't accept `TOOL_PRAATGEN_LINT.zip`, leave it out.** Accounts still on the older project uploader reject zip files as "not a supported file format." Don't unzip the linter or upload it as a text file. As text it's 1.4 MB of code the session can't run, and it competes with the reference files when the project searches them. Upload the other 65 files. PraatGen works without the linter and says "lint not run" before each delivery. Upload the zip once your account accepts it.
-
-**PraatGen has been redesigned to work with the new version of Claude.** Please send feedback to help improve it to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
-
-**New in 2.2: talk it through in SCAFFOLD mode.** The new Opus models take initiative, so PraatGen keeps them on its rules by rereading its whole prompt, about 256 KB, at the start of every turn. That costs tokens on every reply, including a reply to a question. In SCAFFOLD mode, turns that only discuss your project skip the reread: you talk about the research question, what to measure, and the inputs and outputs, and PraatGen holds off on commands, settings and code. When you're ready, tell it to leave scaffold. It reads its rules again, checks the plan you discussed against them, and continues with the usual pre-flight, plan and GO. Start a discussion with SCAFFOLD whenever you want to think a project through before building it.
-
-⚠️ Best practice: PraatGen is structured to work within the claude.ai project framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected. 
-PraatGen was originally trained on Opus 4.6 with Extended Thinking. All signs indicate that Opus 4.8 at high effort excels. Opus 4.7 really wants to behave agentically, and has been superseded by Opus 5. Opus 5 is the current recommendation. Opus 5.5 works; watch that it doesn't run ahead of your decisions. Always keep the model you are using in mind. It is a variable.
-
 # EML PraatGen
 
 **Generate powerful Praat scripts through conversation.**
 
 PraatGen is a Claude AI project that writes syntactically correct Praat scripts from plain-language descriptions. You describe what you want to accomplish — extract F0 contours, batch-process a folder of recordings, build a publication figure, or generate a complex plugin — and PraatGen generates a complete, runnable script with validated commands, proper object handling, and clinical-grade parameter defaults. It can help you ideate your studies, debug its own or your existing code, and collaborate on your research and analysis projects.
+
+**Which version you need.** Release 2.2.6 is for projects in the older Claude project format, whose addresses start `claude.ai/project/`. A version for the new project format, with a project chat and threads, is in development.
+
+Please send feedback to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
 
 While it is helpful to have domain knowledge about the signals you will bring into Praat, no Praat scripting experience is required. In fact, do not try to *think* like Praat. Praat has an object-oriented hierarchy; commands are connected to specific object types rather than organized by tasks or outcomes. Some of the most advanced and useful built-in functions are hidden in the menus by default, so it is likely that you do not even know what Praat is capable of.
 
@@ -26,7 +19,7 @@ Ask PraatGen questions. Push it to do what you want, not what you currently know
 
 **Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
 **Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 2.2.5
+**Version:** 2.2.6
 **Release:** 26 November 2026
 **License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 
@@ -54,7 +47,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 ## Requirements
 
 - **Claude Pro, Team, Max, or Enterprise account** (Projects require a paid plan). PraatGen can burn tokens quickly on complex projects; for serious code production, the Max plan is recommended.
-- **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees.
+- **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees. PraatGen is structured to work within the Claude project framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected.
 - **Claude model:** Claude Opus 5 is the current recommendation. Opus 5.5 works; watch for over-agentic behavior. Opus 4.8 down to 4.6 (with Extended Thinking) works if you want to conserve tokens. Sonnet and Haiku are not supported. See "Choosing a model" below.
 - **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by pointing `PROJECT_INSTRUCTIONS.txt` and the file references in `PRAATGEN_RULES_FULL.md` at a local directory; you may also want to keep PraatGen's instructions separate from your `CLAUDE.md` file.
 - **Praat:** Version 6.4.39 or later. **Prefer 6.6.30** when installing Praat for writing and testing scripts; Sandbox Mode installs 6.6.30 (pinned) in Claude's own workspace. No PraatGen feature requires 7.0.02 or later. Praat 7.0.02 and later add a security feature that slows development: a script that writes a file or runs a system command stops to ask your permission, each run. Anything that runs on 6.6.30 also runs on the current version. Direct downloads for 6.6.30: [Mac](https://www.fon.hum.uva.nl/praat/praat6630_mac.dmg), [Windows](https://www.fon.hum.uva.nl/praat/praat6630_win-x64v3.zip) ([ARM](https://www.fon.hum.uva.nl/praat/praat6630_win-arm64.zip)), [Linux](https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz).
@@ -102,6 +95,8 @@ The Claude app doesn't re-send project instructions on every turn, so the whole 
 1. In your project, click **add files**
 2. Upload all 66 files from the `pkb/` folder. They include `PRAATGEN_RULES_FULL.md`, which holds the whole prompt, the zipped linter `TOOL_PRAATGEN_LINT.zip` (upload the zip as it is; don't unzip it), and the verified reference files PraatGen uses to validate commands and functions
 3. Do not rename the files; the prompt references them by their exact filenames
+
+If your project won't accept `TOOL_PRAATGEN_LINT.zip` (accounts on the older uploader reject zip files as "not a supported file format"), leave it out. Don't unzip it or upload it as a text file. Upload the other 65 files. PraatGen works without the linter and says "lint not run" before each delivery.
 
 ### 4. Start a Conversation
 
@@ -198,7 +193,7 @@ PraatGen cannot reliably tell from the inside that anything happened.
 | `PROJECT_INSTRUCTIONS.txt` | The project instructions: they tell PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns. |
 | `src/` | The sources of `PRAATGEN_RULES_FULL.md`: the core (`MASTER_PROMPT_CORE_v17_0_0.md`) and the six `RULES_*.md` files. Edit these, then rebuild with `tools/build_rules_full.py`. Don't upload them to a project. Master Prompt content version: 17.0.0. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_2.2.5.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.5 GitHub Release. |
+| `RELEASE_NOTES_2.2.6.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.6 GitHub Release. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -314,14 +309,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 2.2.5 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 17.1.6 | The system instructions. Bumped when rules, workflow, or protocols change. Release 2.2.5 ships 17.1.6. |
+| **Release** | 2.2.6 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 17.1.6 | The system instructions. Bumped when rules, workflow, or protocols change. Release 2.2.6 ships 17.1.6. |
 | **PKB Snapshot** | 2026-11-26 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **2.2.5 (26 November 2026)** is the current stable release, for projects in the older Claude project format. It ships Master Prompt 17.1.6. When a question about your data has no command that answers it, PraatGen offers to find an answer from the signals, and when a file's channels carry different kinds of signal it offers to identify them from the signals. The sandbox installs the pinned Praat from GitHub and never asks you to change network settings. A requested jitter or shimmer measure is never left out because another measure determines it. Opus 5.5 is supported.
+- **2.2.6 (26 November 2026)** is the current stable release, for projects in the older Claude project format. It keeps Master Prompt 17.1.6. The lint blocks functions Praat lists but refuses when run, such as `inner##`, and names the working alternative.
+- **2.2.5 (26 November 2026)** ships Master Prompt 17.1.6. When a question about your data has no command that answers it, PraatGen offers to find an answer from the signals, and when a file's channels carry different kinds of signal it offers to identify them from the signals. The sandbox installs the pinned Praat from GitHub and never asks you to change network settings. A requested jitter or shimmer measure is never left out because another measure determines it. Opus 5.5 is supported.
 - **2.2.4 (17 November 2026)** kept Master Prompt 17.1.4 and corrected the command reference: argument lists, object types for commands that need several objects selected, and editor command names, each run in Praat 6.6.30 and 6.4.39.
 - **2.2.3 (1 November 2026)** shipped Master Prompt 17.1.4. The Matrix reference covers formulas, and sessions load it for any script that uses a Matrix. Unvoiced pitch frames test true for `= undefined`, and older Praat builds download from GitHub's release download path.
 - **2.2.2 (22 October 2026)** shipped Master Prompt 17.1.3. Subagents get the files their task needs in their prompt, and the review proves it read them. Files inside a plugin lint cleanly under the plugin's register. Undefined values follow the file's reader, settings files follow the script's scope, and older Praat builds come from GitHub.
