@@ -72,6 +72,9 @@ Checks:
                        that file's real read token. RULES_CODE.md must be
                        listed. The linter holds only a one-way hash of each
                        pairing, so it can confirm a token but never reveal it.
+  Test list            With NAME_testlist.md beside the script (SANDBOX), every
+                       menu option, boolean field and pause-dialog button the
+                       script defines is named in it.
 
 Command references. The selection's type is inferred from the commands that
 created the selected objects, from a literal file extension in Read from file:,
@@ -1548,6 +1551,46 @@ def check_functions(lines, functions, ghosts=None):
     return findings, verified
 
 
+TEST_OPTION = re.compile(r'^(option|button)\b\s*:?\s*"?(.+?)"?\s*$')
+TEST_BOOLEAN = re.compile(r'^boolean\s*:?\s*"?([^",]+?)"?\s*(?:,|\s)\s*\S+\s*$')
+TEST_ENDPAUSE = re.compile(r'endPause\s*:\s*(.*)$')
+
+
+def _label(text):
+    return re.sub(r'\s+', ' ', text.replace('_', ' ')).strip().lower()
+
+
+def check_test_list(script, lines):
+    """With <name>_testlist.md beside the script (SANDBOX), every menu option,
+    boolean field and pause-dialog button the script defines has a row in it."""
+    stem = os.path.splitext(os.path.abspath(script))[0]
+    path = stem + '_testlist.md'
+    if not os.path.isfile(path):
+        return []
+    with open(path, encoding='utf-8') as f:
+        listed = _label(f.read())
+    name = os.path.basename(path)
+    findings = []
+    for ln in lines:
+        code = ln.text.strip()
+        wanted = []
+        m = TEST_OPTION.match(code)
+        if m:
+            wanted.append((m.group(1), m.group(2)))
+        m = TEST_BOOLEAN.match(code)
+        if m:
+            wanted.append(('setting', m.group(1)))
+        m = TEST_ENDPAUSE.search(code)
+        if m:
+            for b in re.findall(r'"([^"]+)"', m.group(1)):
+                wanted.append(('button', b))
+        for kind, label in wanted:
+            if _label(label) not in listed:
+                findings.append(('BLOCKING', ln.n,
+                                 f'{kind} "{label}" has no row in {name} -- {short(ln.text)}'))
+    return findings
+
+
 # ---------------------------------------------------------------- main
 
 def usage():
@@ -1659,6 +1702,7 @@ def main():
         ('Nested queries', check_nested(lines)),
         ('Functions', fn_findings),
         ('Read tokens', tok_findings),
+        ('Test list', check_test_list(script, lines)),
     ]
     blocking = sum(1 for _c, fs in checks for f in fs if f[0] == 'BLOCKING')
     notes = sum(1 for _c, fs in checks for f in fs if f[0] == 'NOTE')

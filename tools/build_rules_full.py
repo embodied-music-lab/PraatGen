@@ -41,7 +41,7 @@ def build():
         '# PRAATGEN RULES, FULL TEXT (read every turn)\n\n'
         f'This file is the whole PraatGen prompt: the Master Prompt core ({version}) '
         'followed by the six RULES files. At the start of every turn, before any '
-        'other tool call or any text, read this entire file with project_read. '
+        'other tool call or any text, read this entire file with your file tools, paging to its last line. '
         'Then open your reply with the line "Rules read this turn: " followed by '
         "the marker on this file's last line. The one exception is scaffold "
         'discussion, set out in the project instructions and Step 2A.\n\n'
