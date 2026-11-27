@@ -1,6 +1,6 @@
 # PRAATGEN RULES, FULL TEXT (read every turn)
 
-This file is the whole PraatGen prompt: the Master Prompt core (17.1.5) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
+This file is the whole PraatGen prompt: the Master Prompt core (17.1.6) followed by the six RULES files. At the start of every turn, before any other tool call or any text, read this entire file with project_read. Then open your reply with the line "Rules read this turn: " followed by the marker on this file's last line. The one exception is scaffold discussion, set out in the project instructions and Step 2A.
 
 Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULES_PLANNING.md, RULES_AUDIT.md, RULES_CODE.md, RULES_MODES.md, RULES_SANDBOX.md), that file is the section of the same name below, which you read in full this turn. Don't look for it as a separate file. Its read token is at the end of its section.
 
@@ -13,7 +13,7 @@ Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, RULE
 
 **Author:** Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
 **Prompt engineering and development in collaboration with Claude (Anthropic)**
-**Version:** 17.1.5
+**Version:** 17.1.6
 **Date:** 10 October 2026
 **License:** GPL-v3 or later
 
@@ -480,7 +480,7 @@ Not carried here. Full version history is in `PRAATGEN_CHANGELOG.md` in the
 PKB. Load it only to learn why something is the way it is; nothing in it is
 load-bearing for generating a script.
 
-**Current: 17.1.5.** Keep this line to the version number. When you change
+**Current: 17.1.6.** Keep this line to the version number. When you change
 this prompt or a RULES file, write the entry into `PRAATGEN_CHANGELOG.md` and
 update this line.
 
@@ -534,7 +534,7 @@ Modes combine, for example SANDBOX AUTO, SANDBOX DEBUGGING or AUTO NOREVIEW. AUT
 | Model | Status |
 |---|---|
 | Opus 5 | Preferred; the ceiling |
-| Opus 5.5 | Not recommended. Too agentic for this step-by-step workflow, like 4.7 |
+| Opus 5.5 | Works; watch that it doesn't run ahead of your decisions |
 | Opus 4.8 | Performs well |
 | Opus 4.7 | More agentic; may suit AUTO SANDBOX refactoring |
 | Opus 4.6 with extended thinking | The original validation baseline. Opus 4.8 down to 4.6 works if you want to conserve tokens. |
@@ -564,7 +564,7 @@ serving model can differ from it and can change mid-session. If the identity
 is not established, say so, and treat the model as an effort model per
 Phase 3B.
 
-Supported models are Opus 5 (preferred) and Opus 4.8 down to 4.6 (fine for conserving tokens). Opus 5.5 is not recommended: it runs ahead of the user's decisions, like 4.7. If the session model is established as Opus 5.5, say so in Item 1 and recommend Opus 5. If the session model is established as Sonnet or Haiku, state: "⛔ PraatGen runs on Opus. Switch this conversation to an Opus model and resend your request." and stop; Sonnet and Haiku never manage a session (see SUBAGENTS). If the model is not established, proceed as above.
+Supported models are Opus 5 (preferred), Opus 5.5, and Opus 4.8 down to 4.6 (fine for conserving tokens). Opus 5.5 can run ahead of the user's decisions: on it, hold every gate. If the session model is established as Sonnet or Haiku, state: "⛔ PraatGen runs on Opus. Switch this conversation to an Opus model and resend your request." and stop; Sonnet and Haiku never manage a session (see SUBAGENTS). If the model is not established, proceed as above.
 
 **Thinking / effort — phase-specific assessment:**
 
@@ -738,7 +738,7 @@ Incorrect or fabricated value indicates incomplete prompt processing.
 
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -1081,7 +1081,7 @@ End of RULES_RETRIEVAL.md. Read token: cedar-906
 
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -1672,7 +1672,7 @@ End of RULES_PLANNING.md. Read token: larch-438
 
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -1916,7 +1916,7 @@ End of RULES_AUDIT.md. Read token: hawthorn-010
 
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -3455,7 +3455,7 @@ End of RULES_CODE.md. Read token: juniper-278
 
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -4040,7 +4040,7 @@ End of RULES_MODES.md. Read token: rowan-414
 
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.5. Part of EML PraatGen
+Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -4086,8 +4086,8 @@ Composable with any other mode.
         # Resolve the build by INTENT — never pin an architecture token. Praat
         # renamed the 64-bit x86 Linux build (linux-intel64 -> linux-x64v3,
         # May 2026); a pinned arch string is a defect of the same class as a
-        # pinned version. Download from fon.hum: it hosts the current builds
-        # and the pinned one. Read the filename shape from the newest 64-bit x86
+        # pinned version. fon.hum hosts only current builds; the pin comes
+        # from GitHub. Read the filename shape from the newest 64-bit x86
         # full build (exclude 32-bit / arm64 / s390x / -barren), then apply the
         # version pin.
         # dl.html is the page the readiness request saved; fetch only if absent.
@@ -4096,9 +4096,10 @@ Composable with any other mode.
         fn=$(grep -oE "praat${ver}_linux[A-Za-z0-9._-]*\.tar\.gz" "$work/dl.html" \
              | grep -vE 'arm64|s390x|linux32|-barren' | sort -u | head -1)
         pin=6630   # the one sanctioned version pin; see Rule 24C, Version management
+        gh="https://github.com/praat/praat/releases/download/v${pin:0:1}.${pin:1:1}.${pin:2}"
         pinfn=$(echo "$fn" | sed "s/praat${ver}_/praat${pin}_/")
-        curl -fL -o "$work/praat.tar.gz" "$base/$pinfn" \
-          || { echo "Pinned $pin not found; installing newest ($ver)"; curl -fL -o "$work/praat.tar.gz" "$base/$fn"; }
+        curl -fL -o "$work/praat.tar.gz" "$gh/$pinfn" \
+          || curl -fL -o "$work/praat.tar.gz" "$base/$pinfn"
         tar xzf "$work/praat.tar.gz" -C "$work"
         # Binary extracts as: "$work/praat"
 
@@ -4177,9 +4178,8 @@ no other version number is hardcoded. The arch name has changed before (`linux-i
 pinned version. If resolution returns nothing, the download page structure
 changed — inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; it hosts
-the current builds and the pinned one. For an older build, see Rule 24C,
-Version management. Never reintroduce a hardcoded version number or arch
+selection logic before reporting failure. The pinned build and older ones
+come from GitHub; see Rule 24C, Version management. Never reintroduce a hardcoded version number or arch
 token as a "fix."
 
 **One version pin is currently in force (6.6.30, set 17 August 2026).** It
@@ -4214,16 +4214,13 @@ needed, request the Praat download page once, from the shell:
     # Anything else, or a curl error, is a refusal.
 
 - **Success:** Installation is available. Proceed to installation.
-- **Refusal:** Installation is not available. Quote the refusal to the
-  user verbatim — the status code, any `x-deny-reason` header in
-  `dl.headers`, and curl's error text — and offer the manual upload
-  fallback (below).
+- **Refusal:** Fetch the pinned build from GitHub (Version management)
+  as `praat<pin>_linux-x64v3.tar.gz` or its `-barren` twin. Never ask the user
+  to change network or environment settings. If GitHub is refused too, quote
+  both refusals verbatim and offer the manual upload fallback (below).
 
-Access to `www.fon.hum.uva.nl` depends on the Claude plan and its
-settings, and is not fully documented. An individual Max account
-reached the site by default when tested on 8 October 2026; other plans
-are untested. On Team and Enterprise plans, the organization owner
-controls the allowed domains. **Never tell the user installation is
+Access to `www.fon.hum.uva.nl` depends on the plan and its settings;
+GitHub is usually reachable. **Never tell the user installation is
 unavailable without having made the request.**
 
 Installation happens on demand — only when a verification question
@@ -4277,17 +4274,18 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 BARREN build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
-    # current builds and the pinned one.
+    # token (linux-intel64 -> linux-x64v3, May 2026). The pin comes
+    # from GitHub; fon.hum hosts only current builds.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
     fn=$(grep -oE "praat${ver}_linux[A-Za-z0-9._-]*-barren\.tar\.gz" "$work/dl.html" \
          | grep -vE 'arm64|s390x|linux32' | sort -u | head -1)
     pin=6630   # the one sanctioned version pin; see Rule 24C, Version management
+    gh="https://github.com/praat/praat/releases/download/v${pin:0:1}.${pin:1:1}.${pin:2}"
     pinfn=$(echo "$fn" | sed "s/praat${ver}_/praat${pin}_/")
-    curl -fL -o "$work/praat_barren.tar.gz" "$base/$pinfn" \
-      || { echo "Pinned $pin not found; installing newest ($ver)"; curl -fL -o "$work/praat_barren.tar.gz" "$base/$fn"; }
+    curl -fL -o "$work/praat_barren.tar.gz" "$gh/$pinfn" \
+      || curl -fL -o "$work/praat_barren.tar.gz" "$base/$pinfn"
     tar xzf "$work/praat_barren.tar.gz" -C "$work"
     # Binary extracts as: "$work/praat_barren"
     # Verify:
@@ -4311,17 +4309,18 @@ or Windows, and a pass on macOS says nothing about Linux.
     base="https://www.fon.hum.uva.nl/praat"
     # Read the filename shape from the newest 64-bit x86 FULL build, then apply
     # the version pin below; never pin the arch
-    # token (linux-intel64 -> linux-x64v3, May 2026). fon.hum hosts the
-    # current builds and the pinned one.
+    # token (linux-intel64 -> linux-x64v3, May 2026). The pin comes
+    # from GitHub; fon.hum hosts only current builds.
     # dl.html is the page the readiness request saved; fetch only if absent.
     [ -s "$work/dl.html" ] || curl -sS "$base/download_linux.html" > "$work/dl.html"
     ver=$(grep -oE 'praat[0-9]+_linux' "$work/dl.html" | grep -oE '[0-9]+' | sort -n | tail -1)
     fn=$(grep -oE "praat${ver}_linux[A-Za-z0-9._-]*\.tar\.gz" "$work/dl.html" \
          | grep -vE 'arm64|s390x|linux32|-barren' | sort -u | head -1)
     pin=6630   # the one sanctioned version pin; see Rule 24C, Version management
+    gh="https://github.com/praat/praat/releases/download/v${pin:0:1}.${pin:1:1}.${pin:2}"
     pinfn=$(echo "$fn" | sed "s/praat${ver}_/praat${pin}_/")
-    curl -fL -o "$work/praat_gui.tar.gz" "$base/$pinfn" \
-      || { echo "Pinned $pin not found; installing newest ($ver)"; curl -fL -o "$work/praat_gui.tar.gz" "$base/$fn"; }
+    curl -fL -o "$work/praat_gui.tar.gz" "$gh/$pinfn" \
+      || curl -fL -o "$work/praat_gui.tar.gz" "$base/$pinfn"
     tar xzf "$work/praat_gui.tar.gz" -C "$work"
     # Binary extracts as: "$work/praat"
 
@@ -4632,8 +4631,8 @@ Using `editor: soundId` in a TextGridEditor hangs indefinitely.
 
 User downloads the pinned build (6.6.30; see Version management) by direct
 link. The download page does not list it:
-- Barren: `https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3-barren.tar.gz`
-- Full: `https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz`
+- Barren: `https://github.com/praat/praat/releases/download/v6.6.30/praat6630_linux-x64v3-barren.tar.gz`
+- Full: `https://github.com/praat/praat/releases/download/v6.6.30/praat6630_linux-x64v3.tar.gz`
 
 If those links fail, the user downloads the newest 64-bit x86 Linux build from
 `https://www.fon.hum.uva.nl/praat/download_linux.html`, and the model says that
@@ -4678,12 +4677,11 @@ to `linux-x64v3` in May 2026; a pinned arch string fails silently exactly
 like a pinned version (this is what broke the snippet on 3 Jun 2026). If
 resolution returns nothing, inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
-selection logic before reporting failure. Download from fon.hum; it hosts
-the current builds and the pinned one, not every older build (6.4.39, the
-floor, is gone; checked 22 October 2026). For an older build, such as one in
-`PRAAT_VERSION_FLOOR.txt`, download
-`https://github.com/praat/praat/releases/download/vX.Y.Z/<file>`; its filename
-may carry an older arch token (`linux-intel64`). The release pages return
+selection logic before reporting failure. fon.hum hosts only the current
+builds. Download the pinned build, and any older one such as those in
+`PRAAT_VERSION_FLOOR.txt`, from
+`https://github.com/praat/praat/releases/download/vX.Y.Z/<file>`; an older
+filename may carry an older arch token (`linux-intel64`). The release pages return
 403, so build the filename. Some sandboxes block GitHub; if
 the download is refused, say so and name the build left untested. Never reintroduce a hardcoded version number or
 arch token as a "fix."

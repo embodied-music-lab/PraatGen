@@ -7,6 +7,27 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.5 — 26 November 2026 (Master Prompt 17.1.6)
+
+For projects in the older Claude project format. Ships the Master Prompt
+17.1.5 and 17.1.6 changes below. Upgrade notes are in `RELEASE_NOTES_2.2.5.md`.
+
+### 17.1.6 — 26 November 2026
+
+**Praat download.** The sandbox installs the pinned Praat 6.6.30 from GitHub's
+release downloads, since the Praat website now hosts only current builds. If
+the Praat website is blocked, the session uses GitHub and never asks you to
+change network or environment settings. It no longer falls back to the newest
+build when the pinned one can't be fetched.
+
+**Jitter and shimmer variants.** A requested jitter or shimmer measure is
+never left out because another measure determines it. ddp and dda (three
+times rap and apq3) stay out of the default output and are reported whenever
+you or your protocol ask for them (Appendix D §3D).
+
+**Opus 5.5.** Opus 5.5 is now a supported model. The introduction and the
+README say to watch that it doesn't run ahead of your decisions.
+
 ### 17.1.5 — 22 November 2026
 
 **Questions about the data.** When no command answers a question about the

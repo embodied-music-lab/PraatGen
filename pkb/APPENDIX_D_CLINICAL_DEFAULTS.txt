@@ -9,6 +9,7 @@
 # Version: 2.1
 # Date: 25 February 2026
 # Revised: 29 July 2026 (PraatGen v14.0.0) — §5B CPPS-vs-dialog-default difference corrected from three to SIX, sandbox-verified against the live dialog (a source-extraction reading had said five; it missed both enum fields); §9 dangling `HANDOFF_A2_Batch_Analyzer.md §4` pointer repointed to §10; `"Parabolic"` normalized to verified `"parabolic"`
+# Revised: 26 November 2026 (Master Prompt 17.1.6) — §3D ddp/dda are reported when the user or a protocol calls for them; no jitter or shimmer measure is left out because it can be calculated from another
 # Source: Praat GUI dialog defaults (verified via screenshots, 25 Feb 2026)
 
 # ============================================================================
@@ -337,12 +338,15 @@ Get shimmer (local): 0, 0, 0.0001, 0.02, 1.3, 1.6
 #   rap / apq3   deviation from a 3-point running mean.
 #   ppq5 / apq5  deviation from a 5-point running mean.
 #   apq11        11-point; heaviest smoothing.
-#   ddp / dda    REDUNDANT. Both verified exactly 3x their base measure
-#                in Praat 6.6.30 (ddp/rap = 3.000000, dda/apq3 = 3.000000,
-#                sandbox, 29 Jul 2026), and the Praat manual states both
-#                identities outright ("The value is three times RAP" /
-#                "three times APQ3"). They carry no information rap and
-#                apq3 do not. Do not report both.
+#   ddp / dda    exactly 3x their base measure. Verified in Praat 6.6.30
+#                (ddp/rap = 3.000000, dda/apq3 = 3.000000, sandbox,
+#                29 Jul 2026), and the Praat manual states both identities
+#                outright ("The value is three times RAP" / "three times
+#                APQ3"). They carry no information rap and apq3 do not, so
+#                they aren't in the default output. When the user, their
+#                protocol, or a comparison with published values calls for
+#                one, report it. Never leave out a jitter or shimmer measure
+#                because it can be calculated from another.
 #
 # ---------------------------------------------------------------------
 # THE CRITICAL PROPERTY
