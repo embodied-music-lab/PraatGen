@@ -7,6 +7,15 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### Release 2.2.6 — 26 November 2026 (Master Prompt 17.1.6, unchanged)
+
+For projects in the older Claude project format. Upgrade notes are in
+`RELEASE_NOTES_2.2.6.md`.
+
+**Lint.** A function that the functions reference marks as listed by Praat but
+refused when run, such as `inner##` or `linear$##`, is now a BLOCKING finding
+that names the working alternative.
+
 ### Release 2.2.5 — 26 November 2026 (Master Prompt 17.1.6)
 
 For projects in the older Claude project format. Ships the Master Prompt
