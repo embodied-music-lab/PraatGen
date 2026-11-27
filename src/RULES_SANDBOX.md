@@ -1,6 +1,6 @@
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -22,6 +22,16 @@ available in every session under Rule 24C; SANDBOX adds the testing
 requirement. SANDBOX uses the full GUI edition with Xvfb unless the user
 asks for barren or the Rule 24C platform check rules the GUI stack out.
 Composable with any other mode.
+
+**Test list (hard).** Before the first test run, write `<name>_testlist.md`:
+one row per case, with its input and expected result. Together the rows
+cover, at least once each: every option of every menu, both states of every
+boolean, every pause-dialog button, every warning the script can print,
+every skip or threshold path, a file name with non-ASCII characters, and a
+batch of 20 or more files when the script loops over files. Not every
+combination. Record each run against its row in `<name>_test.txt`; testing
+is done when every row has a result. The lint checks that every
+option, boolean and button is named in the list.
 
 **Setup (when SANDBOX work first needs Praat):**
 
@@ -199,11 +209,9 @@ version and root access, then try the install itself:
         openbox xcompmgr xdotool imagemagick >/dev/null 2>&1 \
         && echo "GUI packages: ok" || echo "GUI packages: FAILED"
 
-The install's result decides, not `apt-get update`'s. Update can print
-warnings about third-party package sources the image ships with (observed:
-the Docker source refused with 403 on 8 October 2026) and still succeed;
-those warnings are harmless. Observed on 8 October 2026: Ubuntu 24.04
-x86_64, root, update and install both succeeded.
+The install's result decides, not `apt-get update`'s. Update can warn
+about third-party package sources and still succeed; those warnings are
+harmless.
 
 If a check fails, or the GUI packages fail to install, fall back to
 the barren edition, which needs none of them, and tell the user which

@@ -1,6 +1,6 @@
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -97,6 +97,21 @@ generation turn onward. Reply SPARSE to return to compressed.
 (GO and EXECUTE are gate-proceed keywords and never change the
 compression mode — a VERBOSE session that replies GO at a gate stays
 VERBOSE.)
+
+### Review prompt (use word for word)
+
+    Review this Praat script before delivery. Read every attached file in
+    full, and open your reply with the last line of each. The lint has
+    already checked every command, function and library copy. Check every
+    clinical parameter set and pitch limit against
+    APPENDIX_D_CLINICAL_DEFAULTS.txt; every file-output line, dialog and
+    drawing call against RULES_CODE.md, and BEST_PRACTICES_DRAWING.txt
+    when attached; and the plan's Requested | Produced by table against the
+    quoted task. Report findings only: each one breaks a rule, disagrees
+    with a reference file, or leaves a requested item unproduced. Give its
+    file and line, what it breaks, and the fix. Don't rank findings, and
+    add no observations, suggestions or praise. If there are none, reply
+    "No findings." Don't search the web.
 
 ### SELF-AUDIT template
 

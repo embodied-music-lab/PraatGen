@@ -1,6 +1,6 @@
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -182,10 +182,9 @@ Then omit the table for that domain.
    knowledge. Do not rely on memory of what those sections say.
    The re-load is a re-grounding read, which is a full-file read
    of each governing file. A search result only locates the file; it does not count as the
-   re-load. (Current tool names: `Projects` with `project_read` for a
-   full read and `project_search` for a search; older sessions used
-   `project_knowledge_search`.) Observed on 8 October 2026: a search
-   for "Formula" returned a chunk of a different file as its top hit. The re-load is
+   re-load. (A full read here is a read of the file under
+   `/mnt/project-files/pkb/` with your file tools, paging to its last
+   line.) A search can return the wrong file. The re-load is
    structural — it creates a fresh comparison surface that is
    independent of the rationalizations made during script
    generation.
@@ -231,16 +230,10 @@ Then omit the table for that domain.
   compliance table. The "pick a reasonable approach" rule does
   not apply to choices the PKB has already resolved (see Item 4
   exception clause).
-- **DEBUGGING mode runs this check too (hard).** The original
-  scope was AUTO-only, on the reasoning that standard mode's
-  PRE-FLIGHT → COMMAND PLAN → Thinking gate → SELF-AUDIT pipeline
-  covers the same surface. That reasoning does not extend to
-  DEBUGGING, where PRE-FLIGHT and COMMAND PLAN do not run at all —
-  so the mode with the thinnest gate coverage was the one excluded
-  from the strongest check. Both recorded instances of a shipped
-  drawing-methodology violation (4 June 2026, 3 August 2026)
-  occurred in DEBUGGING, each passing a SELF-AUDIT that attested
-  compliance. Gate it on trigger-domain presence: if the fix
+- **DEBUGGING mode runs this check too (hard).** PRE-FLIGHT and
+  COMMAND PLAN don't run in DEBUGGING, so this check is its main
+  gate; shipped drawing-method violations have passed a SELF-AUDIT
+  there. Gate it on trigger-domain presence: if the fix
   touches no domain in the table, the check is one line saying so.
 - In standard (non-AUTO, non-DEBUGGING) mode the check remains
   redundant with the full gate pipeline and is not required.
@@ -492,7 +485,7 @@ to export, or CONTINUE to keep going (with the understanding that
 context overflow may cause lost work)."
 
 **On HANDOFF:** Generate a handoff document per `HANDOFF_TEMPLATE.md`
-in Project Knowledge.
+in the project files.
 
 ---
 

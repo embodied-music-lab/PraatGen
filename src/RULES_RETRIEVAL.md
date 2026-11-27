@@ -1,6 +1,6 @@
 # PRAATGEN RULES — REFERENCE RETRIEVAL
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -38,7 +38,7 @@ as reading it.
 
 Editor scripting is an underestimated Praat capability — similar to FormantPath, it is absent from most training data. Before engineering workarounds for editor-window interactions (muting channels, configuring display, setting analysis parameters), load `COMMANDS_Editor.txt` and check whether a scriptable editor command handles it directly.
 
-Load reference files from Project Knowledge based on the task requirements. Load only what you need.
+Load reference files from `/mnt/project-files/pkb/` based on the task requirements. Load only what you need.
 
 | File | Trigger |
 |------|---------|
@@ -71,7 +71,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
 | `APPENDIX_D_CLINICAL_DEFAULTS.txt` | Script performs voice quality analysis (pitch, jitter, shimmer, HNR, CPPS, formants for clinical purposes) |
 | `APPENDIX_E_SPECIAL_CHARACTERS.txt` | Script generates Picture window text output (any Text:, axis label, or title command) |
 | `WHITELIST_CURRENT.txt` | Check for recently accumulated verified commands not yet redistributed |
-| `TOOL_PRAATGEN_LINT.zip` | CHECKPOINTS step 3, before delivering any script, where the session has a shell. A zip holding the Python 3 script `TOOL_PRAATGEN_LINT.txt`. Get the zip with the project-file read, which saves it to the workspace whole; unzip it into your working folder and run it from there, never reading it into context: `python3 <dir>/TOOL_PRAATGEN_LINT.txt <name>.praat <name>_plan.md`. Checks every command call against the reference files, checks the script against the plan, and runs the mechanical checks; marks each finding BLOCKING or NOTE with its line. |
+| `TOOL_PRAATGEN_LINT.zip` | CHECKPOINTS step 3, before delivering any script, where the session has a shell. A zip holding the Python 3 script `TOOL_PRAATGEN_LINT.txt`. Unzip it from `/mnt/project-files/pkb/` into your working folder and run it from there, never reading it into context: `python3 <dir>/TOOL_PRAATGEN_LINT.txt <name>.praat <name>_plan.md`. Checks every command call against the reference files, checks the script against the plan, and runs the mechanical checks; marks each finding BLOCKING or NOTE with its line. |
 | `PRAAT_VERSION_FLOOR.txt` | Any script at all — build the version-check list from it. Records the Praat 6.4.39 floor and, for everything above it, whether the consequence is a STOP or a different number. Figures are measured on real builds; entries marked [M] were executed, the rest are read from release notes. **A command not listed has an UNKNOWN minimum, not a safe one.** |
 | `APPENDIX_F_UX_STANDARDS.txt` | Every script, for the §S15 version check; in full when the script has user input (form or beginPause), file output, or batch processing |
 | `PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `PRAAT_DEFINITIVE_CATALOGUE_PART2.txt` | **The capabilities check, and the last fallback** after the PKB reference files and the Praat manual. It answers whether Praat can do something and which command does it. It is never the source for a command's arguments: a command found only here is verified in the sandbox before use (Rule 12). The catalogue, in two parts so each reads in full. Part 1 holds §1 class hierarchy and the single-type command blocks from ActivationList to Speaker. Part 2 holds the single-type blocks from Spectrogram on, every multi-type block (two or more object types selected together), the Objects and Picture menu commands, and §3 Formula engine functions. The note at the top of each part lists which part holds each object type; search both parts before concluding a command is absent. Provenance lines that cite `PRAAT_DEFINITIVE_CATALOGUE.txt` mean this catalogue. Load when a command or object type is **not** in the primary `COMMANDS_*.txt` files, or the task involves a type with no curated file (FFNet, HMM, GaussianMixture, NMF, DTW, Discriminant, CCA, Configuration, NoulliGrid). **If the command is in a COMMANDS file, do not open the catalogue.** Covers all 136 object types plus the Formula engine function list. Pinned to Praat 6.4.62; where it and a COMMANDS file disagree, the COMMANDS file governs. Its header banner carries current accuracy and scope notes — read them there. |
@@ -111,8 +111,8 @@ Load reference files from Project Knowledge based on the task requirements. Load
 
     **No web search (hard gate; core prompt, WEB ACCESS).** Domain facts,
     such as values, definitions, citations and methods, come from the
-    Project Knowledge files first and then from the user. Search Project
-    Knowledge and read in full every file that could hold the answer before
+    project files first and then from the user. Search the project
+    files and read in full every file that could hold the answer before
     concluding it doesn't. The only outside sources are Praat's own manual,
     downloads and source repository. Any other web search waits for a
     discussion with the user and their yes.
@@ -144,7 +144,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
     COMMANDS_Formant.txt for the routing decision before proceeding.
 10a. **Library-source honesty (hard).** The PKB ships flattened copies of the
     EML plugin sources. If a procedure is named in the Registry, its source IS
-    in Project Knowledge, and the linter carries an exact copy of it: get it
+    in the project files, and the linter carries an exact copy of it: get it
     with `--procedure` (step 12, "Read procedures, not library files"). The one documented
     exception is `@emlRunLMMAnalysis`, whose `eml-lmm.praat` dependency is
     deliberately not shipped; it carries a do-not-route warning at its
@@ -194,10 +194,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
     don't call; the script calls each of those before the procedures that
     read it. Paste the output at
     the end of the script. A library source file is never read in full; the
-    largest is over 240 KB. A Project Knowledge search is not a route to
-    procedure source: it ranks by similarity, and on 9 October 2026 it
-    returned the definition of one procedure out of three, with the exact
-    name as the query. Without a shell, one subagent reads the library file
+    largest is over 240 KB. A search is not a route to procedure source. Without a shell, one subagent reads the library file
     and returns only the procedure bodies; say so in the plan's process
     notes. The lint's Library copies check compares every `emlPG` procedure
     with its source and blocks a copy that differs.
@@ -305,7 +302,7 @@ Load reference files from Project Knowledge based on the task requirements. Load
 
 A complete reference list for all works cited in the Master Prompt,
 APPENDIX files, COMMANDS files, and procedure libraries is maintained
-in `praatgen_references_complete.md` in Project Knowledge.
+in `praatgen_references_complete.md` in the project files.
 
 **Contents:** 22 entries across six categories — software and framework,
 electroglottography, cepstral analysis and voice quality, statistical

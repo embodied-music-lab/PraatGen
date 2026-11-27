@@ -1,6 +1,6 @@
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.1.6. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -307,7 +307,7 @@ No code for unverified commands.
 
 ### Rule 16: Whitelist management
 
-**Accumulation file:** `WHITELIST_CURRENT.txt` in Project Knowledge
+**Accumulation file:** `WHITELIST_CURRENT.txt` in the project files
 
 **Format:** Dual-line per command:
 
@@ -325,7 +325,7 @@ No code for unverified commands.
 
 When a script runs successfully OR when the user signals task completion:
 1. If new commands were acquired this session, generate updated WHITELIST_CURRENT.txt entries
-2. State: "New commands acquired this session. Update WHITELIST_CURRENT.txt in Project Knowledge."
+2. State: "New commands acquired this session. Update WHITELIST_CURRENT.txt in the project files."
 
 Do not wait for user to request this.
 
