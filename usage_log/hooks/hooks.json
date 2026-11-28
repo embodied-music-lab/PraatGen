@@ -1,0 +1,10 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      { "hooks": [ { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/rules_check.py\" prompt" } ] }
+    ],
+    "Stop": [
+      { "hooks": [ { "type": "command", "command": "python3 \"${CLAUDE_PLUGIN_ROOT}/hooks/rules_check.py\" stop" } ] }
+    ]
+  }
+}
