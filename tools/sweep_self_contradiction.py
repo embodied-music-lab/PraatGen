@@ -19,6 +19,15 @@ BANNED = {
         'bare Marks for tick placement (BEST_PRACTICES_DRAWING.txt)',
     r'^\s*#?\s*Font size:\s*\d+\s*$':
         'literal Font size (font-state invariant, Rule 28L)',
+    # a string variable joined bare to a "," cell separator: by +, as a
+    # write argument, or on a ... continuation of a row built with .sep$.
+    # Numeric strings (fixed$ results held in a variable) also match: triage.
+    r'(?<![\w$"])\.?[A-Za-z_]\w*\$\s*\+\s*","|'
+    r'","\s*\+\s*\.?[A-Za-z_]\w*\$(?!\s*[(\[])|'
+    r'(?:writeFile|appendFile)\w*:.*(?<![\w$"])\.?[A-Za-z_]\w*\$\s*,\s*","|'
+    r'(?:writeFile|appendFile)\w*:.*",\s*",\s*\.?[A-Za-z_]\w*\$\s*(?:,|$)|'
+    r'^\s*\.\.\.\s*\+\s*\.?[A-Za-z_]\w*\$\s*\+\s*\.?sep\$':
+        'CSV text field not quoted (Rule 27, CSV text fields)',
 }
 
 # a hit within this many lines of one of these labels is a counter-example

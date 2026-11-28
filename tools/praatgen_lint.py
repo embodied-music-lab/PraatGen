@@ -65,9 +65,18 @@ Checks:
   Hardcoded paths      No absolute path, file:// URL or UNC path in a string.
   Overwrite guard      A script that writes files checks fileReadable or
                        calls a *UniquePath* procedure. A note.
+  CSV text fields      Text from a file list, an object name, a TextGrid
+                       label or a form text field, joined bare to a ","
+                       separator in a line written to a file, blocks: Rule
+                       27 puts every CSV text field in double quotes, inner
+                       quotes doubled. Text the check can't trace to one of
+                       those sources isn't checked.
   Nested queries       No query command inside an expression (Rule 5E).
   Functions            Every function call is spelled as
                        APPENDIX_B_FUNCTIONS.txt spells it.
+  Test list            With NAME_testlist.md beside the script (SANDBOX), every
+                       menu option, boolean field and pause-dialog button the
+                       script defines is named in it.
   Read tokens          Each line "RULES_NAME.md: token" in the plan names
                        that file's real read token. RULES_CODE.md must be
                        listed. The linter holds only a one-way hash of each
@@ -1028,7 +1037,7 @@ def check_non_ascii(lines, skip=()):
                              'window output from every procedure this script calls, which '
                              'this check does not follow. One non-ASCII character anywhere '
                              'in that output makes Praat write the whole file UTF-16 BE '
-                             '(Rule 24C)'))
+                             'by default (Rule 24C)'))
         if level == 'NOTE' and any(a <= ln.n <= b for a, b in skip):
             continue
         for start, lit in ln.strings:
@@ -1180,6 +1189,57 @@ def reads_of(body, procs, own):
             if m.group(1) in procs and m.group(1) != own]
 
 
+def code_of(body):
+    """The body's code: Praat comment lines dropped and string literal contents blanked."""
+    return '\n'.join(scan_strings(s)[0] for s in body.split('\n')
+                     if not s.lstrip().startswith(('#', ';')))
+
+
+def callees_of(body):
+    return re.findall(r'@(eml\w+)', code_of(body))
+
+
+# A file-level assignment: name = ..., name$ = ..., name# = ... (continuation lines follow it).
+SETTING_DEF = re.compile(r'^([A-Za-z_]\w*[$#]?)\s*=(?!=)')
+SETTINGS_NOTE = '# Library settings read by the procedures below'
+
+
+def load_settings(pkb):
+    """file -> [(variable names, lines)] of the top-level assignments, in file order,
+    in each PKB library file; includes, calls and procedure bodies are left out."""
+    out = {}
+    for fn in sorted(os.listdir(pkb)):
+        if not LIBRARY_FILE.match(fn):
+            continue
+        with open(os.path.join(pkb, fn), encoding='utf-8') as f:
+            raw = [s.rstrip() for s in f.read().split('\n')]
+        items, depth = [], False
+        for i, s in enumerate(raw):
+            if PROC_DEF.match(s):
+                depth = True
+            elif s.startswith('endproc'):
+                depth = False
+            elif not depth and (m := SETTING_DEF.match(s)):
+                j = i + 1
+                while j < len(raw) and raw[j].lstrip().startswith('...'):
+                    j += 1
+                items.append((m.group(1), raw[i:j]))
+        if items:
+            out[fn] = items
+    return out
+
+
+def settings_for(order, procs, settings):
+    """The top-level assignment lines of every file that defines a variable read by
+    the procedures in order, file by file in file order."""
+    code = '\n'.join(code_of(procs[n][2]) for n in order)
+    def read(var):
+        tail = r'(?![\w$#])' if var[-1] not in '$#' else ''
+        return re.search(r'(?<![\w.])' + re.escape(var) + tail, code)
+    return [ln for fn, items in settings.items() if any(read(v) for v, _ in items)
+            for _, lines in items for ln in lines]
+
+
 def with_callees(names, procs):
     """The requested procedures, then every library procedure they call or whose
     variables they read, in turn."""
@@ -1189,12 +1249,13 @@ def with_callees(names, procs):
         if n in order or n not in procs:
             continue
         order.append(n)
-        queue += [c for c in re.findall(r'@(eml\w+)', procs[n][2]) if c != n]
-        queue += reads_of(procs[n][2], procs, n)
+        code = code_of(procs[n][2])
+        queue += [c for c in callees_of(procs[n][2]) if c != n]
+        queue += reads_of(code, procs, n)
     return order
 
 
-def extract(names, procs):
+def extract(names, procs, settings=None):
     """Praat text for the procedures, renamed to emlPG, with their callees.
     Returns (text, unknown names)."""
     wanted, unknown = [], []
@@ -1205,7 +1266,7 @@ def extract(names, procs):
         (wanted if n in procs else unknown).append(n)
     order = with_callees(wanted, procs)
     added = [n for n in order if n not in wanted]
-    called = {c for n in order for c in re.findall(r'@(eml\w+)', procs[n][2])}
+    called = {c for n in order for c in callees_of(procs[n][2])}
     read_only = [n for n in added if n not in called]
     out = [f'# EML library procedures: {", ".join(wanted) or "none"}'
            + (f'; called or read by them: {", ".join(added)}' if added else '')]
@@ -1213,6 +1274,9 @@ def extract(names, procs):
         out.append('# These are not called by the procedures above; those procedures read '
                    'variables these set. Call each before the procedures that read it: '
                    + ', '.join(LIB_PREFIX + n[3:] for n in read_only))
+    lines = settings_for(order, procs, settings or {})
+    if lines:
+        out += ['', SETTINGS_NOTE] + lines
     for n in order:
         fn, header, body = procs[n]
         out.append('')
@@ -1433,6 +1497,184 @@ def check_overwrite(lines):
     return []
 
 
+# Rule 27, CSV text fields. Text from these sources is a text field.
+TEXT_QUERIES = re.compile(r'^(Get string|Get label of interval|Get label of point|'
+                          r'Get column label)\s*:')
+TEXT_FIELDS = ('sentence', 'text', 'word', 'infile', 'outfile', 'folder')
+TEXT_FUNCTIONS = ('replace$', 'replace_regex$', 'left$', 'right$', 'mid$')
+STRING_VAR = re.compile(r'^\.?[A-Za-z_][\w.]*\$$')
+INLINE_SOURCE = re.compile(r'^selected\$\s*\(')
+QUOTE_LIT = '""""'
+
+
+def split_ops(text, ops='+'):
+    """Split an expression at top-level operators, outside strings and brackets."""
+    parts, depth, cur, quote = [], 0, '', False
+    i = 0
+    while i < len(text):
+        c = text[i]
+        if quote:
+            cur += c
+            if c == '"':
+                if i + 1 < len(text) and text[i + 1] == '"':
+                    cur += '"'
+                    i += 1
+                else:
+                    quote = False
+        elif c == '"':
+            quote = True
+            cur += c
+        elif c in '([{':
+            depth += 1
+            cur += c
+        elif c in ')]}':
+            depth -= 1
+            cur += c
+        elif c in ops and depth == 0:
+            parts.append(cur.strip())
+            cur = ''
+        else:
+            cur += c
+        i += 1
+    parts.append(cur.strip())
+    return parts
+
+
+def _literal(op):
+    """The contents of an operand that is one string literal, else None."""
+    if len(op) >= 2 and op[0] == '"' and op[-1] == '"':
+        inner = op[1:-1]
+        if '"' not in inner.replace('""', ''):
+            return inner.replace('""', '"')
+    return None
+
+
+def _separator(op, side, commas):
+    """True when an operand next to a text field ends a CSV cell: the
+    literal ",", a variable holding it, or a literal with no space that
+    starts with a comma (right side) or ends with one (left side)."""
+    if op in commas:
+        return True
+    lit = _literal(op)
+    if lit is None:
+        return False
+    if lit == ',':
+        return True
+    if ' ' in lit or '\t' in lit:
+        return False
+    return lit.startswith(',') if side == 'right' else lit.endswith(',')
+
+
+def _text_function(op, tainted):
+    m = re.match(r'^(' + '|'.join(re.escape(f) for f in TEXT_FUNCTIONS) + r')\s*\((.*)\)$', op)
+    if not m:
+        return False
+    args = split_args(m.group(2))
+    return bool(args) and args[0] in tainted
+
+
+def _bare_text(op, tainted):
+    return op in tainted or bool(INLINE_SOURCE.match(op))
+
+
+def _bare_joins(expr, tainted, commas):
+    """Text-field operands joined bare to a separator by + in expr."""
+    ops = split_ops(expr)
+    out = []
+    for i, op in enumerate(ops):
+        if not _bare_text(op, tainted):
+            continue
+        left = ops[i - 1] if i > 0 else None
+        right = ops[i + 1] if i + 1 < len(ops) else None
+        if (left is not None and _separator(left, 'left', commas)) or \
+                (right is not None and _separator(right, 'right', commas)):
+            out.append(op)
+    return out
+
+
+def check_csv_text(lines):
+    """Rule 27, CSV text fields: a traced text field joined bare to a comma
+    separator in a line written to a file, directly or through a row
+    variable built earlier."""
+    findings = []
+    tainted = set()     # string variables holding a text field
+    commas = set()      # string variables holding ","
+    quotes = set()      # string variables holding a double quote
+    rows = {}           # string variable -> (line, field) of a bare join in it
+    seen = set()
+    fields = '|'.join(TEXT_FIELDS)
+
+    def report(ln, field):
+        n = ln.line_at(max(ln.text.find(field), 0))
+        if (n, field) not in seen:
+            seen.add((n, field))
+            findings.append(('BLOCKING', n,
+                             f'{field} joined bare to a "," separator in a file line -- '
+                             f'quote it: {QUOTE_LIT} + replace$ ({field}, """", """""", 0) + '
+                             f'{QUOTE_LIT} (Rule 27, CSV text fields)'))
+
+    def is_quote(op):
+        return op in quotes or _literal(op) == '"'
+
+    for ln in lines:
+        m = re.match(r'^(' + fields + r')(\s*:\s*|\s+)(.*)$', ln.text)
+        if m and (ln.in_form or ':' in m.group(2)):
+            if ':' in m.group(2):
+                label = next((_literal(a) for a in split_args(m.group(3))
+                              if _literal(a) is not None), None)
+            else:
+                label = m.group(3).split(' ')[0]
+            var = form_variable(label) if label else None
+            if var:
+                tainted.add(var + '$')
+            continue
+        if ln.in_form:
+            continue
+        target, body = statement(ln.text)
+        expr = body.strip()
+        if target is not None and STRING_VAR.match(target):
+            ops = split_ops(expr, '+-')
+            joins = _bare_joins(expr, tainted, commas)
+            if joins:
+                rows.setdefault(target, (ln, joins[0]))
+            else:
+                carried = next((o for o in split_ops(expr) if o in rows), None)
+                if carried is not None:
+                    rows[target] = rows[carried]
+                else:
+                    rows.pop(target, None)
+            source = (TEXT_QUERIES.match(expr) or INLINE_SOURCE.match(expr)
+                      or (all(_bare_text(o, tainted) or _literal(o) is not None
+                              or _text_function(o, tainted) for o in ops)
+                          and any(_bare_text(o, tainted) or _text_function(o, tainted)
+                                  for o in ops)))
+            quoted = len(ops) >= 3 and is_quote(ops[0]) and is_quote(ops[-1])
+            for s in (tainted, commas, quotes):
+                s.discard(target)
+            if _literal(expr) == ',':
+                commas.add(target)
+            elif _literal(expr) == '"':
+                quotes.add(target)
+            elif source and not quoted:
+                tainted.add(target)
+            continue
+        if re.match(r'^(' + '|'.join(FILE_WRITERS) + r')\s*:', body):
+            args = split_args(body.split(':', 1)[1])[1:]
+            for i, arg in enumerate(args):
+                for field in _bare_joins(arg, tainted, commas):
+                    report(ln, field)
+                if _bare_text(arg, tainted):
+                    left = split_ops(args[i - 1])[-1] if i > 0 else None
+                    right = split_ops(args[i + 1])[0] if i + 1 < len(args) else None
+                    if (left is not None and _separator(left, 'left', commas)) or \
+                            (right is not None and _separator(right, 'right', commas)):
+                        report(ln, arg)
+                for op in split_ops(arg):
+                    if op in rows:
+                        report(*rows[op])
+    return findings
+
+
 # A command inside a function call: round (Get mean: ...), abs (Is ...).
 NESTED_CALL = re.compile(r'\b[a-z]\w*[$#]?\s*\(\s*('
                          r'[A-Z][\w\-]*(?: [\w\-()]+)*?\s*:'
@@ -1548,6 +1790,47 @@ def check_functions(lines, functions, ghosts=None):
     return findings, verified
 
 
+# A declaration, not an assignment: the keyword is followed by a colon or a space, then a label.
+TEST_OPTION = re.compile(r'^(option|button)(?:\s*:\s*|\s+)(?!=)"?(.+?)"?\s*$')
+TEST_BOOLEAN = re.compile(r'^boolean(?:\s*:\s*|\s+)(?!=)"?([^",]+?)"?\s*(?:,|\s)\s*\S+\s*$')
+TEST_ENDPAUSE = re.compile(r'endPause\s*:\s*(.*)$')
+
+
+def _label(text):
+    return re.sub(r'\s+', ' ', text.replace('_', ' ')).strip().lower()
+
+
+def check_test_list(script, lines):
+    """With <name>_testlist.md beside the script (SANDBOX), every menu option,
+    boolean field and pause-dialog button the script defines has a row in it."""
+    stem = os.path.splitext(os.path.abspath(script))[0]
+    path = stem + '_testlist.md'
+    if not os.path.isfile(path):
+        return []
+    with open(path, encoding='utf-8') as f:
+        listed = _label(f.read())
+    name = os.path.basename(path)
+    findings = []
+    for ln in lines:
+        code = ln.text.strip()
+        wanted = []
+        m = TEST_OPTION.match(code)
+        if m:
+            wanted.append((m.group(1), m.group(2)))
+        m = TEST_BOOLEAN.match(code)
+        if m:
+            wanted.append(('setting', m.group(1)))
+        m = TEST_ENDPAUSE.search(code)
+        if m:
+            for b in re.findall(r'"([^"]+)"', m.group(1)):
+                wanted.append(('button', b))
+        for kind, label in wanted:
+            if _label(label) not in listed:
+                findings.append(('BLOCKING', ln.n,
+                                 f'{kind} "{label}" has no row in {name} -- {short(ln.text)}'))
+    return findings
+
+
 # ---------------------------------------------------------------- main
 
 def usage():
@@ -1567,26 +1850,32 @@ def tally(checks):
     return 'Tally: ' + '; '.join(parts)
 
 
-def library_procedures():
-    """The library index: embedded in the PKB copy, else the pkb folder beside."""
+def library_index(key, load):
+    """A library index: embedded in the PKB copy, else loaded from the pkb folder beside."""
     if EMBEDDED_INDEX is not None:
-        return {k: list(v) for k, v in EMBEDDED_INDEX['procedures'].items()}
+        return {k: list(v) for k, v in EMBEDDED_INDEX[key].items()}
     beside = os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir, 'pkb')
-    return load_procedures(os.path.normpath(beside)) if os.path.isdir(beside) else {}
+    return load(os.path.normpath(beside)) if os.path.isdir(beside) else {}
+
+
+def library_procedures():
+    return library_index('procedures', load_procedures)
 
 
 def main_procedure(names):
     procs = library_procedures()
     if not names:
         usage()
-    text, unknown = extract(names, procs)
+    text, unknown = extract(names, procs, library_index('settings', load_settings))
     for n in unknown:
         print(f'# NOT IN THE EML LIBRARY: {n}')
-    sys.stdout.write(text)
+    sys.stdout.flush()
+    sys.stdout.buffer.write(text.encode('utf-8'))
     sys.exit(1 if unknown else 0)
 
 
 def main():
+    sys.stdout.reconfigure(encoding='utf-8', errors='replace')
     args = sys.argv[1:]
     if args[:1] == ['--procedure']:
         main_procedure(args[1:])
@@ -1656,9 +1945,11 @@ def main():
         ('Pause dialogs', check_pause(lines)),
         ('Hardcoded paths', check_paths(lines)),
         ('Overwrite guard', check_overwrite(lines)),
+        ('CSV text fields', check_csv_text(lines)),
         ('Nested queries', check_nested(lines)),
         ('Functions', fn_findings),
         ('Read tokens', tok_findings),
+        ('Test list', check_test_list(script, lines)),
     ]
     blocking = sum(1 for _c, fs in checks for f in fs if f[0] == 'BLOCKING')
     notes = sum(1 for _c, fs in checks for f in fs if f[0] == 'NOTE')

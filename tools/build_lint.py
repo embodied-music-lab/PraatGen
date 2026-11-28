@@ -14,6 +14,7 @@ page is compressed by the browser, so its bytes differ from a Python build.
 import importlib.util
 import io
 import json
+import re
 import sys
 import zipfile
 
@@ -30,6 +31,11 @@ HEADER = ('# TOOL_PRAATGEN_LINT.txt is a Python 3 script.\n'
           '# Do not edit; regenerate.\n')
 
 
+# json writes a non-BMP character as a surrogate pair of \\u escapes, which a Python
+# literal decodes as two lone surrogates; the pair becomes one \\U escape instead.
+ASTRAL_PAIR = re.compile(r'(?<!\\)((?:\\\\)*)\\u(d[89ab]\w\w)\\u(d[c-f]\w\w)')
+
+
 def build():
     spec = importlib.util.spec_from_file_location('lint', SRC)
     lint = importlib.util.module_from_spec(spec)
@@ -41,12 +47,16 @@ def build():
              'functions': sorted(lint.load_functions('pkb').items()),
              'ghosts': sorted(lint.load_ghosts('pkb').items()),
              'tokens': lint.load_token_hashes('src'),
-             'procedures': lint.load_procedures('pkb')}
+             'procedures': lint.load_procedures('pkb'),
+             'settings': {k: [[v, l] for v, l in e]
+                          for k, e in lint.load_settings('pkb').items()}}
     src = open(SRC, encoding='utf-8').read()
     assert src.count(MARKER) == 1
     # One entry per line, so no line is too long for a reader to show whole.
-    lit = 'EMBEDDED_INDEX = ' + json.dumps(index, indent=0, separators=(',', ':'),
-                                           ensure_ascii=True)
+    lit = 'EMBEDDED_INDEX = ' + ASTRAL_PAIR.sub(
+        lambda m: m.group(1) + '\\U%08x' % (0x10000 + ((int(m.group(2), 16) - 0xD800) << 10)
+                                             + int(m.group(3), 16) - 0xDC00),
+        json.dumps(index, indent=0, separators=(',', ':'), ensure_ascii=True))
     body = src.replace('#!/usr/bin/env python3\n', '', 1)
     body = body.replace(MARKER + '  # replaced in the PKB copy by tools/build_lint.py', lit)
     assert MARKER not in body

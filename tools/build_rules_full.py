@@ -21,7 +21,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUT = os.path.join(ROOT, 'pkb', 'PRAATGEN_RULES_FULL.md')
 RULES_ORDER = ['RETRIEVAL', 'PLANNING', 'AUDIT', 'CODE', 'MODES', 'SANDBOX']
 MARKER = 'marsh-7316'
-APP_READ_LIMIT = 262144
+APP_READ_LIMIT = 393216
 RULE = '=' * 64
 
 
@@ -41,10 +41,11 @@ def build():
         '# PRAATGEN RULES, FULL TEXT (read every turn)\n\n'
         f'This file is the whole PraatGen prompt: the Master Prompt core ({version}) '
         'followed by the six RULES files. At the start of every turn, before any '
-        'other tool call or any text, read this entire file with project_read. '
+        'other tool call or any text, read this entire file with the Read tool, '
+        'in consecutive pages as the skill instructions set out. '
         'Then open your reply with the line "Rules read this turn: " followed by '
         "the marker on this file's last line. The one exception is scaffold "
-        'discussion, set out in the project instructions and Step 2A.\n\n'
+        'discussion, set out in the skill instructions and Step 2A.\n\n'
         'Wherever the text below says to read a RULES_*.md file (RULES_RETRIEVAL.md, '
         'RULES_PLANNING.md, RULES_AUDIT.md, RULES_CODE.md, RULES_MODES.md, '
         'RULES_SANDBOX.md), that file is the section of the same name below, which '
