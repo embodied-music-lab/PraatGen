@@ -1,0 +1,801 @@
+# ============================================================================
+# EML Stats & Graphs — broom-style result writer
+# ============================================================================
+# Purpose: Collect one analysis's results as three tables and write them as
+#          three CSV files, shaped and named the way R's broom package shapes
+#          and names them.
+#
+#            tidy     one row per model TERM        <base>_tidy.csv
+#            glance   one row per MODEL             <base>_glance.csv
+#            augment  one row per OBSERVATION       <base>_augment.csv
+#
+#          read_csv("<base>_tidy.csv") in R then gives a data frame with the
+#          same columns, in the same order, as broom::tidy() on the equivalent
+#          model — so modelsummary, gt, flextable and every broom idiom work
+#          on our output untouched.
+#
+# Date: 6 August 2026
+# Version: 1.0
+#
+# WHY A DECLARATION CONTRACT RATHER THAN FREE APPEND
+#
+# A caller does not build rows of text. It declares cells:
+#
+#     @emlResultBegin: tableName$, "One-way ANOVA"
+#     @emlTidyRow: "voice_type"
+#     @emlTidyNum: "df", 2
+#     @emlTidyNum: "statistic", 13.70
+#     @emlTidyNum: "p.value", 0.0000247
+#     @emlGlanceNum: "nobs", 45
+#     @emlResultWrite: folder$, "anova"
+#
+# The writer owns the shape. That is what closes five failure modes the
+# previous exporter had each hit at least once:
+#
+#   1. Column union computed at write time, so a term row that sets sumsq and
+#      one that does not both produce valid CSV — the second gets an empty
+#      cell, not a shifted row.
+#   2. Every column name is checked against the vocabulary below at the call
+#      site. A typo is refused with the correct spelling in the message rather
+#      than silently creating a second column nothing downstream reads.
+#   3. Undefined writes an EMPTY cell, never 0 and never --undefined--. R
+#      reads an empty cell as NA, which is what it means. The old exporter
+#      wrote a literal 0 into six descriptive slots on the correlation path.
+#   4. A verb with no rows produces no file, and .skipped$ says which and why.
+#      An empty _augment.csv with only a header is indistinguishable from a
+#      failed export.
+#   5. One writer, so RFC 4180 quoting is solved once. "Soprano, lyric" is an
+#      ordinary level name in this field.
+#
+# Column ORDER is the vocabulary's order, not first-seen order, so two runs of
+# the same analysis are byte-comparable and the order matches broom's.
+#
+# ATTRIBUTION
+# Framework: EML PraatGen by Ian Howell
+#            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
+# Code generation: Claude (Anthropic)
+# Script author: Ian Howell — created and verified by this individual
+#
+# RESEARCH USE DISCLOSURE
+# If this script is used in research or publication, disclose AI use
+# per your target journal's policy. Suggested language:
+#
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
+#
+# The script author assumes responsibility for the correctness and
+# appropriate application of this code.
+# ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-result-writer.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
+
+# ----------------------------------------------------------------------------
+# VOCABULARY
+# ----------------------------------------------------------------------------
+# Canonical broom names wherever the quantity exists; nothing invented when
+# broom already has a name. Order within each verb is the emitted column order.
+#
+# The one documented extension is effect.size + effect.size.type. broom itself
+# carries no effect sizes, so there is no name to collide with, and keeping it
+# to two columns means adding a new effect-size family never widens the schema.
+#
+# Leading dots on augment columns are broom's convention for derived values.
+# They are also what stops .resid colliding with a user's own column named
+# resid.
+# ----------------------------------------------------------------------------
+
+# Tidy column ORDER matters, and this particular order is not arbitrary.
+#
+# broom's tidy() column order differs by model family: for lm it is
+# term, estimate, std.error, statistic, p.value; for aov it is
+# term, df, sumsq, meansq, statistic, p.value. A single global order cannot
+# reproduce both — unless the family-specific columns are disjoint and sit
+# between the shared head and the shared tail, which they are and do. Putting
+# the regression block (estimate, std.error) before the ANOVA block
+# (df, sumsq, meansq) and both before (statistic, p.value) yields exactly
+# broom's order for each family, because each family only ever populates one
+# of the two middle blocks.
+#
+# Found by validate/v17_broom_parity.R, which failed the "columns appear in
+# broom's relative order" assertion on the first ANOVA export: statistic and
+# p.value were being emitted ahead of df/sumsq/meansq.
+#
+# The same trick resolves the second conflict. tidy(TukeyHSD) orders
+# conf.low, conf.high BEFORE adj.p.value, while tidy(lm, conf.int = TRUE)
+# puts conf.low, conf.high AFTER p.value. Putting adj.p.value last of the
+# five satisfies both, because adj.p.value only ever appears in a post-hoc
+# frame and p.value only ever in a model frame -- they never co-occur.
+#
+# OUR OWN ADDITIONS TRAIL THE BROOM BLOCK HERE TOO, on the same rule the
+# glance vocabulary below states in one line. gg.epsilon, hf.epsilon, df.gg,
+# p.value.gg, effect.size, effect.size.type, skewness and kurtosis are not
+# broom column names; term, statistic, p.value, method and alternative are.
+# broom has no vocabulary for shape at all -- tidy(shapiro.test(x)) returns
+# statistic, p.value and method and nothing else, because shapiro.test itself
+# reports nothing else -- so skewness and kurtosis cannot be broom parity in
+# either frame and are flagged as additions in both.
+#
+# SKEWNESS AND KURTOSIS SIT IMMEDIATELY BEFORE `method`, so that their
+# position relative to the broom tail is the SAME here as in emlVocabGlance$
+# below. A reader who has
+# seen the single-column glance file reads the multi-column tidy file in the
+# same order -- term, statistic, p.value, skewness, kurtosis, method -- and the
+# only difference between the two artefacts is the one that is real, which is
+# how many models were fitted. Putting them earlier would have been legal and
+# would have made the two files disagree about an order neither broom nor this
+# plugin has any reason to disagree about.
+#
+# THE VOCABULARY IS THE COLUMN ORDER AND ALSO THE WHITELIST, and the second
+# half is the one that bites: @eml_orderedCols walks these tokens and emits
+# only the columns it finds, so a column the analysis declares under a name
+# that is NOT here is dropped from the written file without a word. That is
+# not hypothetical -- a describe declared into this frame writes a file
+# containing `term` and `method` and nothing else. Naming a column here is
+# also only half of what it takes: the other half is in
+# stats/eml-analysis.praat, where @emlDeclareNormalityResult declares the two
+# columns per row for there to be anything for this line to order.
+#
+# WARNING TRAILS EVEN alternative, the same relative place it already holds
+# in emlVocabGlance$ below. It is not a broom name in either frame: the
+# glance version is one warning per MODEL (@emlDeclareRMResult's sphericity
+# caveat); the tidy version, used by @emlDeclarePostHoc's "friedman" kind, is one
+# per ROW -- a post-hoc pair whose confidence interval fell back to the
+# normal approximation and could not reach the requested level. Same word,
+# same column position in both frames, because it is the same kind of fact:
+# a caveat about the number beside it, not the number itself.
+; "n" JOINS THE TIDY VOCABULARY (9 Sep 2026, API completion wave section
+; 4.4): the per-group tidy rows a grouped correlation writes need a row
+; count that varies row to row (unlike glance's "nobs", one count per
+; MODEL), and broom's own tidy.htest has no such column for cor.test to
+; borrow -- the same "addition, not parity" situation ruling 3 already put
+; skewness and kurtosis in this list for (see v71_tidy_vocab_and_warning.R).
+;
+; THE DESCRIPTIVE-STATISTICS WORDS BELOW JOIN FOR THE SAME REASON (order
+; section 4.6): a per-group descriptive row is not a model fit broom has a
+; tidy() method for at all, so every one of mean/sd/.../trim.k is a genuine
+; addition, not a broom name being matched. conf.low/conf.high, already
+; here for other doors, are reused for the descriptive CI rather than
+; adding a second pair of words for the same idea.
+emlVocabTidy$ = "term n effect contrast null.value estimate estimate1"
+... + " estimate2 std.error"
+... + " df num.df den.df sumsq meansq"
+... + " statistic p.value parameter conf.low conf.high adj.p.value"
+... + " gg.epsilon hf.epsilon df.gg p.value.gg"
+... + " effect.size effect.size.type skewness kurtosis method alternative"
+... + " mean sd variance sem median q1 q3 iqr min max range"
+... + " mode mode.unique mode.count mad mad.raw geo.mean harm.mean"
+... + " trimmed.mean winsorized.mean trim.k"
+... + " warning"
+
+# Glance order is broom::glance(lm)'s order exactly:
+#   r.squared adj.r.squared sigma statistic p.value df logLik AIC BIC
+#   deviance df.residual nobs
+# An aov fit IS an lm fit, and glance.aov returns only logLik/AIC/BIC/deviance/
+# nobs -- no F, no p, no r.squared -- which would be a strange export for a
+# statistics tool. Matching glance.lm gives a superset of glance.aov in R's own
+# order, so the file is still something an R user recognises immediately.
+# Our own additions trail after the broom block.
+# n.conditions SITS BESIDE n.groups AND NOT INSIDE THE BROOM BLOCK. It is
+# not a broom name; it is the within-subject counterpart of n.groups, written
+# by the repeated-measures ANOVA and by Friedman, where a count of
+# independent groups would say a between-subjects design had been run. It is
+# placed immediately after n.groups so that a reader comparing a
+# between-subjects glance row with a within-subject one finds the design
+# count in the same place in both, and after the broom block so that
+# validate/v17_broom_parity.R's "glance leads with broom::glance(lm)'s
+# columns, in order" check still reads the same twelve columns first.
+emlVocabGlance$ = "r.squared adj.r.squared sigma statistic p.value df"
+... + " logLik AIC BIC deviance df.residual nobs"
+... + " n.subjects n.groups n.conditions n.cells n.pairs n.excluded"
+... + " estimate parameter partial.eta.squared epsilon.squared"
+... + " tie.correction gg.epsilon p.value.gg kendalls.w"
+... + " skewness kurtosis method alternative warning"
+... + " bf.statistic bf.df1 bf.df2 bf.p.value"
+... + " welch.statistic welch.df1 welch.df2 welch.p.value"
+
+# augment's derived columns. The input table's own columns are carried
+# through ahead of these and are not vocabulary-checked, since they are the
+# user's names, not ours.
+emlVocabAugment$ = ".fitted .se.fit .resid .std.resid .hat .cooksd .rank"
+
+emlResult_MAXCOL = 40
+# RAISED FROM 4000 ON 31 AUGUST 2026. The NIST StRD datasets SmLs03, SmLs06
+# and SmLs09 export 18,009 rows, so the old cap aborted them before the
+# result store could write anything -- the failure looked like a missing
+# export rather than a refused one. 25000 clears the largest certified
+# dataset with room, and the cap still exists to catch a runaway table.
+emlResult_MAXROW = 25000
+
+
+# ----------------------------------------------------------------------------
+# @eml_vocabHas: .vocab$, .name$   ->  .ok
+# Whole-token match. Substring matching would accept "p.value.gg" as "p.value"
+# and, worse, accept "df" inside "num.df".
+# ----------------------------------------------------------------------------
+procedure eml_vocabHas: .vocab$, .name$
+    .ok = 0
+    if index (" " + .vocab$ + " ", " " + .name$ + " ") > 0
+        .ok = 1
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @eml_vocabCheck: .verb$, .vocab$, .name$
+# Refuses an unknown column name loudly, at the call site, naming the verb and
+# listing what is legal. A silent accept here is a column nobody reads.
+# ----------------------------------------------------------------------------
+procedure eml_vocabCheck: .verb$, .vocab$, .name$
+    @eml_vocabHas: .vocab$, .name$
+    if eml_vocabHas.ok = 0
+        exitScript: "Result writer: """ + .name$ + """ is not a "
+        ... + .verb$ + " column." + newline$ + newline$
+        ... + "Legal " + .verb$ + " columns are:" + newline$
+        ... + .vocab$ + newline$ + newline$
+        ... + "If this quantity genuinely has no broom name, add it to "
+        ... + "emlVocab" + .verb$ + "$ in eml-result-writer.praat and to the "
+        ... + "parity check in validate/v17_broom_parity.R, in the same "
+        ... + "commit."
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @emlResultBegin: .tableName$, .analysis$
+# Clears all three collectors. Call once at the top of an analysis.
+# ----------------------------------------------------------------------------
+procedure emlResultBegin: .tableName$, .analysis$
+    ; Migration state. emlResult_declared is what the export surface forks
+    ; on, so a path converts by declaring and no list has to be edited.
+    ;
+    ; The extra-frame slots are NOT cleared here, deliberately. They are
+    ; staged BEFORE the model frames, because staging reuses the single tidy
+    ; collector and the model's own tidy must be the last thing left in it.
+    ; Clearing them here would discard the post-hoc and effect-size frames
+    ; that were just staged. Use @emlResultClearExtras at the start of a
+    ; declaration sequence instead.
+    emlResult_declared = 1
+    @eml_ensureExtraSlots
+    emlResult_table$ = .tableName$
+    emlResult_analysis$ = .analysis$
+
+    emlTidy_nRows = 0
+    emlTidy_nCols = 0
+    emlGlance_nCols = 0
+    emlAugment_nRows = 0
+    emlAugment_nCols = 0
+    emlAugment_nCarried = 0
+
+    for .c from 1 to emlResult_MAXCOL
+        emlTidy_col$ [.c] = ""
+        emlGlance_col$ [.c] = ""
+        emlGlance_val$ [.c] = ""
+        emlAugment_col$ [.c] = ""
+    endfor
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @eml_colIndex: .which$, .name$  ->  .idx
+# Index of a column in the named collector, registering it on first use.
+# ----------------------------------------------------------------------------
+procedure eml_colIndex: .which$, .name$
+    .idx = 0
+    if .which$ = "tidy"
+        for .c from 1 to emlTidy_nCols
+            if emlTidy_col$ [.c] = .name$
+                .idx = .c
+            endif
+        endfor
+        if .idx = 0
+            emlTidy_nCols = emlTidy_nCols + 1
+            emlTidy_col$ [emlTidy_nCols] = .name$
+            .idx = emlTidy_nCols
+        endif
+    elsif .which$ = "glance"
+        for .c from 1 to emlGlance_nCols
+            if emlGlance_col$ [.c] = .name$
+                .idx = .c
+            endif
+        endfor
+        if .idx = 0
+            emlGlance_nCols = emlGlance_nCols + 1
+            emlGlance_col$ [emlGlance_nCols] = .name$
+            .idx = emlGlance_nCols
+        endif
+    else
+        for .c from 1 to emlAugment_nCols
+            if emlAugment_col$ [.c] = .name$
+                .idx = .c
+            endif
+        endfor
+        if .idx = 0
+            emlAugment_nCols = emlAugment_nCols + 1
+            emlAugment_col$ [emlAugment_nCols] = .name$
+            .idx = emlAugment_nCols
+        endif
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# TIDY — one row per model term
+# ----------------------------------------------------------------------------
+
+# @emlTidyRow: .term$   Start a new term row. Every later @emlTidyNum /
+# @emlTidyStr writes into it until the next @emlTidyRow.
+procedure emlTidyRow: .term$
+    emlTidy_nRows = emlTidy_nRows + 1
+    for .c from 1 to emlResult_MAXCOL
+        emlTidy_cell$ [emlTidy_nRows, .c] = ""
+    endfor
+    @eml_colIndex: "tidy", "term"
+    emlTidy_cell$ [emlTidy_nRows, eml_colIndex.idx] = .term$
+endproc
+
+# @emlTidyNum: .col$, .value   Undefined writes nothing, so the cell stays
+# empty and R reads NA.
+procedure emlTidyNum: .col$, .value
+    @eml_vocabCheck: "Tidy", emlVocabTidy$, .col$
+    if emlTidy_nRows < 1
+        exitScript: "Result writer: @emlTidyNum: """ + .col$ + """ called "
+        ... + "before any @emlTidyRow. Every tidy cell belongs to a term."
+    endif
+    if .value <> undefined
+        @eml_colIndex: "tidy", .col$
+        emlTidy_cell$ [emlTidy_nRows, eml_colIndex.idx] = string$ (.value)
+    endif
+endproc
+
+procedure emlTidyStr: .col$, .value$
+    @eml_vocabCheck: "Tidy", emlVocabTidy$, .col$
+    if emlTidy_nRows < 1
+        exitScript: "Result writer: @emlTidyStr: """ + .col$ + """ called "
+        ... + "before any @emlTidyRow. Every tidy cell belongs to a term."
+    endif
+    if .value$ <> ""
+        @eml_colIndex: "tidy", .col$
+        emlTidy_cell$ [emlTidy_nRows, eml_colIndex.idx] = .value$
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# GLANCE — one row per model
+# ----------------------------------------------------------------------------
+
+procedure emlGlanceNum: .col$, .value
+    @eml_vocabCheck: "Glance", emlVocabGlance$, .col$
+    if .value <> undefined
+        @eml_colIndex: "glance", .col$
+        emlGlance_val$ [eml_colIndex.idx] = string$ (.value)
+    endif
+endproc
+
+procedure emlGlanceStr: .col$, .value$
+    @eml_vocabCheck: "Glance", emlVocabGlance$, .col$
+    if .value$ <> ""
+        @eml_colIndex: "glance", .col$
+        emlGlance_val$ [eml_colIndex.idx] = .value$
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# AUGMENT — one row per observation
+# ----------------------------------------------------------------------------
+
+# @emlAugmentFrom: .tableId
+# Carry the input table through verbatim: same columns, same order, same
+# values, one augment row per table row. Derived columns are appended after.
+# This is what makes augment "your data plus what the model says about it"
+# rather than a separate artefact you have to join back.
+procedure emlAugmentFrom: .tableId
+    selectObject: .tableId
+    .nRows = Get number of rows
+    .nCols = Get number of columns
+    if .nRows > emlResult_MAXROW
+        exitScript: "Result writer: augment supports up to "
+        ... + string$ (emlResult_MAXROW) + " rows; this table has "
+        ... + string$ (.nRows) + "."
+    endif
+    emlAugment_nRows = .nRows
+    for .c from 1 to .nCols
+        .lab$ = Get column label: .c
+        @eml_colIndex: "augment", .lab$
+        .ci = eml_colIndex.idx
+        for .r from 1 to .nRows
+            selectObject: .tableId
+            .v$ = Get value: .r, .lab$
+            emlAugment_cell$ [.r, .ci] = .v$
+        endfor
+    endfor
+    emlAugment_nCarried = emlAugment_nCols
+endproc
+
+# @emlAugmentNum: .col$, .row, .value
+procedure emlAugmentNum: .col$, .row, .value
+    @eml_vocabCheck: "Augment", emlVocabAugment$, .col$
+    if emlAugment_nRows < 1
+        exitScript: "Result writer: @emlAugmentNum called before "
+        ... + "@emlAugmentFrom. Augment rows come from the input table."
+    endif
+    if .value <> undefined
+        @eml_colIndex: "augment", .col$
+        emlAugment_cell$ [.row, eml_colIndex.idx] = string$ (.value)
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @eml_rwQuote: .s$   RFC 4180
+# ----------------------------------------------------------------------------
+procedure eml_rwQuote: .s$
+    if index (.s$, ",") > 0 or index (.s$, """") > 0
+    ... or index (.s$, newline$) > 0
+        .result$ = """" + replace$ (.s$, """", """""", 0) + """"
+    else
+        .result$ = .s$
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @eml_orderedCols: .vocab$, .which$
+# Emit order = vocabulary order, filtered to the columns actually used. Two
+# runs of the same analysis are then byte-comparable, and the order matches
+# broom's own. Augment's carried input columns keep their table order and come
+# first; only the derived columns are vocabulary-ordered.
+# ----------------------------------------------------------------------------
+procedure eml_orderedCols: .vocab$, .which$
+    .n = 0
+    if .which$ = "augment"
+        for .c from 1 to emlAugment_nCarried
+            .n = .n + 1
+            .name$ [.n] = emlAugment_col$ [.c]
+            .src [.n] = .c
+        endfor
+    endif
+    .vocabTok$# = splitBy$# (.vocab$, " ")
+    for .vt to size (.vocabTok$#)
+        .tok$ = .vocabTok$# [.vt]
+        if .tok$ <> ""
+            .found = 0
+            if .which$ = "tidy"
+                for .c from 1 to emlTidy_nCols
+                    if emlTidy_col$ [.c] = .tok$
+                        .found = .c
+                    endif
+                endfor
+                ; A tidy column that is empty in EVERY row carries no
+                ; information and broom would not have produced it. The one
+                ; that matters in practice is `term`: @emlTidyRow always sets
+                ; it, so an htest frame -- tidy(t.test), tidy(cor.test) --
+                ; would otherwise ship a column of blanks that broom's own
+                ; frame does not have, and a reader diffing the two would see
+                ; a spurious difference in the header.
+                ;
+                ; A column empty on SOME rows survives: tidy(aov) leaves
+                ; statistic and p.value blank on the Residuals row, and that
+                ; blank is broom's NA and has to stay.
+                if .found > 0
+                    .anySet = 0
+                    for .r from 1 to emlTidy_nRows
+                        if emlTidy_cell$ [.r, .found] <> ""
+                            .anySet = 1
+                        endif
+                    endfor
+                    if .anySet = 0
+                        .found = 0
+                    endif
+                endif
+            elsif .which$ = "glance"
+                for .c from 1 to emlGlance_nCols
+                    if emlGlance_col$ [.c] = .tok$
+                        .found = .c
+                    endif
+                endfor
+            else
+                for .c from emlAugment_nCarried + 1 to emlAugment_nCols
+                    if emlAugment_col$ [.c] = .tok$
+                        .found = .c
+                    endif
+                endfor
+            endif
+            if .found > 0
+                .n = .n + 1
+                .name$ [.n] = .tok$
+                .src [.n] = .found
+            endif
+        endif
+    endfor
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @emlResultWrite: .folder$, .base$
+# Writes whichever of the three verbs have content.
+#
+# Outputs:
+#   .written  — how many files were written
+#   .files$   — newline-separated paths, for the caller to report
+#   .skipped$ — newline-separated "verb: reason", so an absent file is
+#               explained rather than looking like a failure
+# ----------------------------------------------------------------------------
+
+# ============================================================================
+# @emlResultClearAll
+# Clears all three collectors: tidy, glance, augment. Call at the start of
+# an analysis to ensure a clean slate. This is distinct from @emlCSVInit,
+# which clears the declaration flag and legacy buffer only.
+#
+# Does NOT clear the extra-frame slots (post-hoc, effect sizes). Those are
+# managed by @emlResultClearExtras when needed.
+# ============================================================================
+procedure emlResultClearAll
+    emlTidy_nRows = 0
+    emlTidy_nCols = 0
+    emlGlance_nCols = 0
+    emlAugment_nRows = 0
+    emlAugment_nCols = 0
+    emlAugment_nCarried = 0
+
+    for .c from 1 to emlResult_MAXCOL
+        emlTidy_col$ [.c] = ""
+        emlGlance_col$ [.c] = ""
+        emlGlance_val$ [.c] = ""
+        emlAugment_col$ [.c] = ""
+    endfor
+endproc
+
+# ============================================================================
+# @emlTidyClear
+# Empties the tidy collector without touching glance or augment.
+#
+# One analysis can produce several MODEL OBJECTS, and in R each gets its own
+# tidy() call and its own frame: aov and TukeyHSD are two objects, not two
+# kinds of row in one frame. So a caller emits the model's terms, writes them,
+# clears, emits the post-hoc contrasts, writes those to a second file. Glance
+# and augment survive the clear because they belong to the fitted model, of
+# which there is only one.
+# ----------------------------------------------------------------------------
+procedure emlTidyClear
+    emlTidy_nRows = 0
+    emlTidy_nCols = 0
+    for .c from 1 to emlResult_MAXCOL
+        emlTidy_col$ [.c] = ""
+    endfor
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @eml_writeTidyFile: .path$   ->  .wrote
+# ----------------------------------------------------------------------------
+# Render the current tidy collector to CSV text without writing it. Factored
+# out of @eml_writeTidyFile so a frame can be STAGED at declare time and
+# written later: the analysis knows its contents when it runs, but the user
+# does not choose the output folder until the export dialog, and the single
+# tidy collector has been cleared and refilled several times by then.
+procedure eml_renderTidy
+    .text$ = ""
+    if emlTidy_nRows >= 1
+        @eml_orderedCols: emlVocabTidy$, "tidy"
+        for .k from 1 to eml_orderedCols.n
+            if .k > 1
+                .text$ = .text$ + ","
+            endif
+            @eml_rwQuote: eml_orderedCols.name$ [.k]
+            .text$ = .text$ + eml_rwQuote.result$
+        endfor
+        .text$ = .text$ + newline$
+        for .r from 1 to emlTidy_nRows
+            for .k from 1 to eml_orderedCols.n
+                if .k > 1
+                    .text$ = .text$ + ","
+                endif
+                @eml_rwQuote: emlTidy_cell$ [.r, eml_orderedCols.src [.k]]
+                .text$ = .text$ + eml_rwQuote.result$
+            endfor
+            .text$ = .text$ + newline$
+        endfor
+    endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# THE FLUSH, AND THE CONTRACT THE PATH ARRIVES UNDER.
+# ----------------------------------------------------------------------------
+# The `writeFile:` below is where two session-killing failures would land,
+# and neither is guarded here. Both are guarded where the path is BUILT,
+# which is @emlSavePanel in stats/eml-output.praat:
+#
+#   a "/" typed into the panel's Base name field would arrive in .path$
+#              verbatim and Praat answers "Cannot create file ... Hint: one
+#              of the folders in this file path does not exist", stopping the
+#              script inside the panel and taking the caller's post-analysis
+#              loop with it. @eml_saveSafeBaseName sanitises the stem.
+#   an unwritable folder would arrive the same way and answer
+#              "unexpected error 30". @eml_saveFolderWritable proves the
+#              target with a `nocheck` probe write before any of this runs.
+#
+# WHY NOT HERE AS WELL. Praat has no try/catch, so a guard at this line could
+# only refuse or repair -- and repairing a path at the flush would give the
+# frames a different base name from the figure and the report written beside
+# them, which is precisely the one-stamp-one-name contract the panel exists to
+# hold. The panel is the sole caller of @emlResultWrite (through
+# @emlExportResultFiles, which nothing else calls), so it is the only place a
+# guard can be both complete and consistent.
+#
+# WHAT A FUTURE CALLER OWES. Any new route to this writer must sanitise its
+# base name and prove its folder BEFORE calling, or it re-opens both defects
+# on a path no harness watches. harness/savepaths presses the panel; nothing
+# presses a bypass.
+# ----------------------------------------------------------------------------
+procedure eml_writeTidyFile: .path$
+    .wrote = 0
+    @eml_renderTidy
+    if eml_renderTidy.text$ <> ""
+        writeFile: .path$, eml_renderTidy.text$
+        .wrote = 1
+    endif
+endproc
+
+
+# ============================================================================
+# @emlResultStageExtra: .suffix$
+# ============================================================================
+# Freeze the current tidy collector as an additional frame to be written
+# alongside tidy/glance/augment, under <base>_<suffix>_tidy.csv.
+#
+# TukeyHSD and the effect sizes are separate model objects in R -- each is its
+# own tidy() call returning its own frame -- so they are separate files here.
+# Staging rather than writing keeps the export folder a user decision.
+#
+# Two slots, which is what the converted paths need; a third would be a
+# straightforward addition. Slots are cleared by @emlResultBegin.
+# ============================================================================
+# Create the extra-frame slots without disturbing anything already staged.
+procedure eml_ensureExtraSlots
+    ; A LIST, NOT TWO NAMED SLOTS. Until 13 Aug 2026 this held exactly two,
+    ; and @emlResultStageExtra called exitScript: on a third -- a hard kill
+    ; mid-run, aimed at a developer, on a path a user can reach. A one-way
+    ; ANOVA already stages both (post-hoc and effect sizes); a two-way with
+    ; post-hoc plus two effect-size families needs three. The ceiling was one
+    ; requirement away from binding and the failure was a crash, so it is
+    ; gone: Praat arrays grow on assignment and emlResult_extraN counts them.
+    if not variableExists ("emlResult_extraN")
+        emlResult_extraN = 0
+    endif
+endproc
+
+
+# Drop any staged extra frames. Call this ONCE at the start of a declaration
+# sequence, before the first @emlResultStageExtra.
+procedure emlResultClearExtras
+    @eml_ensureExtraSlots
+    ; The COUNT is the truth. Stale array entries above it are unreachable --
+    ; every reader loops 1..emlResult_extraN -- so zeroing the count is the
+    ; whole clear, and it cannot leave a half-cleared list behind.
+    emlResult_extraN = 0
+endproc
+
+
+procedure emlResultStageExtra: .suffix$
+    @eml_ensureExtraSlots
+    @eml_renderTidy
+    if eml_renderTidy.text$ = ""
+        goto STAGE_EXTRA_DONE
+    endif
+    emlResult_extraN = emlResult_extraN + 1
+    emlResult_extra$ [emlResult_extraN] = .suffix$
+    emlResult_extraText$ [emlResult_extraN] = eml_renderTidy.text$
+    label STAGE_EXTRA_DONE
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @emlResultWriteTidy: .folder$, .base$
+# Writes ONLY the tidy collector, as <base>_tidy.csv. For the second and later
+# model objects of one analysis.
+# ----------------------------------------------------------------------------
+procedure emlResultWriteTidy: .folder$, .base$
+    .dir$ = .folder$
+    if right$ (.dir$, 1) <> "/"
+        .dir$ = .dir$ + "/"
+    endif
+    .path$ = .dir$ + .base$ + "_tidy.csv"
+    @eml_writeTidyFile: .path$
+    .written = eml_writeTidyFile.wrote
+    .files$ = ""
+    if .written = 1
+        .files$ = .path$ + newline$
+    endif
+endproc
+
+
+procedure emlResultWrite: .folder$, .base$
+    .written = 0
+    .files$ = ""
+    .skipped$ = ""
+    .dir$ = .folder$
+    if right$ (.dir$, 1) <> "/"
+        .dir$ = .dir$ + "/"
+    endif
+
+    # ---- tidy ----
+    if emlTidy_nRows < 1
+        .skipped$ = .skipped$ + "tidy: the analysis declared no model terms"
+        ... + newline$
+    else
+        .p$ = .dir$ + .base$ + "_tidy.csv"
+        @eml_writeTidyFile: .p$
+        .written = .written + 1
+        .files$ = .files$ + .p$ + newline$
+    endif
+
+    # ---- glance ----
+    if emlGlance_nCols < 1
+        .skipped$ = .skipped$ + "glance: the analysis declared no "
+        ... + "model-level statistics" + newline$
+    else
+        @eml_orderedCols: emlVocabGlance$, "glance"
+        .out$ = ""
+        for .k from 1 to eml_orderedCols.n
+            if .k > 1
+                .out$ = .out$ + ","
+            endif
+            @eml_rwQuote: eml_orderedCols.name$ [.k]
+            .out$ = .out$ + eml_rwQuote.result$
+        endfor
+        .out$ = .out$ + newline$
+        for .k from 1 to eml_orderedCols.n
+            if .k > 1
+                .out$ = .out$ + ","
+            endif
+            @eml_rwQuote: emlGlance_val$ [eml_orderedCols.src [.k]]
+            .out$ = .out$ + eml_rwQuote.result$
+        endfor
+        .out$ = .out$ + newline$
+        .p$ = .dir$ + .base$ + "_glance.csv"
+        writeFile: .p$, .out$
+        .written = .written + 1
+        .files$ = .files$ + .p$ + newline$
+    endif
+
+    # ---- augment ----
+    if emlAugment_nRows < 1
+        .skipped$ = .skipped$ + "augment: this analysis has no per-observation"
+        ... + " quantities" + newline$
+    else
+        @eml_orderedCols: emlVocabAugment$, "augment"
+        .out$ = ""
+        for .k from 1 to eml_orderedCols.n
+            if .k > 1
+                .out$ = .out$ + ","
+            endif
+            @eml_rwQuote: eml_orderedCols.name$ [.k]
+            .out$ = .out$ + eml_rwQuote.result$
+        endfor
+        .out$ = .out$ + newline$
+        for .r from 1 to emlAugment_nRows
+            for .k from 1 to eml_orderedCols.n
+                if .k > 1
+                    .out$ = .out$ + ","
+                endif
+                @eml_rwQuote: emlAugment_cell$ [.r, eml_orderedCols.src [.k]]
+                .out$ = .out$ + eml_rwQuote.result$
+            endfor
+            .out$ = .out$ + newline$
+        endfor
+        .p$ = .dir$ + .base$ + "_augment.csv"
+        writeFile: .p$, .out$
+        .written = .written + 1
+        .files$ = .files$ + .p$ + newline$
+    endif
+endproc

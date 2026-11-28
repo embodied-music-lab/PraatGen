@@ -1,7 +1,7 @@
 # EML Procedure Guide
-# Version: 1.3
+# Version: 1.4
 # Date: 8 April 2026
-# Revised: 29 July 2026 (PraatGen v14.0.0) — dead `@emlVibratoDrawFigure` / `vibrato-procedures-manual.md` references removed; "Regression: not yet implemented" clarified as workflow wiring, with a pointer to the registry quarantine section
+# Revised: 28 November 2026 — synced to the EML Stats & Graphs library: 22 library files (versions below), renamed and retired procedures updated, tidy long-format CSV export, new-file entries (Section 5.8)
 # Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
 # Author: Ian Howell, Embodied Music Lab (www.embodiedmusiclab.com)
 #
@@ -17,30 +17,40 @@
 #
 # VERSIONING
 # This guide reflects the following source file versions:
-#   eml-graph-procedures.praat      v3.21
-#   eml-draw-procedures.praat       v1.18
-#   eml-annotation-procedures.praat v3.17
+#   eml-core-descriptive.praat      v1.2
 #   eml-core-utilities.praat        v1.0
-#   eml-core-descriptive.praat      v1.1
-#   eml-extract.praat               v1.4
-#   eml-output.praat                v1.7
-#   eml-inferential.praat           v1.2
-#   eml-analysis.praat              (new to PKB, 29 Jul 2026)
-#   eml-vibrato-procedures.praat    v2.0  (16 procs incl. drawing)
-#   eml-batch-process.praat         v1.1
-#   eml-test-helpers.praat          v1.0
-#   eml-egg-procedures.praat        v1.0
+#   eml-extract.praat               v2.0
+#   eml-output.praat                v2.4
+#   eml-studentized-range.praat     v1.0
+#   eml-anova-kernel.praat          v1.0
+#   eml-wilcoxon-interval.praat     v1.0
+#   eml-inferential.praat           v1.8
+#   eml-psychometrics.praat         v1.0
+#   eml-categorical.praat           v1.0
+#   eml-result-writer.praat         v1.0
+#   eml-record.praat                v1.0
+#   eml-report.praat                v1.0
+#   eml-analysis.praat              v1.3
+#   eml-graph-procedures.praat      v3.32
+#   eml-draw-procedures.praat       v1.26
+#   eml-annotation-procedures.praat v3.22
 #   eml-graphs.praat                v3.0
-#   eml-graphs-form.praat           v1.9
+#   eml-graphs-form.praat           v2.9
+#   eml-batch-process.praat         v1.3
+#   eml-vibrato-procedures.praat    v2.0  (16 procs incl. drawing)
+#   eml-egg-procedures.praat        v1.1
 #
 #   These are the PLUGIN's version numbers, carried verbatim in each PKB
 #   file header. A mismatch between the two means the PKB has drifted.
 #
-#   NOT shipped in the PKB: eml-lmm.praat (mixed models, not ready) with
-#   its private numerical dependencies eml-linalg.praat and
-#   eml-optimizer.praat; and eml-wizard.praat (vestigial). Note that the
-#   @emlWizardExplain* helpers ARE shipped — they live in eml-output.praat,
-#   a core file, not in the wizard script.
+#   NOT shipped in the PKB: eml-lmm.praat (mixed models, excluded by
+#   author ruling) with its private numerical dependencies eml-linalg.praat
+#   and eml-optimizer.praat; @emlDrawLMMForest, the one procedure of
+#   eml-draw-procedures.praat that reads them; eml-wizard.praat
+#   (vestigial); eml-demo-tables.praat; eml-draw-qq.praat; and the test
+#   helpers (eml-test-helpers). Note that the @emlWizardExplain* helpers
+#   ARE shipped — they live in eml-output.praat, a core file, not in the
+#   wizard script.
 #
 # When a source file is updated, bump its version here. A mismatch
 # between this table and the source file header signals the guide
@@ -122,7 +132,10 @@
 # 1.4 AXIS CONVENTIONS
 #
 # Always suppress garnish (set garnish parameter to "no") and use
-# manual axis commands via @emlDrawAxes or @emlDrawAxesSelective.
+# manual axis commands via @emlDrawAxes. Per-axis visibility of the axis
+# name, the ticks and the tick values is set through the globals
+# emlShowAxisNameX/Y, emlShowTicksX/Y and emlShowAxisValuesX/Y, which
+# @emlDrawAxes reads.
 # Axis ranges: @emlComputeAxisRange with buffer.
 # Tick intervals: @emlComputeNiceStep.
 # Categorical axes: @emlDrawCategoricalXAxis with
@@ -171,6 +184,10 @@
 # @emlClearAnnotations → populate brackets/text → @emlStackBrackets
 # → @emlDrawAnnotations. Annotations render after data but before
 # the axis frame.
+#
+# @emlDrawAnnotations takes: .xMin, .xMax, .yDataMax, .yRange,
+# .bracketColor$, .fontSize, .axYMin, .axYMax. The last two are the
+# installed y axis bounds; pass the same values the figure's axis uses.
 
 # 1.10 PANEL CONTEXT
 #
@@ -179,7 +196,7 @@
 # absorbed by @emlSetAdaptiveTheme — all viewport bounds it computes
 # include the offset.
 #
-# Initialization: @emlInitDrawingDefaults sets panel origin to (0,0)
+# Initialization: @emlInitializeDrawingDefaults sets panel origin to (0,0)
 # and initializes all drawing globals. Call once at script start.
 #
 # Extent tracking: @emlResetDrawnExtent zeroes the bounding box.
@@ -188,7 +205,7 @@
 # viewport with the tracker. @emlAssertFullViewport reads the
 # accumulated extent.
 #
-# Single-panel figures (default): Call @emlInitDrawingDefaults,
+# Single-panel figures (default): Call @emlInitializeDrawingDefaults,
 # @emlResetDrawnExtent, then the draw procedure. No panel origin
 # manipulation needed.
 #
@@ -200,7 +217,7 @@
 #
 # Example (two panels side by side):
 #
-#   @emlInitDrawingDefaults
+#   @emlInitializeDrawingDefaults
 #   @emlResetDrawnExtent
 #   Erase all
 #
@@ -227,7 +244,8 @@
 #   Research question
 #   │
 #   ├── Describe one variable
-#   │   → @emlDescribe (full summary)
+#   │   → @emlDescribe: .data#, .trim, .confidenceLevel (full summary;
+#   │     .trim is the proportion trimmed from each tail, 0 <= .trim < 0.5)
 #   │   → Individual procedures for specific measures
 #   │
 #   ├── Compare groups
@@ -240,9 +258,9 @@
 #   │   │       └── Nonparametric → @emlWilcoxonSignedRank
 #   │   └── 3+ groups
 #   │       ├── One factor
-#   │       │   ├── Parametric → @emlOneWayAnova (+@emlTukeyHSD)
+#   │       │   ├── Parametric → @emlOneWayAnova (.tukey = 1 adds Tukey HSD)
 #   │       │   └── Nonparametric → @emlKruskalWallis (+@emlDunnTest)
-#   │       └── Two factors → @emlTwoWayAnova
+#   │       └── Two factors → @emlTwoWayAnova (.ssType 1, 2 or 3; default 3)
 #   │
 #   └── Examine relationship
 #       ├── Both continuous
@@ -285,7 +303,7 @@
 #   @emlSpearmanCorrelation → (rho IS the effect size)  → rho
 #
 # Pairwise effect sizes for k-group tests:
-#   @emlOneWayAnova + @emlTukeyHSD → .dMatrix## (Cohen's d)
+#   @emlOneWayAnova with .tukey = 1 → .dMatrix## (Cohen's d)
 #   @emlKruskalWallis + @emlDunnTest → .rMatrix## (rank-biserial r)
 #
 # Effect size interpretation (Cohen's conventions):
@@ -349,7 +367,8 @@
 # conservative when ties produce half-integer U.
 #
 # Tukey HSD: Groups sorted alphabetically (matching R). Display order
-# uses encounter order. The anovaMap[] lookup bridges these.
+# uses encounter order. @emlRunAnnotationComparison bridges these through
+# its own .sortMap[] lookup.
 #
 # All implementations cross-verified against R and scipy.
 #
@@ -362,16 +381,29 @@
 #
 # 2.9 CSV EXPORT INFRASTRUCTURE
 #
-# Three procedures in eml-output.praat manage structured CSV export:
-#   @emlCSVInit — initialize accumulator arrays (called once)
-#   @emlCSVAddRow — append one comparison row to accumulators
-#   @emlExportStatsCSV — write accumulated rows to file
+# Procedures in eml-output.praat manage structured CSV export. The
+# accumulator holds tidy long-format rows, one result per row, with the
+# columns table, analysis, term, term_type, field, value:
+#   @emlCSVInit — initialize the accumulator (called once)
+#   @emlCSVSetTable: .table$ — name the table; every row carries it
+#   @emlCSVTermType: .kind$ — kind of thing the following rows' term names
+#   @emlCSVAdd: .analysis$, .term$, .field$, .value — one numeric result
+#     (an undefined value writes nothing)
+#   @emlCSVAddStr: .analysis$, .term$, .field$, .value$ — one string result
+#   @emlExportStatsCSV: .filePath$ — write the accumulated rows to a file
+#   @emlExportResultFiles: .folder$, .base$ — write the broom-style file
+#     set (tidy, glance, augment) when the analysis declared its results
+#     through eml-result-writer.praat; otherwise write the single
+#     long-format file
 #
-# Shared reporters (@emlReport*) call @emlCSVAddRow internally.
+# Text cells pass through eml_csvQuote (RFC 4180 quoting after an ASCII
+# fold), so a label containing a comma or a quote stays one field.
+#
+# Shared reporters (@emlReport*) call @emlCSVAdd / @emlCSVAddStr internally.
 # CSV rows contain structured data only — "Why:" pedagogical
 # commentary and section headers are naturally excluded. The
 # caller is responsible for calling @emlCSVInit before the first
-# reporter and @emlExportStatsCSV after reporting is complete.
+# reporter and for exporting after reporting is complete.
 
 # ====================================================================
 # 3. DEMO WINDOW METHODOLOGY
@@ -447,8 +479,8 @@
 #   1. Graph annotations (brackets, text blocks, matrix panels)
 #   2. Info window reporting (descriptive stats, test results, "Why:")
 #
-# Single-source-of-truth pattern: six shared reporter procedures in
-# eml-annotation-procedures.praat handle ALL Info window output and
+# Single-source-of-truth pattern: the shared reporter procedures in
+# eml-report.praat handle ALL Info window output and
 # CSV row population. They are called identically by:
 #   - Stats wrapper scripts (eml-compare-groups.praat, etc.)
 #   - The graphs tool (via @emlReportBridgeStats dispatcher)
@@ -471,11 +503,11 @@
 #   - "Why:" pedagogical commentary (always in Info, excluded from CSV)
 #   - Pairwise post-hoc results if applicable (Tukey/Dunn's)
 #   - Pairwise effect sizes from matrix outputs (.dMatrix##, .rMatrix##)
-#   - CSV rows via @emlCSVAddRow
+#   - CSV rows via @emlCSVAdd / @emlCSVAddStr
 #
 # 4.3 BRIDGE ENTRY POINTS
 #
-#   @emlBridgeGroupComparison — for bar/violin/box with annotations
+#   @emlRunAnnotationComparison — for bar/violin/box with annotations
 #   @emlBridgeCorrelation — for scatter with regression line
 #   @emlReportBridgeStats — thin dispatcher (reads bridge globals,
 #     routes to the appropriate shared reporter)
@@ -503,7 +535,7 @@
 # 4.5 ANNOTATION QUEUE PATTERN
 #
 #   @emlClearAnnotations              — reset arrays + globals
-#   @emlBridgeGroupComparison         — run stats, populate arrays
+#   @emlRunAnnotationComparison       — run stats, populate arrays
 #   @emlStackBrackets                 — compute vertical positions
 #   ... draw procedure renders data ...
 #   @emlDrawAnnotations               — render brackets/text
@@ -514,16 +546,17 @@
 #
 # Bridge and reporter procedures read pairwise effect sizes from
 # matrices stored by the stats procedures, rather than recomputing:
-#   - @emlOneWayAnova.dMatrix## — Cohen's d for all pairs (via Tukey)
+#   - @emlOneWayAnova.dMatrix## — Cohen's d for all pairs (when .tukey = 1)
 #   - @emlDunnTest.rMatrix## — rank-biserial r for all pairs
 #
 # Matrix indices follow the stats procedure's alphabetical sort
-# order. @emlTukeyHSD.sortMap maps display indices to matrix indices.
+# order. @emlRunAnnotationComparison maps display indices to matrix
+# indices through its own .sortMap[].
 #
 # 4.7 DISPATCHER PATTERN
 #
 # @emlReportBridgeStats reads bridge globals set by
-# @emlBridgeGroupComparison / @emlBridgeCorrelation:
+# @emlRunAnnotationComparison / @emlBridgeCorrelation:
 #   annotBridgeNGroups, annotBridgeTestType$, annotBridgeGroup1$,
 #   annotBridgeGroup2$, annotBridgeCorrType$, etc.
 #
@@ -558,7 +591,7 @@
 #   → @emlDrawRegressionLine for the line itself
 #
 # "Multi-panel figure"
-#   → @emlInitDrawingDefaults + @emlResetDrawnExtent
+#   → @emlInitializeDrawingDefaults + @emlResetDrawnExtent
 #   → @emlSetPanelOrigin before each panel
 #   → Multiple @emlDraw* calls
 #   → @emlAssertFullViewport before save
@@ -575,7 +608,7 @@
 #   → Report via @emlReportTwoGroupComparison
 #
 # "Compare three or more groups"
-#   → @emlOneWayAnova with tukey=1 (or @emlKruskalWallis + @emlDunnTest)
+#   → @emlOneWayAnova with .tukey = 1 and .alpha (or @emlKruskalWallis + @emlDunnTest)
 #   → Report via @emlReportAnovaComparison / @emlReportKWComparison
 #
 # "Compare paired samples"
@@ -588,11 +621,11 @@
 #   → Report via @emlReportCorrelationAnalysis
 #
 # "Two-way ANOVA"
-#   → @emlTwoWayAnova
+#   → @emlTwoWayAnova: .tableId, .dataCol$, .factor1$, .factor2$, .ssType
 #   → Report via @emlReportTwoWayAnova
 #
 # "Descriptive statistics"
-#   → @emlExtractColumn + @emlDescribe (comprehensive)
+#   → @emlExtractColumn + @emlDescribe: .data#, .trim, .confidenceLevel (comprehensive)
 #   → Or individual: @emlMean, @emlSD, @emlMedian, etc.
 #
 # "Pairwise comparisons"
@@ -635,6 +668,7 @@
 #
 # "Export stats results to CSV"
 #   → @emlCSVInit + shared reporters (populate rows) + @emlExportStatsCSV
+#     (or @emlExportResultFiles for the broom-style file set)
 #
 # 5.5 BATCH PROCESSING TASKS
 #
@@ -654,15 +688,7 @@
 #     @emlVibratoDrawCoV, @emlVibratoDrawDualScatter,
 #     @emlVibratoDrawSummaryTable.
 #
-# 5.7 TESTING TASKS
-#
-# "Write tests for a procedure"
-#   → Dev: Test Harness family
-#   → @emlTestInit to start, @emlTestAssert* for assertions,
-#     @emlTestSummary to close
-#   → Pattern: init → section → assertions → section → ... → summary
-#
-# 5.8 DEMO WINDOW TASKS
+# 5.7 DEMO WINDOW TASKS
 #
 # "Build a tutorial / interactive Demo window display"
 #   → Demo Window family
@@ -671,12 +697,69 @@
 #     input, lifecycle) and BEST_PRACTICES_DEMO_WINDOW.md (canonical
 #     patterns). There is no EML layout-helper library in the PKB — write
 #     layout from the documented demo commands.
-#   → @emlPlace* procedures for typographic layout
-#   → Demo window: drive it directly from COMMANDS_DemoWindow.txt (syntax,
-#     the font-metric contamination bug, Text special alignment, animation
-#     input, lifecycle) and BEST_PRACTICES_DEMO_WINDOW.md (canonical
-#     patterns). There is no EML layout-helper library in the PKB — write
-#     layout from the documented demo commands.
+
+# 5.8 LIBRARY FILES ADDED TO THE PKB
+#
+# Eight files carry procedures that the files above call. A copied
+# procedure's own @-calls come with it (Section 0), so a generated script
+# that uses a procedure from the files above may need procedures from these.
+# Each entry follows the file's own header comment.
+#
+# eml-record.praat (v1.0) — Record workflow: buffer, phrases, renderer.
+#   Accumulates every analysis and drawing step of a session and writes it
+#   out as a single annotated Praat script that both re-runs and reads like
+#   a lab notebook. Draw procedures, @emlGraphsWorkflow and the
+#   @emlRun*Analysis orchestrators call @emlRecord* procedures,
+#   @emlPhrase and @emlPluginRoot.
+#
+# eml-result-writer.praat (v1.0) — broom-style result writer. Collects one
+#   analysis's results as three tables and writes them as three CSV files
+#   named and shaped as R's broom package does: tidy (one row per model
+#   term, <base>_tidy.csv), glance (one row per model, <base>_glance.csv)
+#   and augment (one row per observation, <base>_augment.csv). A caller
+#   declares cells (@emlResultBegin, @emlTidyRow, @emlTidyNum,
+#   @emlGlanceNum, @emlResultWrite) and the writer owns the shape: column
+#   names are checked against its vocabulary, an undefined value writes an
+#   empty cell, and a table with no rows produces no file.
+#
+# eml-report.praat (v1.0) — Info-window report writers. Prints a finished
+#   result for two-group, one-way and two-way ANOVA (including the
+#   Brown-Forsythe, Welch and Games-Howell arm), Kruskal-Wallis, paired
+#   comparisons, correlation, regression (including Theil-Sen) and
+#   normality. Each reporter reads the test's result globals and appends the
+#   matching CSV rows. Moved here from eml-annotation-procedures.praat so the
+#   statistical surface runs without the graphs layer. Reporter names are
+#   unchanged.
+#
+# eml-studentized-range.praat (v1.0) — studentized range distribution.
+#   @emlStudentizedRangeQ and @emlInvStudentizedRangeQ, a translation of
+#   R's ptukey.c that computes the upper tail directly instead of as
+#   1 - CDF, which Praat's built-in Get TukeyQ: does. Carries R's
+#   GPL-2-or-later origin notice, which must stay verbatim in any copy.
+#   Used by Tukey HSD and Games-Howell.
+#
+# eml-wilcoxon-interval.praat (v1.0) — Wilcoxon (Hodges-Lehmann)
+#   confidence-interval approximation branch, @emlWilcoxonIntervalApprox:
+#   .v1#, .v2#, .paired, .level. Reports a .warning$ and the achieved level
+#   when the requested level cannot be bracketed. Carries a third-party
+#   notice that must stay verbatim in any copy.
+#
+# eml-anova-kernel.praat (v1.0) — two-way ANOVA kernel. Computes the table
+#   directly from raw data for Type I, II and III sums of squares
+#   (@emlAnovaKernelTwoWay), with Levene's test (@emlLeveneTest), estimated
+#   marginal means, simple effects and post-hoc comparisons. It does not
+#   call Praat's Report two-way anova, whose error term is wrong on
+#   unbalanced designs. Called by @emlTwoWayAnova and
+#   @emlRunTwoWayAnalysis.
+#
+# eml-categorical.praat (v1.0) — categorical data. @emlChiSquareIndependence
+#   (chi-square test of independence on a matrix of counts, with Cramer's V
+#   and an optional continuity correction on 2 x 2 tables) and
+#   @emlWilsonInterval (Wilson interval for a proportion).
+#
+# eml-psychometrics.praat (v1.0) — Cronbach's alpha (@emlCronbachAlpha) and
+#   alpha-if-item-deleted (@emlAlphaInfluence), with listwise deletion of
+#   respondents who have an undefined cell (@eml_listwiseComplete).
 
 # ====================================================================
 # 6. SCRIPT GENERATION MODEL
@@ -789,8 +872,10 @@
 #
 # 7.5 REGISTRY GENERATION
 #
-# The registry can be regenerated mechanically by scanning procedure
-# definitions (lines matching `^procedure `) across all source files.
+# The registry is regenerated mechanically by scanning procedure
+# definitions (lines matching `^procedure `) across all source files:
+# run `python3 tools/build_procedure_registry.py` from the PraatGen work
+# folder (`--src` reads a plugin tree instead of the PKB copies).
 # The guide cannot be regenerated mechanically — it encodes design
 # decisions and methodology that require human judgment.
 

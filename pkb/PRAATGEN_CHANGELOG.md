@@ -7,6 +7,108 @@
 # Referenced from the Master Prompt Core via the CHANGELOG section.
 # ============================================================================
 
+### 18.0.0 — 28 November 2026
+
+**PraatGen 3.** PraatGen runs as a skill in a Claude plugin. It reads its rules
+each turn with the Read tool, and its reference files are in the skill's
+`pkb/` folder.
+
+**Review.** The independent review uses one fixed prompt, kept in
+`RULES_AUDIT.md`, and reports findings only: no ranking, and "No findings."
+when there are none. The review fixes only faults against the approved plan. A
+fix that would change what the plan says the script does comes to you as a question before
+delivery.
+
+**Recommendations.** When PraatGen offers options, the one it recommends is
+the method the reference files give. It doesn't recommend a step they don't
+name, and says so when it mentions one.
+
+**Memory.** PraatGen never saves its rules, procedures, workarounds, findings
+or lessons to memory. It saves only a preference you state as your own way of
+working and ask it to keep.
+
+**Test list.** In SANDBOX, PraatGen writes `<name>_testlist.md` before the first
+test run. It covers every menu option, both states of every boolean, every
+pause-dialog button, every warning, every skip or threshold path, a file name
+with non-ASCII characters and, for a script that loops over files, a batch of
+20 or more. The linter checks that every option, boolean and button appears in
+the list.
+
+**Delivery.** PraatGen delivers only when `open_items.md` lists nothing it can
+still do, asks you about any item only you can settle, and states any limit of
+the environment with the delivery.
+
+**Audit files.** Each version of a script gets its own audit file,
+`<name>_audit_v<version>.md`, named with the version in the script header.
+Earlier audit files are never edited.
+
+**Recovery.** When PraatGen sees a conversation summary it hasn't checked
+against the output folder, it runs VERIFY YOUR STATE itself. You can still
+give the command at any time.
+
+**Settings.** The model-training setting list now includes Ultra.
+
+### 17.1.9 — 27 November 2026
+
+**Text in CSV files.** Scripts write every text field in a CSV file, such as a
+file name or label, in double quotes with any quote inside it doubled, so a
+comma in a file name no longer shifts the columns, and sessions apply this as
+a settled rule with no caveat, warning or question to you. Appendix E now
+also covers how Praat's own CSV save and read treat commas and quotes,
+including that a double quote in a name can't survive Praat's own CSV reader.
+
+**UTF-8 output.** Scripts that write file names, labels or your input to a
+file set Praat's text writing preference to UTF-8 first, so one accented or
+other non-ASCII character no longer turns the whole file into UTF-16.
+
+**The EML library's CSV rows.** `@emlCSVAddRow` in the PKB copy of
+`eml-output.txt` writes its text fields in double quotes, inner quotes
+doubled. It is logged in `UPSTREAM_CORRECTIONS.md` for the plugin.
+
+**Linter.** A new check blocks a file name, object name, TextGrid label or
+form text field joined bare to a "," separator in a line written to a file.
+`Text writing preferences:` is now a curated command, so the linter verifies
+it.
+
+**History out of the rules files.** These history notes left the rules files
+and are recorded here:
+
+- A non-ASCII string literal written to a file caused the UTF-16
+  `eml-batch-process.txt` incident. The old note that em dashes in string
+  literals are harmless unless something re-encodes them was wrong: writing
+  one to a file is the re-encoding.
+- The citation dates corrected on 22 April 2026 (Watts et al. 2017, Vojtech
+  et al. 2020, Heller Murray et al. 2022).
+- An earlier APPENDIX_D §1B lacked "silence threshold", the 6th parameter,
+  which shifted every later value.
+- The DEBUGGING-mode PKB compliance check was first AUTO-only, on the
+  reasoning that standard mode's PRE-FLIGHT, COMMAND PLAN, Thinking gate and
+  SELF-AUDIT cover the same surface. That reasoning didn't extend to
+  DEBUGGING, where PRE-FLIGHT and COMMAND PLAN don't run. Both recorded
+  shipped drawing-methodology violations (4 June 2026, 3 August 2026)
+  occurred in DEBUGGING, each passing a SELF-AUDIT that attested compliance.
+- The interactive overwrite dialog was dropped because it behaved
+  inconsistently between single-file and batch runs and could not protect
+  automated runs.
+- The interpolated-variable `$` placement rule came from a bug hit in
+  `annotMatrixCell` dynamic variables (comparison matrix), 20 March 2026;
+  9 occurrences were corrected.
+- The Praat download snippet broke on 3 June 2026 because it pinned the
+  architecture token after the rename from `linux-intel64` to `linux-x64v3`.
+- On 8 October 2026, on Ubuntu 24.04 x86_64 as root, the GUI package update
+  and install both succeeded.
+
+### 17.1.8 — 27 November 2026
+
+**Questions before delivery.** PraatGen asks a question only you can settle
+before it delivers the script, one question per message in plain words, and
+waits for your answer. The delivery message never ends with questions, and
+PraatGen never calls an item yours to answer or decide.
+
+**Test data offer.** The offer of synthetic test files is the same TESTDATA
+line in SPARSE and VERBOSE, so VERBOSE no longer closes the delivery with a
+question.
+
 ### Release 2.2.7 — 27 November 2026 (Master Prompt 17.1.7)
 
 For projects in the older Claude project format. Ships the Master Prompt

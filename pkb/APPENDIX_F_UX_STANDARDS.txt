@@ -20,12 +20,16 @@
 #    parameters exist behind an opt-in gate.
 #
 # ⚠️ FILE-OUTPUT ENCODING (hard) — sandbox-verified, Praat 6.6.30, 29 Jul 2026
-#   Every string literal written to a file must be pure ASCII. ONE non-ASCII
-#   character (— – … ’ “ ° µ ± Δ é ≥ …) makes Praat write the ENTIRE file as
-#   UTF-16 BE, even when Praat is launched with --utf8, and subsequent
-#   appendFileLine: calls keep it UTF-16. A UTF-16 CSV is unreadable to
-#   R read.csv, pandas, Excel import and grep. Use -> not →, - not —,
-#   deg not °, +/- not ±. Non-ASCII in Info-window or Picture output is fine.
+#   Every string literal written to a file must be pure ASCII. Under Praat's
+#   default text-writing setting, ONE non-ASCII character (— – … ’ “ ° µ ±
+#   Δ é ≥ …) makes Praat write the ENTIRE file as UTF-16 BE, even when Praat
+#   is launched with --utf8, and subsequent appendFileLine: calls keep it
+#   UTF-16. A UTF-16 CSV is unreadable to R read.csv, pandas, Excel import
+#   and grep. Use -> not →, - not —, deg not °, +/- not ±. Non-ASCII in
+#   Info-window or Picture output is fine. A script that writes text from
+#   file names, labels or user input sets Text writing preferences: "UTF-8"
+#   before its first write (Rule 27, File text encoding; APPENDIX_E
+#   Section 8).
 # 2. TEMPORAL CONTINUITY: A script used repeatedly should remember its
 #    previous configuration. The user should never re-enter information
 #    the script already knows.

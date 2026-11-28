@@ -157,6 +157,15 @@
   # Number of rows: 1 for ordinary Tukey tests; above 1, the maximum over that many ranges.
   # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026: count from Praat's "requires only 4 arguments" error; names match the dialog fields in Praat's source; every argument's meaning matches SciPy 1.17 studentized_range to 8 digits.
 
+  # Text encoding of written files (no selection needed)
+  Text writing preferences: output encoding$
+  # Verified: Text writing preferences: "UTF-8"
+  # "UTF-8" makes writeFileLine:, appendFileLine:, Save as comma-separated
+  # file and Save as tab-separated file write UTF-8 with no BOM. "UTF-16" and
+  # "try ASCII, then UTF-16" write UTF-16 with a BOM. Praat keeps the setting
+  # between runs. Rule 27, File text encoding; APPENDIX_E Section 8.
+  # Provenance: Sandbox-verified 6.6.30, 27 Nov 2026: count from Praat's "requires only 1 arguments" error; the three values were accepted and the written files' bytes read; any other value stops with "Option argument "Output encoding" cannot have the value ...".
+
 ---
 
 ## Syntax Notes and Errata

@@ -1,0 +1,764 @@
+# ============================================================================
+# EML Stats : Wilcoxon Confidence Interval — Approximation Branch
+# ============================================================================
+# Module: eml-wilcoxon-interval.praat
+# Version: 1.0
+# Date: 2 September 2026
+#
+# License: GPL-3.0-or-later
+#
+# ---------------------------------------------------------------------------
+# WHAT THIS FILE IS, AND WHY IT IS STANDALONE.
+#
+# Tracker item (mailbox/to-opus/TRACKER_KIT_AND_1p0.md, A.5): "Wilcoxon H-L
+# interval, approx branch = port of R's corrected-z inversion (intervals
+# item 3.8 ...) — UNMEASURED." Item 3.8, per
+# docs/WORK_ORDER_INTERVALS_2026-08-26.md, names
+# @emlHodgesLehmannTwoSample in stats/eml-inferential.praat.
+#
+# MEASURED BEFORE BUILDING (per standing instruction): @emlHodgesLehmannTwoSample
+# and @emlHodgesLehmannPaired already exist in stats/eml-inferential.praat and
+# their "normal approximation" branches already invert R's continuity-corrected
+# z statistic by the same route this file uses -- Brent's zeroin ported from
+# R's own src/library/stats/src/zeroin.c. Run directly against R 4.3.3 on two
+# forced-approximation fixtures (n1=55,n2=60 two-sample; n=55 paired), the
+# existing code's .low/.high agreed with wilcox.test(conf.int = TRUE)$conf.int
+# to full double precision (differences at the 1e-13 relative level, i.e.
+# floating-point noise, not a defect). The command and output are in this
+# repository's commit message / agent report for this file's construction,
+# and are reproduced in validate/v158_wilcoxon_interval.R's own R session so
+# the claim is re-runnable there, not merely asserted here.
+#
+# ONE GENUINE GAP WAS FOUND, on the PAIRED (one-sample) form only. R's
+# one-sample approximation branch widens alpha in a loop when the requested
+# level cannot be bracketed by the sample (see "THE ALGORITHM" below), and on
+# success at a wider alpha it emits `warning("requested conf.level not
+# achievable")` and reports the ACHIEVED level, not the requested one. The
+# existing @emlHodgesLehmannPaired ports the widening loop and returns the
+# correct bounds, but has no `.warning$` output at all to carry that signal,
+# and does not report the achieved level either -- silently correct on the
+# numbers, silently short of telling a caller the requested level was not
+# met. Measured (n = 3 paired, x = {-0.626, 0.184, -0.836}, y = {-0.446, 0.3,
+# -0.777}, requested level 0.999, R's approximation branch forced with
+# exact = FALSE): R widens alpha from 0.001 to where it achieves conf.level =
+# 0.488 and warns; a caller of this file's own procedure at forced
+# approximation gets `.warning$` and `.achievedLevel` naming exactly that.
+# (At n = 3 the WIRED @emlHodgesLehmannPaired takes R's own exact branch
+# instead, per its own n<50 gate, so this gap is invisible there and only
+# reachable by a caller that deliberately asks for the approximation branch
+# — which is what a standalone approximation-branch procedure is for.)
+# validate/v158_wilcoxon_interval.R re-derives both of the numbers above.
+#
+# THE ESTIMATE IS NOT THIS FILE'S SUBJECT. There is a separately documented,
+# SETTLED difference between R's own $estimate on the approximation branch
+# (a root of W with the continuity correction switched off) and the plugin's
+# estimate (the median of the cross-differences / Walsh averages on every
+# branch, per Fable's 26 August work order). That gap is ruled to stay as
+# documentation of R's own behaviour -- see validate/v145_hodges_lehmann_
+# interval.R's header. This file reports the same estimate
+# (median-of-differences) as @emlHodgesLehmannTwoSample / Paired already do,
+# for the same reason, and does not reopen that question.
+#
+# THIS FILE IS DELIBERATELY UNWIRED. Per this task's brief: "Do NOT wire
+# this into any existing file. Connecting it up is a later step and those
+# files belong to other people right now." stats/eml-inferential.praat is
+# mid-flux under the tracker's own pending "uniform outcome contract"
+# item (A.5), so nothing here is added to it, and nothing here is called
+# from it. This file depends only on @emlRankVector
+# (stats/eml-core-utilities.praat), a stable low-level utility, and is
+# otherwise self-contained: its own copy of R's W(d) for both the
+# two-sample and one-sample forms, and its own copy of Brent's zeroin. Its
+# procedure and internal-helper names (`eml_wci*`, `emlWilcoxonIntervalApprox`)
+# are deliberately distinct from eml-inferential.praat's `eml_hl*` /
+# `emlHodgesLehmann*` names so the two files can be included together later
+# without a silent redefinition.
+#
+# THE OUTCOME CONTRACT. This file uses `.ok` / `.error$` / `.warning$`, the
+# tracker's accepted-but-not-yet-applied uniform contract (A.5), rather than
+# the `.error$`-only shape @emlHodgesLehmannTwoSample / Paired currently use
+# -- read from stats/eml-anova-kernel.praat's `.ok = 0` / `.error$ = ""` /
+# `.warning$ = ""` initialisation and `.ok = 1` on success, which is the
+# shape this file matches.
+#
+# ---------------------------------------------------------------------------
+# ORIGIN NOTICE -- required by mailbox/to-opus/RULING_PORT_ATTRIBUTION_2026-09-01.md.
+# This file translates two pieces of R's own implementation, not merely an
+# implementation of a published method.
+#
+# 1. SOURCE.
+#
+#    a. R's asymptotic Wilcoxon/Hodges-Lehmann confidence-interval algorithm
+#       (the W(d) statistics, the two-sample root() with its endpoint
+#       returns, and the one-sample root() with its alpha-widening loop):
+#       translated from src/library/stats/R/wilcox.test.R, function
+#       wilcox.test.default, the "conf.int" blocks. Fetched 2 September 2026
+#       from
+#       https://raw.githubusercontent.com/wch/r-source/561d2158da5ce11153d3595de865de840339c59a/src/library/stats/R/wilcox.test.R
+#       -- commit 561d215..., the tip of the r-source mirror's
+#       refs/heads/tags/R-4-3-3 ref, i.e. R 4.3.3 itself (measured: 488
+#       lines at that commit, versus 1136 at the mirror's trunk tip, which
+#       carries R-devel changes past 4.3.3 not present in the installed
+#       oracle). Cross-checked against the installed R 4.3.3's own
+#       formals(stats:::wilcox.test.default) -- digits.rank = Inf there,
+#       matching this fetched file and NOT the trunk copy's digits.rank = 7L
+#       -- so the fetched version is confirmed to be the version actually
+#       running as this kit's oracle, not merely a same-numbered tag.
+#
+#    b. Brent's zeroin, the root finder wilcox.test's uniroot() calls:
+#       translated from src/library/stats/src/zeroin.c, function
+#       R_zeroin2, fetched the same day from
+#       https://raw.githubusercontent.com/wch/r-source/561d2158da5ce11153d3595de865de840339c59a/src/library/stats/src/zeroin.c
+#       -- the same R-4-3-3 commit as (a).
+#
+# 2. ORIGINAL COPYRIGHT AND LICENSE, verbatim from each fetched file.
+#
+#    From wilcox.test.R:
+#
+#      File src/library/stats/R/wilcox.test.R
+#      Part of the R package, https://www.R-project.org
+#
+#      Copyright (C) 1995-2019 The R Core Team
+#
+#      This program is free software; you can redistribute it and/or modify
+#      it under the terms of the GNU General Public License as published by
+#      the Free Software Foundation; either version 2 of the License, or
+#      (at your option) any later version.
+#
+#      This program is distributed in the hope that it will be useful,
+#      but WITHOUT ANY WARRANTY; without even the implied warranty of
+#      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#      GNU General Public License for more details.
+#
+#      A copy of the GNU General Public License is available at
+#      https://www.R-project.org/Licenses/
+#
+#    From zeroin.c:
+#
+#      R : A Computer Language for Statistical Data Analysis
+#      Copyright (C) 1999-2016  The R Core Team
+#
+#      This program is free software; you can redistribute it and/or modify
+#      it under the terms of the GNU General Public License as published by
+#      the Free Software Foundation; either version 2 of the License, or
+#      (at your option) any later version.
+#
+#      This program is distributed in the hope that it will be useful,
+#      but WITHOUT ANY WARRANTY; without even the implied warranty of
+#      MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+#      GNU General Public License for more details.
+#
+#      You should have received a copy of the GNU General Public License
+#      along with this program; if not, a copy is available at
+#      https://www.R-project.org/Licenses/
+#
+# 3. THIS TRANSLATION is distributed as part of the EML Stats & Graphs
+#    plugin under the GNU General Public License version 3 or later.
+#    GPL-2-or-later permits redistribution under GPL-3; the origin notice
+#    above is preserved as that license requires.
+#
+# 4. WHAT CHANGED IN TRANSLATION.
+#
+#    Language: R / C to Praat script, throughout.
+#
+#    Algorithm: NONE. Every constant and every comparison in the ported
+#    procedures below is R's own -- the sign(dz)*0.5 / sign(zd)*0.5
+#    continuity correction, the tie-corrected SIGMA.CI formulas (recomputed
+#    at the shifted data on every call, never hoisted), the two-sample
+#    root()'s early-return endpoints, the one-sample root()'s repeat-loop
+#    alpha doubling and its `alpha >= 2` termination test, and Brent's
+#    zeroin iterate-for-iterate (the swap, the linear-vs-quadratic-inverse
+#    branch, the 0.75*cb*q acceptance test, the tol_act floor). DBL_EPSILON
+#    is written as the literal 2.220446049250313e-16, which Praat has no
+#    name for.
+#
+#    Structural changes forced by Praat, not by the algorithm: R's W(d) and
+#    wdiff() are closures captured over x, y, correct; Praat has no
+#    closures, so W(d) is a procedure taking the vectors and d explicitly,
+#    and `.correct` is always passed as 1 (this file's callers never need
+#    R's `correct = FALSE` re-evaluation path, which R uses only to compute
+#    its OWN point estimate -- a quantity this file does not report; see
+#    "THE ESTIMATE IS NOT THIS FILE'S SUBJECT" above). R's uniroot() takes a
+#    function pointer; Brent's zeroin here takes a `.form` switch (1: the
+#    two-sample W; 2: the one-sample/paired W) and calls the matching
+#    procedure at the one site R's zeroin.c calls `(*f)(b, info)`, because
+#    Praat has no function values to pass instead.
+#
+#    Precision-relevant decision carried over unchanged: R re-strips zero
+#    differences created BY THE SHIFT inside the one-sample W(d) itself
+#    (`xd <- xd[xd != 0]`, evaluated fresh at every d, including at d =
+#    mumin and d = mumax, both of which ARE sample points and therefore
+#    always drop exactly one entry there) -- not merely the zero
+#    differences present in the original, unshifted sample. This file's
+#    @eml_wciWPaired reproduces that re-stripping at every call, which is
+#    why its bounds match R's to double precision at exactly the endpoints
+#    where a naive port (stripping zeroes once, up front, and never again)
+#    would silently disagree.
+# ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-wilcoxon-interval.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
+
+
+# ============================================================================
+# INTERNAL HELPER: @eml_wciW2  — R's two-sample W(d), ported
+# ============================================================================
+# Translated from wilcox.test.R's asymptotic two-sample block (see ORIGIN
+# NOTICE above):
+#
+#     W <- function(d) {
+#         dr <- rank(c(x - d, y))
+#         NTIES.CI <- table(dr)
+#         dz <- sum(dr[seq_along(x)]) - n.x * (n.x + 1) / 2 - n.x * n.y / 2
+#         CORRECTION.CI <- if (correct) sign(dz) * 0.5 else 0
+#         SIGMA.CI <- sqrt((n.x * n.y / 12) *
+#                          ((n.x + n.y + 1)
+#                           - sum(NTIES.CI^3 - NTIES.CI)
+#                           / ((n.x + n.y) * (n.x + n.y - 1))))
+#         (dz - CORRECTION.CI) / SIGMA.CI
+#     }
+#
+# `.correct` is always 1 from this file's own callers (see ORIGIN NOTICE
+# item 4) but kept as a parameter so the ported shape matches R's.
+#
+# Input:
+#   .v1#, .v2# - the two groups (R's x, y)
+#   .d         - the shift being tested
+#   .correct   - 1 to apply the continuity correction, 0 not to
+#
+# Output:
+#   .value - W(d), or undefined when SIGMA.CI is zero (every observation in
+#            the combined, shifted sample tied -- R warns and returns NaN)
+# ============================================================================
+
+procedure eml_wciW2: .v1#, .v2#, .d, .correct
+    .n1 = size (.v1#)
+    .n2 = size (.v2#)
+    .nTotal = .n1 + .n2
+
+    .shifted# = zero# (.nTotal)
+    for .i from 1 to .n1
+        .shifted#[.i] = .v1#[.i] - .d
+    endfor
+    for .i from 1 to .n2
+        .shifted#[.n1 + .i] = .v2#[.i]
+    endfor
+
+    @emlRankVector: .shifted#
+    .ranks# = emlRankVector.ranks#
+    .tieSum = emlRankVector.tieCorrectionSum
+
+    .rankSum = 0
+    for .i from 1 to .n1
+        .rankSum = .rankSum + .ranks#[.i]
+    endfor
+    .dz = .rankSum - .n1 * (.n1 + 1) / 2 - .n1 * .n2 / 2
+
+    .correction = 0
+    if .correct = 1
+        if .dz > 0
+            .correction = 0.5
+        elsif .dz < 0
+            .correction = -0.5
+        endif
+    endif
+
+    .sigma = sqrt ((.n1 * .n2 / 12) * ((.nTotal + 1)
+    ... - .tieSum / (.nTotal * (.nTotal - 1))))
+
+    if .sigma = 0
+        .value = undefined
+    else
+        .value = (.dz - .correction) / .sigma
+    endif
+endproc
+
+
+# ============================================================================
+# INTERNAL HELPER: @eml_wciWPaired  — R's one-sample/paired W(d), ported
+# ============================================================================
+# Translated from wilcox.test.R's asymptotic one-sample block:
+#
+#     W <- function(d) {
+#         xd <- x - d
+#         xd <- xd[xd != 0]
+#         nx <- length(xd)
+#         dr <- rank(abs(xd))
+#         zd <- sum(dr[xd > 0]) - nx * (nx + 1)/4
+#         NTIES.CI <- table(dr)
+#         SIGMA.CI <- sqrt(nx * (nx + 1) * (2 * nx + 1) / 24
+#                          - sum(NTIES.CI^3 - NTIES.CI) / 48)
+#         CORRECTION.CI <- if (correct) sign(zd) * 0.5 else 0
+#         (zd - CORRECTION.CI) / SIGMA.CI
+#     }
+#
+# THE RE-STRIP IS THE POINT: `xd <- xd[xd != 0]` runs on the SHIFTED vector,
+# every call, so nx can be one less than length(.x#) whenever d equals one
+# of the sample's own values -- which happens exactly at d = mumin and
+# d = mumax, the two endpoints every caller below evaluates first. Skipping
+# this and using length(.x#) unconditionally is a defect that agrees with R
+# everywhere except at those two endpoints, which is exactly where the
+# two-sided interval's brackets are tested.
+#
+# Input:
+#   .x#      - the (already zero-difference-stripped-once, per the caller)
+#              sample, R's x after paired differencing and its own initial
+#              ZEROES strip
+#   .d       - the shift being tested
+#   .correct - 1 to apply the continuity correction, 0 not to
+#
+# Output:
+#   .value - W(d), or undefined when nx = 0 or SIGMA.CI is zero (R warns
+#            and returns NaN in the tied/all-equal-to-d case)
+# ============================================================================
+
+procedure eml_wciWPaired: .x#, .d, .correct
+    .n = size (.x#)
+
+    .keep# = zero# (.n)
+    .nx = 0
+    for .i from 1 to .n
+        .shift = .x#[.i] - .d
+        if .shift <> 0
+            .nx = .nx + 1
+            .keep#[.nx] = .shift
+        endif
+    endfor
+
+    if .nx = 0
+        .value = undefined
+    else
+        .xd# = zero# (.nx)
+        .absXd# = zero# (.nx)
+        for .i from 1 to .nx
+            .xd#[.i] = .keep#[.i]
+            .absXd#[.i] = abs (.keep#[.i])
+        endfor
+
+        @emlRankVector: .absXd#
+        .ranks# = emlRankVector.ranks#
+        .tieSum = emlRankVector.tieCorrectionSum
+
+        .rankSum = 0
+        for .i from 1 to .nx
+            if .xd#[.i] > 0
+                .rankSum = .rankSum + .ranks#[.i]
+            endif
+        endfor
+        .zd = .rankSum - .nx * (.nx + 1) / 4
+
+        .correction = 0
+        if .correct = 1
+            if .zd > 0
+                .correction = 0.5
+            elsif .zd < 0
+                .correction = -0.5
+            endif
+        endif
+
+        .sigma = sqrt (.nx * (.nx + 1) * (2 * .nx + 1) / 24 - .tieSum / 48)
+
+        if .sigma = 0
+            .value = undefined
+        else
+            .value = (.zd - .correction) / .sigma
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# INTERNAL HELPER: @eml_wciZeroin  — R's uniroot (R_zeroin2), ported once
+# ============================================================================
+# Brent's zeroin, translated from src/library/stats/src/zeroin.c's
+# R_zeroin2 -- the routine R's uniroot() calls, given the two endpoint
+# values it already has. W is a step function, so which point inside a
+# jump comes back as "the root" is decided by the iteration path; this
+# follows R_zeroin2's iterates exactly rather than bisecting from scratch,
+# so the two share the sequence and not merely the vicinity.
+#
+# .form selects which W this call is solving, in place of R's function
+# pointer:
+#   1 - the two-sample @eml_wciW2 (.v1#, .v2# both used)
+#   2 - the one-sample/paired @eml_wciWPaired (.v1# only; pass an empty
+#       vector for .v2#)
+#
+# Input:
+#   .form      - 1 or 2, as above
+#   .v1#, .v2# - the sample(s), passed through to W
+#   .ax, .bx   - the bracketing interval [a, b]
+#   .fa, .fb   - wdiff at those endpoints, already known to the caller
+#   .zq        - the quantile W is being inverted at (wdiff = W(d) - zq)
+#   .tol       - acceptable tolerance (R's tol.root = 1e-4)
+#   .maxit     - iteration ceiling (R's uniroot maxiter = 1000)
+#
+# Output:
+#   .root - the abscissa where wdiff changes sign
+# ============================================================================
+
+procedure eml_wciZeroin: .form, .v1#, .v2#, .ax, .bx, .fa, .fb, .zq, .tol, .maxit
+    .epsilon = 2.220446049250313e-16
+
+    .a = .ax
+    .b = .bx
+    .c = .a
+    .fc = .fa
+    .iter = .maxit + 1
+    .root = undefined
+    .done = 0
+
+    if .fa = 0
+        .root = .a
+        .done = 1
+    elsif .fb = 0
+        .root = .b
+        .done = 1
+    endif
+
+    while .done = 0 and .iter > 0
+        .iter = .iter - 1
+        .prevStep = .b - .a
+
+        if abs (.fc) < abs (.fb)
+            .a = .b
+            .b = .c
+            .c = .a
+            .fa = .fb
+            .fb = .fc
+            .fc = .fa
+        endif
+
+        .tolAct = 2 * .epsilon * abs (.b) + .tol / 2
+        .newStep = (.c - .b) / 2
+
+        if abs (.newStep) <= .tolAct or .fb = 0
+            .root = .b
+            .done = 1
+        else
+            if abs (.prevStep) >= .tolAct and abs (.fa) > abs (.fb)
+                .cb = .c - .b
+                if .a = .c
+                    .t1 = .fb / .fa
+                    .p = .cb * .t1
+                    .q = 1 - .t1
+                else
+                    .q = .fa / .fc
+                    .t1 = .fb / .fc
+                    .t2 = .fb / .fa
+                    .p = .t2 * (.cb * .q * (.q - .t1) - (.b - .a) * (.t1 - 1))
+                    .q = (.q - 1) * (.t1 - 1) * (.t2 - 1)
+                endif
+                if .p > 0
+                    .q = - .q
+                else
+                    .p = - .p
+                endif
+                if .p < (0.75 * .cb * .q - abs (.tolAct * .q) / 2)
+                ... and .p < abs (.prevStep * .q / 2)
+                    .newStep = .p / .q
+                endif
+            endif
+
+            if abs (.newStep) < .tolAct
+                if .newStep > 0
+                    .newStep = .tolAct
+                else
+                    .newStep = - .tolAct
+                endif
+            endif
+
+            .a = .b
+            .fa = .fb
+            .b = .b + .newStep
+            if .form = 1
+                @eml_wciW2: .v1#, .v2#, .b, 1
+                .fb = eml_wciW2.value - .zq
+            else
+                @eml_wciWPaired: .v1#, .b, 1
+                .fb = eml_wciWPaired.value - .zq
+            endif
+
+            if (.fb > 0 and .fc > 0) or (.fb < 0 and .fc < 0)
+                .c = .a
+                .fc = .fa
+            endif
+        endif
+    endwhile
+
+    if .done = 0
+        .root = .b
+    endif
+endproc
+
+
+# ============================================================================
+# @emlWilcoxonIntervalApprox
+# ============================================================================
+# The Wilcoxon / Hodges-Lehmann confidence interval, APPROXIMATION BRANCH
+# ONLY: R's continuity-corrected z inversion, ported, for both the
+# two-sample (independent groups) and paired (matched-pairs / one-sample)
+# forms of wilcox.test. This procedure does NOT decide exact vs.
+# approximation -- that branch gate (n < 50 and no ties) belongs to whatever
+# orchestrates the choice; a caller that wants the exact branch calls
+# something else. This is deliberate and matches the task's scope: the
+# tracker's UNMEASURED item names the approximation branch, and the exact
+# branch is a different, already-existing piece of machinery (the U- and
+# T+-null-distribution DPs) that this file does not duplicate.
+#
+# THE ESTIMATE reported is the median of the cross-differences (two-sample)
+# or Walsh averages (paired) -- the SAME quantity
+# @emlHodgesLehmannTwoSample / Paired report on every branch, per Fable's
+# work order. It is not R's own approximation-branch $estimate (a root of W
+# with the continuity correction switched off); see the file header.
+#
+# Arguments:
+#   .v1#, .v2# - two-sample: independent groups, any sizes >= 1.
+#                paired: matched pairs, EQUAL length; R's x - y is formed
+#                internally.
+#   .paired    - 0 for the two-sample form, 1 for the paired form.
+#   .level     - confidence level as a proportion (e.g. 0.95).
+#
+# Output:
+#   .estimate     - median of cross-differences (two-sample) or Walsh
+#                   averages (paired); undefined only when it cannot be
+#                   formed at all (paired: never, since even all-zero
+#                   differences have a median; two-sample: never, for
+#                   n1, n2 >= 1)
+#   .low, .high   - confidence bounds, or undefined on refusal
+#   .achievedLevel - the confidence level actually achieved. Equals .level
+#                    except on the paired form when the requested level
+#                    could not be bracketed and alpha was widened -- see
+#                    .warning$. R: `conf.level <- 1 - pmin(1, alpha)`.
+#   .ok           - 1 if .low/.high were produced, 0 on refusal
+#   .error$       - refusal reason, or "" when .ok = 1
+#   .warning$     - non-fatal caveat, or "" when none applies. The only
+#                   case this file raises is the paired form's "requested
+#                   confidence level not achievable" (R's own warning text,
+#                   with the achieved level named)
+#
+# DEPENDENCY: @emlRankVector from eml-core-utilities.praat.
+# ============================================================================
+
+procedure emlWilcoxonIntervalApprox: .v1#, .v2#, .paired, .level
+    .estimate = undefined
+    .low = undefined
+    .high = undefined
+    .achievedLevel = .level
+    .ok = 0
+    .error$ = ""
+    .warning$ = ""
+
+    .n1 = size (.v1#)
+    .n2 = size (.v2#)
+
+    if .level <= 0 or .level >= 1
+        .error$ = "Confidence level must be between 0 and 1"
+    elsif .paired = 0
+        if .n1 < 1
+            .error$ = "Group 1 must have at least 1 observation"
+        elsif .n2 < 1
+            .error$ = "Group 2 must have at least 1 observation"
+        endif
+    else
+        if .n1 <> .n2
+            .error$ = "Vectors must have equal length for paired test"
+        elsif .n1 < 1
+            .error$ = "Need at least 1 pair"
+        endif
+    endif
+
+    if .error$ = "" and .paired = 0
+        # ---------------- Two-sample form ----------------
+        .nDiff = .n1 * .n2
+        .diffs# = zero# (.nDiff)
+        for .i from 1 to .n1
+            .base = (.i - 1) * .n2
+            for .j from 1 to .n2
+                .diffs#[.base + .j] = .v1#[.i] - .v2#[.j]
+            endfor
+        endfor
+        .sortedDiffs# = sort# (.diffs#)
+
+        @emlMedian: .sortedDiffs#
+        .estimate = emlMedian.result
+
+        .mumin = .sortedDiffs#[1]
+        .mumax = .sortedDiffs#[.nDiff]
+
+        @eml_wciW2: .v1#, .v2#, .mumin, 1
+        .wmin = eml_wciW2.value
+        @eml_wciW2: .v1#, .v2#, .mumax, 1
+        .wmax = eml_wciW2.value
+
+        if .wmin = undefined or .wmax = undefined
+            .error$ = "Cannot compute a confidence interval when every "
+            ... + "observation is tied"
+        else
+            .alpha = 1 - .level
+            .zq = invGaussQ (.alpha / 2)
+
+            # root(zq): early-return endpoints, then zeroin. R:
+            #   f.lower <- Wmumin - zq; if (f.lower <= 0) return(mumin)
+            #   f.upper <- Wmumax - zq; if (f.upper >= 0) return(mumax)
+            .fLower = .wmin - .zq
+            if .fLower <= 0
+                .low = .mumin
+            else
+                .fUpper = .wmax - .zq
+                if .fUpper >= 0
+                    .low = .mumax
+                else
+                    .empty# = zero# (0)
+                    @eml_wciZeroin: 1, .v1#, .v2#, .mumin, .mumax, .fLower,
+                    ... .fUpper, .zq, 1e-4, 1000
+                    .low = eml_wciZeroin.root
+                endif
+            endif
+
+            .fLower = .wmin - (- .zq)
+            if .fLower <= 0
+                .high = .mumin
+            else
+                .fUpper = .wmax - (- .zq)
+                if .fUpper >= 0
+                    .high = .mumax
+                else
+                    .empty# = zero# (0)
+                    @eml_wciZeroin: 1, .v1#, .v2#, .mumin, .mumax, .fLower,
+                    ... .fUpper, - .zq, 1e-4, 1000
+                    .high = eml_wciZeroin.root
+                endif
+            endif
+
+            .ok = 1
+        endif
+    elsif .error$ = ""
+        # ---------------- Paired / one-sample form ----------------
+        .allDiffs# = zero# (.n1)
+        for .i from 1 to .n1
+            .allDiffs#[.i] = .v1#[.i] - .v2#[.i]
+        endfor
+
+        .nWalsh = .n1 * (.n1 + 1) / 2
+        .walsh# = zero# (.nWalsh)
+        .w = 0
+        for .i from 1 to .n1
+            for .j from .i to .n1
+                .w = .w + 1
+                .walsh#[.w] = (.allDiffs#[.i] + .allDiffs#[.j]) / 2
+            endfor
+        endfor
+        .sortedWalsh# = sort# (.walsh#)
+
+        @emlMedian: .sortedWalsh#
+        .estimate = emlMedian.result
+
+        .nNonzero = 0
+        for .i from 1 to .n1
+            if .allDiffs#[.i] <> 0
+                .nNonzero = .nNonzero + 1
+            endif
+        endfor
+
+        if .nNonzero = 0
+            .error$ = "Cannot compute a confidence interval when every "
+            ... + "difference is zero"
+        else
+            .nonzeroDiffs# = zero# (.nNonzero)
+            .idx = 0
+            for .i from 1 to .n1
+                if .allDiffs#[.i] <> 0
+                    .idx = .idx + 1
+                    .nonzeroDiffs#[.idx] = .allDiffs#[.i]
+                endif
+            endfor
+
+            .sortedNz# = sort# (.nonzeroDiffs#)
+            .mumin = .sortedNz#[1]
+            .mumax = .sortedNz#[.nNonzero]
+
+            .empty# = zero# (0)
+            @eml_wciWPaired: .nonzeroDiffs#, .mumin, 1
+            .wmin = eml_wciWPaired.value
+            .wmax = undefined
+            if .wmin <> undefined
+                @eml_wciWPaired: .nonzeroDiffs#, .mumax, 1
+                .wmax = eml_wciWPaired.value
+            endif
+
+            if .wmin = undefined or .wmax = undefined
+                .error$ = "Cannot compute a confidence interval when every "
+                ... + "difference is zero or tied"
+            else
+                # R's alpha-widening repeat-loop, ported:
+                #   repeat {
+                #     mindiff <- Wmumin - qnorm(alpha/2, lower.tail=FALSE)
+                #     maxdiff <- Wmumax - qnorm(alpha/2)
+                #     if (mindiff < 0 || maxdiff > 0) alpha <- alpha*2
+                #     else break
+                #   }
+                # Terminates at alpha = 2, where R's qnorm(1, lower.tail =
+                # FALSE) is -Inf and both comparisons stop being satisfied.
+                .alpha = 1 - .level
+                .alphaUsed = .alpha
+                .bracketed = 0
+                while .bracketed = 0 and .alphaUsed < 2
+                    .zTry = invGaussQ (.alphaUsed / 2)
+                    .minDiff = .wmin - .zTry
+                    .maxDiff = .wmax + .zTry
+                    if .minDiff < 0 or .maxDiff > 0
+                        .alphaUsed = .alphaUsed * 2
+                    else
+                        .bracketed = 1
+                    endif
+                endwhile
+
+                # R: `if (alpha >= 1 || 1 - conf.level < alpha * 0.75)
+                #        conf.level <- 1 - pmin(1, alpha); warning(...)`
+                # -- evaluated against the ORIGINAL requested level, using
+                # the WIDENED alpha. Any widening at all satisfies this
+                # (alphaUsed > .alpha implies .alpha < alphaUsed * 0.75,
+                # since alphaUsed is .alpha times a power of 2 >= 2), so
+                # the achieved level is reported whenever the loop above
+                # doubled even once, not only when it reaches alpha >= 1.
+                if .alphaUsed >= 1 or (1 - .level) < .alphaUsed * 0.75
+                    .achievedLevel = 1 - min (1, .alphaUsed)
+                    @eml_fixed: .achievedLevel, 6
+                    .achievedLevel$ = eml_fixed.result$
+                    @eml_fixed: .level, 6
+                    .warning$ = "Requested confidence level not achievable "
+                    ... + "with this sample; achieved level "
+                    ... + .achievedLevel$
+                    ... + " reported instead of the requested "
+                    ... + eml_fixed.result$ + "."
+                else
+                    .achievedLevel = .level
+                endif
+
+                if .alphaUsed < 1
+                    .zq = invGaussQ (.alphaUsed / 2)
+
+                    @eml_wciZeroin: 2, .nonzeroDiffs#, .empty#, .mumin,
+                    ... .mumax, .wmin - .zq, .wmax - .zq, .zq, 1e-4, 1000
+                    .low = eml_wciZeroin.root
+
+                    @eml_wciZeroin: 2, .nonzeroDiffs#, .empty#, .mumin,
+                    ... .mumax, .wmin + .zq, .wmax + .zq, - .zq, 1e-4, 1000
+                    .high = eml_wciZeroin.root
+                else
+                    # rep(median(x), 2): the requested level cannot be
+                    # achieved at all. R returns the median of the
+                    # (zero-stripped) differences -- NOT of the Walsh
+                    # averages -- as both bounds.
+                    @emlMedian: .sortedNz#
+                    .medNz = emlMedian.result
+                    .low = .medNz
+                    .high = .medNz
+                endif
+
+                .ok = 1
+            endif
+        endif
+    endif
+endproc

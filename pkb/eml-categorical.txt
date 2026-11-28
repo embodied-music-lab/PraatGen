@@ -1,0 +1,283 @@
+# ============================================================================
+# EML Stats : Categorical Data
+# ============================================================================
+# Module: eml-categorical.praat
+# Version: 1.0
+# Date: 17 August 2026
+#
+# Part of the EML Stats library (EML Praat Tools).
+# License: GPL-3.0-or-later
+#
+# Provides: @emlChiSquareIndependence, @emlWilsonInterval
+#
+# Dependencies: None (uses only Praat built-in vector and matrix
+# primitives and the built-in chi-square and Gaussian distributions).
+#
+# All procedures use the "eml" prefix (EML Stats) to avoid
+# namespace collisions with user scripts.
+#
+# ATTRIBUTION
+# Framework: EML PraatGen by Ian Howell
+#            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
+# Code generation: Claude (Anthropic)
+# Script author: Ian Howell — created and verified by this individual
+#
+# RESEARCH USE DISCLOSURE
+# If this script is used in research or publication, disclose AI use
+# per your target journal's policy. Suggested language:
+#
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
+#
+# The script author assumes responsibility for the correctness and
+# appropriate application of this code.
+# ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-categorical.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
+
+# ============================================================================
+# @emlChiSquareIndependence
+# ============================================================================
+# Chi-square test of independence with Cramer's V, for a contingency
+# table of counts (category x category).
+#
+# The input is one matrix of observed counts, rows = levels of the
+# first variable, columns = levels of the second, so a 2 x 3 design
+# arrives as a 2 x 3 matrix.
+#
+# Continuity correction (.correction) applies to 2 x 2 tables only,
+# where each cell's deviation is reduced by min(0.5, |O - E|) before
+# squaring (Yates). Pass 1 to match R's chisq.test default for 2 x 2
+# tables (correct = TRUE); pass 0 for the uncorrected statistic. On
+# tables larger than 2 x 2 the parameter is accepted and ignored,
+# matching R.
+#
+# Cramer's V is always computed from the UNCORRECTED statistic,
+# sqrt(chiSq / (n * (min(r, c) - 1))), the standard effect-size
+# definition (continuity correction adjusts the test, not the
+# strength of association).
+#
+# The test is inherently upper-tail; there is no directional variant.
+#
+# Arguments:
+#   .observed##  - matrix of non-negative counts (r x c, both >= 2)
+#   .correction  - 1 = Yates continuity correction on 2 x 2 tables
+#                  (R's default), 0 = uncorrected; ignored above 2 x 2
+#
+# Output:
+#   .chiSq        - chi-square statistic (corrected if requested and
+#                   the table is 2 x 2)
+#   .df           - degrees of freedom, (r - 1)(c - 1)
+#   .p            - upper-tail p-value
+#   .cramersV     - Cramer's V, from the uncorrected statistic
+#   .n            - total count
+#   .minExpected  - smallest expected count
+#   .nCellsBelow5 - number of cells with expected count below 5
+#   .warning$     - non-fatal disclosure when any expected count is
+#                   below 5 (the approximation may be poor), or ""
+#   .error$       - error message, or "" if valid
+#
+# Access pattern:
+#   @emlChiSquareIndependence: counts##, 1
+#   chiSq = emlChiSquareIndependence.chiSq
+#   v = emlChiSquareIndependence.cramersV
+#
+# Notes:
+#   - A table with a zero row or column total has no defined test;
+#     the procedure refuses rather than returning undefined values.
+#   - Zero cells are legal as long as every row and column total is
+#     positive.
+#   - Raw values are returned; callers format for display.
+# ============================================================================
+
+procedure emlChiSquareIndependence: .observed##, .correction
+    # Initialize outputs
+    .chiSq = undefined
+    .df = undefined
+    .p = undefined
+    .cramersV = undefined
+    .n = undefined
+    .minExpected = undefined
+    .nCellsBelow5 = undefined
+    .warning$ = ""
+    .error$ = ""
+
+    .nRows = numberOfRows (.observed##)
+    .nCols = numberOfColumns (.observed##)
+
+    # --- Input validation ---
+    if .nRows < 2 or .nCols < 2
+        .error$ = "The contingency table must be at least 2 x 2; it is "
+        ... + string$ (.nRows) + " x " + string$ (.nCols) + "."
+    elsif .correction <> 0 and .correction <> 1
+        .error$ = "correction must be 0 or 1"
+    else
+        .rowTotal# = rowSums# (.observed##)
+        .colTotal# = columnSums# (.observed##)
+        .n = sum (.rowTotal#)
+
+        # --- Cell-level validation (per-cell scan; tables are small
+        #     and the checks branch, so a loop is the right tool) ---
+        .minCell = .observed## [1, 1]
+        .hasUndefined = 0
+        for .i from 1 to .nRows
+            for .j from 1 to .nCols
+                .cell = .observed## [.i, .j]
+                if .cell = undefined
+                    .hasUndefined = 1
+                elsif .cell < .minCell or .minCell = undefined
+                    .minCell = .cell
+                endif
+            endfor
+        endfor
+
+        if .hasUndefined = 1
+            .error$ = "The table contains an undefined cell."
+            .n = undefined
+        elsif .minCell < 0
+            .error$ = "Counts must be non-negative; the smallest cell is "
+            ... + string$ (.minCell) + "."
+        elsif min (.rowTotal#) = 0 or min (.colTotal#) = 0
+            .error$ = "Every row and column must contain at least one "
+            ... + "observation; a zero row or column total leaves the "
+            ... + "test undefined."
+        else
+            # --- Expected counts (outer product of margins / n) ---
+            .expected## = outer## (.rowTotal#, .colTotal#) * (1 / .n)
+
+            # Expected-count diagnostics. Script-level operators offer
+            # no min/max reduction or comparison over a matrix variable
+            # (17 Aug idiom probe); the object route (Create simple
+            # Matrix from values: + Formula: ~ self < 5 + Get sum) can
+            # do both, but would create and remove an object inside a
+            # kernel that otherwise touches none, so these two stay in
+            # a small loop; per-row minima reduce through row#/min.
+            .minExpected = .expected## [1, 1]
+            .nCellsBelow5 = 0
+            for .i from 1 to .nRows
+                .rowMin = min (row# (.expected##, .i))
+                if .rowMin < .minExpected
+                    .minExpected = .rowMin
+                endif
+                for .j from 1 to .nCols
+                    if .expected## [.i, .j] < 5
+                        .nCellsBelow5 = .nCellsBelow5 + 1
+                    endif
+                endfor
+            endfor
+            if .nCellsBelow5 > 0
+                @eml_fixed: .minExpected, 4
+                .warning$ = "Expected counts below 5 in "
+                ... + string$ (.nCellsBelow5) + " of "
+                ... + string$ (.nRows * .nCols) + " cells (smallest "
+                ... + eml_fixed.result$ + "); the chi-square "
+                ... + "approximation may be poor."
+            endif
+
+            # --- Uncorrected statistic, vectorized ---
+            # Elementwise division is composed as * (e## ^ -1): the /
+            # operator does not take matrices on 6.6.30 (17 Aug idiom
+            # probe), but elementwise power and multiplication do.
+            .dev## = .observed## - .expected##
+            .rawChiSq = sum (.dev## * .dev## * (.expected## ^ -1))
+
+            .df = (.nRows - 1) * (.nCols - 1)
+            .minDim = min (.nRows, .nCols)
+            .cramersV = sqrt (.rawChiSq / (.n * (.minDim - 1)))
+
+            # --- Continuity correction, 2 x 2 only, vectorized ---
+            if .correction = 1 and .nRows = 2 and .nCols = 2
+                # Reduce each |O - E| by min(0.5, |O - E|), as R does:
+                # equivalently, shrink |O - E| by 0.5 and clamp at zero.
+                # The clamp is (x + abs##(x)) * 0.5 (17 Aug idiom probe).
+                .shrunk## = abs## (.dev##) - 0.5
+                .corrDev## = (.shrunk## + abs## (.shrunk##)) * 0.5
+                .chiSq = sum (.corrDev## * .corrDev## * (.expected## ^ -1))
+            else
+                .chiSq = .rawChiSq
+            endif
+
+            # --- Upper-tail p-value ---
+            .p = chiSquareQ (.chiSq, .df)
+        endif
+    endif
+endproc
+
+# ============================================================================
+# @emlWilsonInterval
+# ============================================================================
+# Wilson score confidence interval on a single proportion.
+#
+# The Wilson interval stays inside [0, 1] and behaves correctly at the
+# endpoints x = 0 and x = n, where the Wald interval collapses to zero
+# width. No continuity correction is applied, matching R's
+# binom::binom.confint(method = "wilson") and
+# prop.test(correct = FALSE).
+#
+# Arguments:
+#   .successes   - number of successes (integer, 0 <= x <= n)
+#   .n           - number of trials (integer, >= 1)
+#   .confidence  - confidence level as a proportion, e.g. 0.95
+#
+# Output:
+#   .propHat  - point estimate, x / n
+#   .ciLow    - lower Wilson bound
+#   .ciHigh   - upper Wilson bound
+#   .error$   - error message, or "" if valid
+#
+# Access pattern:
+#   @emlWilsonInterval: 17, 20, 0.95
+#   low = emlWilsonInterval.ciLow
+#
+# Notes:
+#   - Raw values are returned; callers format for display.
+# ============================================================================
+
+procedure emlWilsonInterval: .successes, .n, .confidence
+    # Initialize outputs
+    .propHat = undefined
+    .ciLow = undefined
+    .ciHigh = undefined
+    .error$ = ""
+
+    # --- Input validation ---
+    if .n < 1 or .n <> round (.n)
+        .error$ = "n must be a positive integer"
+    elsif .successes < 0 or .successes > .n
+    ... or .successes <> round (.successes)
+        .error$ = "successes must be an integer between 0 and n"
+    elsif .confidence <= 0 or .confidence >= 1
+        .error$ = "confidence must be strictly between 0 and 1, "
+        ... + "e.g. 0.95"
+    else
+        .propHat = .successes / .n
+        .z = invGaussQ ((1 - .confidence) / 2)
+        .zSq = .z * .z
+        .center = (.propHat + .zSq / (2 * .n)) / (1 + .zSq / .n)
+        .halfWidth = (.z / (1 + .zSq / .n))
+        ... * sqrt (.propHat * (1 - .propHat) / .n
+        ... + .zSq / (4 * .n * .n))
+        .ciLow = .center - .halfWidth
+        .ciHigh = .center + .halfWidth
+
+        # At x = 0 the lower bound is exactly 0 and at x = n the upper
+        # bound is exactly 1 (the algebra cancels); pin the endpoints
+        # so floating-point residue cannot leak a bound outside [0, 1].
+        if .successes = 0
+            .ciLow = 0
+        endif
+        if .successes = .n
+            .ciHigh = 1
+        endif
+    endif
+endproc
+
+# ============================================================================
+# END OF MODULE
+# ============================================================================

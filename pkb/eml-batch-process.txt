@@ -6,36 +6,38 @@
 #          CPPS), optionally constrained to labeled TextGrid intervals.
 #          Results are exported to a CSV file with one row per analysis
 #          segment.
-# Date: 3 April 2026
-# Version: 1.1
+# Date: 16 August 2026
+# Version: 1.3
+#
 #
 # ATTRIBUTION
 # Framework: EML PraatGen by Ian Howell
 #            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
 # Code generation: Claude (Anthropic)
-# Script author: [Your name here] — created and verified by this individual
+# Script author: Ian Howell — created and verified by this individual
 #
 # RESEARCH USE DISCLOSURE
 # If this script is used in research or publication, disclose AI use
 # per your target journal's policy. Suggested language:
 #
-#   "Acoustic analysis scripts were developed using the EML Praat
-#    Assistant (Howell, Embodied Music Lab) with code generation
-#    by Claude 4.6 Extended Thinking (Anthropic). All scripts were
-#    reviewed, tested, and validated by [your name]."
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
 #
 # The script author assumes responsibility for the correctness and
 # appropriate application of this code.
 # ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/scripts/eml-batch-process.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
 
 # ============================================================================
 # Procedures
 # ============================================================================
-# PKB copy: flattened from plugin_EML_Praat_Tools/scripts/eml-batch-process.praat
-#   Content is verbatim from plugin source; only the License line is
-#   normalized to the repo's GPL-3.0-or-later. Version above is the
-#   PLUGIN's version and must match it exactly — a mismatch means the
-#   PKB has drifted. PKB sync: 29 July 2026 (PraatGen v14.0.0).
 
 procedure emlBuildDateStamp
     .vec# = date# ()
@@ -64,12 +66,312 @@ procedure emlInitSentinel: .sentinelPath$
     appendFileLine: .sentinelPath$, "The script checks this file after each file completes."
 endproc
 
+# ────────────────────────────────────────────────────────────────────────────
+# @emlSentinelIsOurs: .path$   →  .ours
+# ────────────────────────────────────────────────────────────────────────────
+# NEVER TRUNCATE SOMEONE ELSE'S FILE. @emlInitSentinel writes with
+# writeFileLine:, which TRUNCATES. Until 14 August 2026 the sentinel path was
+# hard-wired to <sound folder>/STOP.txt, so a user who kept their own STOP.txt
+# — a note to a collaborator, a stop-word list, a marker file — lost it the
+# moment they ran a batch: silently, with no prompt and no undo. The results
+# CSV has walked to a free name on collision as of that change; the sentinel did not.
+# This procedure is the missing half of that protection.
+#
+# A path that does NOT exist is ours to make. A path that exists is ours only
+# if its whole FIRST LINE is RUN or STOP — the line @emlInitSentinel writes and
+# the one edit the Info window asks the user to make.
+#
+# THE FIRST LINE, NOT THE FIRST WORD, and that distinction is not theoretical:
+# the first draft of this procedure tested the first word, and the end-to-end
+# drive on 14 Aug 2026 destroyed a file whose first line was "Stop list for
+# this study" — the very failure this exists to prevent, reproduced by the
+# guard meant to stop it. A file that BEGINS with the word stop is exactly what
+# a human writes in a file they name STOP.txt.
+#
+# `length = n and index_caseInsensitive (...) = 1` is then a WHOLE-LINE
+# case-insensitive compare, deliberately stricter than @emlCheckStopSentinel's
+# substring test: deciding whether to destroy a file is not the place to accept
+# "stopwords" as evidence that we wrote it. "run", "Run" and "STOP" alone on
+# the line are ours; "Running order" and "STOP — ask Ian first" are not.
+#
+# BLANKS EITHER SIDE ARE TRIMMED, because a text editor and a human both leave
+# them, and because @emlCheckStopSentinel — the halt test on the same file —
+# uses extractWord$ and so already ignores them. A file this script would STOP
+# for must be a file this script is willing to own; disagreeing would leave a
+# user whose "  STOP" halted one run watching the next run write STOP_2.txt.
+#
+# unicode$ (13) is trimmed with them as belt and braces only. Measured on
+# 6.4.06, 14 Aug 2026: readFile$ normalises both CRLF and lone-CR line endings
+# to newline$, so no CR survives to be seen — but the trim costs nothing and
+# the day that stops being true is not a day to lose a file.
+#
+# AN EMPTY FILE IS NOT OURS. It is far more likely to be the user's placeholder
+# than a sentinel of ours that died halfway through its first line, and the
+# cost of being wrong is asymmetric: refusing a file we did write costs one
+# extra STOP_2.txt, truncating a file we did not costs the user their data.
+# ────────────────────────────────────────────────────────────────────────────
+procedure emlSentinelIsOurs: .path$
+    .ours = 1
+    if fileReadable (.path$)
+        .ours = 0
+        .content$ = readFile$ (.path$)
+        .nl = index (.content$, newline$)
+        if .nl > 0
+            .line$ = left$ (.content$, .nl - 1)
+        else
+            .line$ = .content$
+        endif
+        while length (.line$) > 0 and (right$ (.line$, 1) = " "
+            ... or right$ (.line$, 1) = tab$
+            ... or right$ (.line$, 1) = unicode$ (13))
+            .line$ = left$ (.line$, length (.line$) - 1)
+        endwhile
+        while length (.line$) > 0 and (left$ (.line$, 1) = " "
+            ... or left$ (.line$, 1) = tab$)
+            .line$ = right$ (.line$, length (.line$) - 1)
+        endwhile
+        if length (.line$) = 3 and index_caseInsensitive (.line$, "run") = 1
+            .ours = 1
+        endif
+        if length (.line$) = 4 and index_caseInsensitive (.line$, "stop") = 1
+            .ours = 1
+        endif
+    endif
+endproc
+
+# ────────────────────────────────────────────────────────────────────────────
+# @emlResolveSentinelPath: .folder$   →  .path$, .displaced
+# ────────────────────────────────────────────────────────────────────────────
+# THE SAME WALK THE CSV ALREADY DOES (Rule 27, S9): try the wanted name, and
+# on collision append _2, _3, … until a name is acceptable. Deliberately the
+# same shape, so there is one collision idiom in this file and not two.
+#
+# ONE DIFFERENCE, AND IT IS ON PURPOSE. The CSV's walk stops at a name that is
+# FREE, because a previous run's results must never be overwritten. The
+# sentinel's stops at a name that is free OR ALREADY OURS, because the sentinel
+# is a control file we rewrite at the start of every run: if a foreign STOP.txt
+# sits in the output folder and we insisted on a free name, every run would
+# leave one more STOP_2.txt, STOP_3.txt … behind forever. Neither test can pick
+# a foreign file, which is the property that matters.
+#
+# .displaced tells the caller the user's own STOP.txt was found and left alone,
+# so the Info window can name the file they must actually edit to stop the run
+# — a sentinel whose location the user cannot guess is a sentinel that does not
+# work.
+# ────────────────────────────────────────────────────────────────────────────
+procedure emlResolveSentinelPath: .folder$
+    .path$ = .folder$ + "/STOP.txt"
+    .displaced = 0
+    @emlSentinelIsOurs: .path$
+    if emlSentinelIsOurs.ours = 0
+        .displaced = 1
+        .suffix = 2
+        repeat
+            .path$ = .folder$ + "/STOP_" + string$ (.suffix) + ".txt"
+            .suffix = .suffix + 1
+            @emlSentinelIsOurs: .path$
+        until emlSentinelIsOurs.ours = 1
+    endif
+endproc
+
+# ────────────────────────────────────────────────────────────────────────────
+# @emlWarnNearRangeEnd: .lo, .hi, .floor, .ceiling, .what$   →  .fired
+# ────────────────────────────────────────────────────────────────────────────
+# ONE PROCEDURE FOR ALL THREE BOUNDED RANGES, and the reason is arithmetic
+# rather than tidiness. APPENDIX_D §7's rule — "GUARD BOTH ENDS OF EVERY
+# BOUNDED RANGE (hard) … A floor-only guard is half a guard" — has to be
+# applied to three ranges in this module (filtered autocorrelation, raw cross-
+# correlation, the cepstral peak search), which is six comparisons. Written out
+# at each site that is six chances to drop a `<` or to write the ceiling test
+# against the floor, and the appendix's observed failure is precisely a missing
+# half. Written once it is one place to read and one place to break.
+#
+# THE MARGIN IS 10%, WHICH IS THE APPENDIX'S OWN. Its worked example calls a
+# maximum of 322.87 Hz against a 330 Hz ceiling — 97.8% of it — the failure to
+# report, and its sample code is `if maxF0 > 0.9 * ceiling`. The floor test is
+# the mirror: within 10% ABOVE the floor, so `.lo < .floor * 1.1`. Note that
+# these are not symmetric in ratio (0.9 × ceiling versus 1.1 × floor rather
+# than 1/0.9), and the appendix is followed rather than tidied.
+#
+# WHY IT COUNTS INSTEAD OF INCREMENTING. A procedure cannot touch the caller's
+# nWarnings without naming a global, and a procedure in this file that reached
+# out and changed a counter would be the one thing in it that did. So it
+# returns .fired — 0, 1 or 2 — and the caller adds it. That also makes the
+# arithmetic visible at the call site, which matters because S7C's counter is
+# what the closing summary reports.
+#
+# A RANGE END IS APPROACHED, NOT EXCEEDED, and the wording says so. The value
+# came back inside the range because it could not come back outside one: a
+# tracker asked for 50-800 Hz reports something in 50-800 Hz whatever the voice
+# did. That is why "censored" is the right word and why this warning cannot be
+# derived from the value alone — which is the whole reason the plausibility
+# bands above cannot cover this and a second kind of check is needed.
+#
+# UNDEFINED IS NOT A NEAR MISS. Measured on Praat 6.6.30, 16 August 2026, both
+# `undefined < 55` and `undefined > 297` are FALSE, so the guards below would
+# be silent even unwritten; they are written because an unvoiced segment is
+# already reported once by the plausibility block and must not be reported
+# twice, and because a build that changed that answer would otherwise turn
+# every silent segment into two warnings.
+# ────────────────────────────────────────────────────────────────────────────
+procedure emlWarnNearRangeEnd: .lo, .hi, .floor, .ceiling, .what$
+    .fired = 0
+    if .lo <> undefined
+        if .lo < .floor * 1.1
+            .line$ = "  WARNING: minimum F0 " + fixed$ (.lo, 2)
+                ... + " Hz is within 10% of the " + fixed$ (.floor, 0)
+                ... + " Hz floor of the " + .what$
+                ... + " — widen the range or treat the result as censored."
+            appendInfoLine: .line$
+            .fired = .fired + 1
+        endif
+    endif
+    if .hi <> undefined
+        if .hi > .ceiling * 0.9
+            .line$ = "  WARNING: maximum F0 " + fixed$ (.hi, 2)
+                ... + " Hz is within 10% of the " + fixed$ (.ceiling, 0)
+                ... + " Hz ceiling of the " + .what$
+                ... + " — widen the range or treat the result as censored."
+            appendInfoLine: .line$
+            .fired = .fired + 1
+        endif
+    endif
+endproc
+
+# ────────────────────────────────────────────────────────────────────────────
+# @emlAppendFailureRow: .table, .row, .stem$, .why$
+# ────────────────────────────────────────────────────────────────────────────
+# A FILE THAT CANNOT BE ANALYSED IS A ROW, NOT AN ABSENCE. Until 14 August 2026
+# this script had no containment of any kind: `Read from file:` was unguarded,
+# so ONE zero-length recording — the thing a stopped or disconnected interface
+# leaves behind — aborted the entire batch with Praat's own "Data not read from
+# text file" and took every row already computed with it, because the CSV is
+# written after the loop and an abort never reaches it. An overnight run over
+# 500 files ended at file 372 with nothing on disk and no indication which file
+# had done it.
+#
+# THE ROW IS THE POINT. A file quietly missing from a results CSV is invisible
+# — the reader counts rows against a corpus they half remember, or does not
+# count at all. A row that says FAILED and why is the one form of this that a
+# person notices, and it keeps the CSV's row count equal to the number of files
+# the batch was asked for, which is the property that makes the count checkable
+# at all.
+#
+# NO COMMAS IN .why$. Praat's "Save as comma-separated file" does not quote the
+# fields it writes, so a comma in this string silently becomes a column break
+# and shifts every measure on that row one place to the right. Measured on
+# 6.6.30, 14 Aug 2026. Use a semicolon or a dash.
+#
+# The measure columns are left UNSET rather than filled with a sentinel number.
+# Praat writes an unset numeric cell as an empty field, which read.csv and every
+# other reader takes as NA — a missing value, which is exactly what it is. A
+# 0 or a -999 in that cell would be averaged by somebody.
+# ────────────────────────────────────────────────────────────────────────────
+procedure emlAppendFailureRow: .table, .row, .stem$, .why$
+    selectObject: .table
+    Append row
+    Set string value: .row, "file", .stem$
+    Set string value: .row, "status", .why$
+endproc
+
+# ────────────────────────────────────────────────────────────────────────────
+# @emlEnsureOutputFolder: .folder$, .probePath$   →  .writable
+# ────────────────────────────────────────────────────────────────────────────
+# THE FOLDER IS MADE, NOT ASSUMED — the same reasoning as @emlSavePanel in
+# stats/eml-output.praat (14 Aug 2026): `folder:` is a freely editable text
+# field with a Browse button beside it, so the user can type a path that does
+# not exist yet, and typing one is the natural thing to do when you want this
+# batch's results in their own folder.
+#
+# EVERY LEVEL IS MADE, NOT JUST THE LAST ONE. Measured on Praat 6.4.06,
+# 14 Aug 2026: createFolder: creates ONE level — it is mkdir, not mkdir -p —
+# and refuses outright when the parent is missing. "~/Documents/Study A/run 1"
+# is exactly the kind of path a user types into this field, and typing the
+# whole thing at once is the normal way to do it, so the parents are created
+# here in turn. The scan is for BOTH separators, per the truth table at "Last
+# path component of the sound folder": a folder typed on Windows arrives as
+# "C:\Users\ian\Study A" and a scan for "/" alone would find no levels at all.
+# A prefix ending in ":" is a drive root, which exists and is not ours to
+# create, so it is skipped.
+#
+# WHY IT IS ALSO PROVED WRITABLE, which the save panel does not do. This script
+# runs unattended for a long time, and the CSV is written at the END: a folder
+# that cannot be written would otherwise be discovered after the whole batch
+# had run, with the results in a Table and Praat's own error — "Cannot create
+# file …" — as the only explanation. The probe is what turns every way this can
+# fail — unmakeable path, read-only folder, full disk — into one message,
+# before any audio is read.
+#
+# The probe is the sentinel itself rather than a scratch file: it is the first
+# thing this script writes anyway, the caller has already resolved it to a path
+# that is free or ours, and a scratch file would need its own collision walk
+# not to delete something of the user's.
+#
+# nocheck GUARDS EXACTLY ONE COMMAND — the one it prefixes — and is used here
+# so a refusal becomes a message this script can write instead of a Praat abort
+# the user has to interpret. .writable is set BEFORE the nochecks and only
+# raised inside an if, never assigned on the line following one (M4 in
+# audit/static: a failing nocheck can corrupt the next assignment).
+# ────────────────────────────────────────────────────────────────────────────
+procedure emlEnsureOutputFolder: .folder$, .probePath$
+    .writable = 0
+    for .i from 1 to length (.folder$)
+        .ch$ = mid$ (.folder$, .i, 1)
+        if .ch$ = "/" or .ch$ = "\"
+            .prefix$ = left$ (.folder$, .i - 1)
+            if .prefix$ <> "" and right$ (.prefix$, 1) <> ":"
+                nocheck createFolder: .prefix$
+            endif
+        endif
+    endfor
+    nocheck createFolder: .folder$
+    nocheck writeFileLine: .probePath$, "RUN"
+    if fileReadable (.probePath$)
+        .writable = 1
+    endif
+endproc
+
 # ============================================================================
 # Initialize defaults
 # ============================================================================
 
 sound_folder$ = ""
 file_extension$ = "wav"
+
+# THE OUTPUT FOLDER, AND WHY ITS DEFAULT IS NOT THE SOUND FOLDER.
+#
+# THE STOP FILE AND THE CSV BOTH GO TO THE USER'S DESIGNATED OUTPUT FOLDER,
+# never to the input folder.
+#
+# Writing them beside the AUDIO would put STOP.txt and the results CSV into
+# the folder of recordings this script is reading, which is the user's corpus
+# and often someone else's shared data.
+#
+# THE DEFAULT IS PART OF IT, not decoration. An empty default that
+# falls back to the sound folder was considered and rejected: it would preserve
+# today's behaviour for existing users at the price of re-creating the exact
+# defect for every user who does not edit the field — and the users who do not
+# edit fields are precisely the ones the truncation would surprise. A default
+# is what most runs will actually use, so it has to be a folder the rule
+# allows.
+#
+# HOME, IN A NAMED FOLDER. homeDirectory$ exists and is writable on every
+# platform Praat runs on, so the pre-filled path works with one click; it is
+# outside the corpus, so nothing this script writes can ever land among the
+# recordings; and the name says what is in it, so a user who has forgotten
+# where their results went can find them. It is also exactly ONE level below a
+# folder that is certain to exist, so the default is creatable by the plainest
+# possible means and never leans on the ancestor-creating loop in
+# @emlEnsureOutputFolder, which exists for the paths users type by hand.
+#
+# NOT preferencesDirectory$, though the plugin uses it for the review copies in
+# eml-record-open.praat (13 Aug 2026). That folder is for things the plugin
+# owns and the user is not meant to keep; a batch's results are the deliverable
+# and belong where a user will look for them.
+#
+# The field is pre-filled, not fixed: a user who wants the results elsewhere
+# — including, with their eyes open, the sound folder — types it or browses.
+output_folder$ = homeDirectory$ + "/EML Batch Results"
 channel_handling = 1
 mean_F0 = 1
 mean_intensity = 1
@@ -96,6 +398,17 @@ repeat
             option: "Left channel only"
             option: "Right channel only"
             option: "Mix to mono"
+        comment: "--- Output ---"
+        # `folder:` to match "Sound folder" above — the same widget, with the
+        # same Browse button, for the same kind of thing.
+        #
+        # THE READBACK VARIABLE IS output_folder$. Praat derives it from the
+        # LABEL: the first character lowercases and every other character keeps
+        # its case, so `boolean: "Figure PNG"` reads back as figure_PNG. That
+        # rule cost this project a silent no-op save on 13 Aug 2026
+        # (eml-output.praat:1598). This label is two lowercase words, so the
+        # derived name is output_folder$ — verified by readback, not assumed.
+        folder: "Output folder", output_folder$
         comment: "--- Measures ---"
         boolean: "Mean F0", mean_F0
         boolean: "Mean intensity", mean_intensity
@@ -114,7 +427,7 @@ repeat
         boolean: "Clear Info window", 0
     clicked = endPause: "Quit", "Standard", "Run", 3, 0
     if clicked = 1
-        exitScript
+        exitScript: ""
     elsif clicked = 2
         # Reset analysis parameters to canonical defaults
         mean_F0 = 1
@@ -134,6 +447,28 @@ until clicked <> 2
 if sound_folder$ = ""
     exitScript: "No sound folder selected. Please re-run and select a folder."
 endif
+
+# NO SILENT FALLBACK TO THE INPUT FOLDER. A user who clears the output field
+# is asked again rather than quietly given the behaviour the author ruled
+# against on 14 August 2026; guessing here is what put STOP.txt in a corpus.
+if output_folder$ = ""
+    exitScript: "No output folder selected. The results CSV and the STOP "
+        ... + "file are written there, not into the sound folder. Please "
+        ... + "re-run and choose one."
+endif
+
+# TRAILING SEPARATORS ARE DROPPED, BOTH KINDS. Every path below is built as
+# output_folder$ + "/" + name, so "…/Results/" would give "…/Results//STOP.txt".
+# Praat tolerates that on the way in, but the doubled separator is then printed
+# in the Info window as the file the user must open, and copied from there.
+# BOTH separators are matched for the reason set out at "Last path component of
+# the sound folder" below: a folder typed or picked on Windows arrives with
+# backslashes, so testing only "/" would leave "C:\Users\ian\Results\" intact
+# and produce "C:\Users\ian\Results\/STOP.txt".
+while length (output_folder$) > 1 and (right$ (output_folder$, 1) = "/"
+    ... or right$ (output_folder$, 1) = "\")
+    output_folder$ = left$ (output_folder$, length (output_folder$) - 1)
+endwhile
 
 if not mean_F0 and not mean_intensity and not jitter and not shimmer and not hNR and not cPPS
     exitScript: "No measures selected. Please re-run and select at least one measure."
@@ -161,6 +496,84 @@ facPitchTop = max (2 * highest_expected_F0, 800)
 # RCC pitch ceiling: canonical 600 (APPENDIX_D S1B), raise only if needed
 rccPitchCeiling = max (highest_expected_F0 * 1.1, 600)
 
+# ────────────────────────────────────────────────────────────────────────────
+# THE CEPSTRAL PEAK SEARCH WINDOW, MIRRORED — NOT PASSED
+# ────────────────────────────────────────────────────────────────────────────
+# 60 and 330 Hz are the pitch floor and ceiling of the cepstral peak search in
+# `Get CPPS:` (APPENDIX_D §5B, Maryn et al.). They are a BOUNDED ANALYSIS
+# RANGE in the sense APPENDIX_D §7 means, and §7's worked example is this exact
+# pair: a measured maximum F0 of 322.87 Hz against a 330 Hz cepstral ceiling —
+# 98% of it — with nothing said. Guarding it needs the numbers here.
+#
+# THEY ARE MIRRORED RATHER THAN SUBSTITUTED INTO THE CALL, and that is a
+# deliberate choice against the obvious one. Passing these variables to
+# `Get CPPS:` would keep one copy of each number, which is normally the right
+# instinct; here it would replace two canonical LITERALS with two names, and
+# the literals are what validate/v52_acoustic_calls.R pins argument-by-argument
+# against the appendix. A parameter set that reads `cppsSearchFloor,
+# cppsSearchCeiling` cannot be compared to a printed canon by anything but a
+# human. So the call keeps its literals and the drift risk moves here, where
+# validate/v72_batch_registration.R closes it: v72 reads the fourth and fifth
+# arguments of the shipped `Get CPPS:` line and requires them to equal these
+# two assignments. Change either end alone and the suite goes red.
+cppsSearchFloor = 60
+cppsSearchCeiling = 330
+
+# ────────────────────────────────────────────────────────────────────────────
+# THE SHORTEST SEGMENT THE SELECTED MEASURES CAN ACTUALLY BE ASKED FOR
+# ────────────────────────────────────────────────────────────────────────────
+# A SEGMENT TOO SHORT FOR ITS ANALYSIS WINDOW IS NOT A WARNING, IT IS AN ABORT.
+# Until 14 August 2026 this script warned — "measures may be undefined" — and
+# then ran the analysis anyway. Praat does not return undefined for a sound
+# shorter than the window. It refuses, and a refusal inside `To Pitch` ends the
+# script:
+#
+#     Error: To analyse this Sound, "pitch floor" must not be less than 300 Hz.
+#     Sound "b_tiny": pitch analysis (filtered AC) not performed.
+#
+# `Save as comma-separated file:` sits after the loop, so that abort discards
+# every row already computed. One truncated take — a clipped trigger, a
+# mis-trimmed interval, a 20 ms TextGrid label — and a whole night's batch
+# writes nothing. Same shape as the unguarded read; same fix, a failed row.
+#
+# THE THRESHOLDS ARE MEASURED, NOT DERIVED. Praat's requirement is a multiple
+# of the analysis window, and the multiple differs by command, so the only
+# honest source is the binary. Bisected on Praat 6.6.30 (linux), 14 August
+# 2026, with each command's canonical APPENDIX_D parameter set, on a 44.1 kHz
+# periodic complex — the shortest duration at which each command SUCCEEDS:
+#
+#     To Pitch (filtered autocorrelation)  floor 50    0.06  s   (= 3 / 50)
+#     To Pitch (raw cross-correlation)     floor 75    0.03  s
+#     To Intensity                         floor 100   0.064 s   (= 6.4 / 100)
+#     To Harmonicity (cc)                  floor 75    0.03  s
+#     To PowerCepstrogram                  floor 60    0.10  s   (= 6 / 60)
+#
+# CPPS is therefore the binding constraint whenever it is selected, at nearly
+# double the 0.064 s a naive threshold would warn at — which is why a
+# threshold could not have been used as a guard even if it had been one: a
+# 0.08 s segment passed it and then killed the run inside the cepstrogram.
+#
+# THE MAXIMUM OVER THE SELECTED MEASURES, not a fixed constant, because the
+# guard must refuse exactly the segments that would abort. A fixed 0.1 s would
+# refuse an 0.08 s segment that a mean-F0-only run measures perfectly well, and
+# a fixed 0.06 s would let that same segment through into a CPPS run.
+minAnalysisDuration = 0
+if mean_F0
+    minAnalysisDuration = max (minAnalysisDuration, 0.06)
+endif
+if mean_intensity
+    minAnalysisDuration = max (minAnalysisDuration, 0.064)
+endif
+if needsRccPitch
+    minAnalysisDuration = max (minAnalysisDuration, 0.03)
+endif
+if hNR
+    minAnalysisDuration = max (minAnalysisDuration, 0.03)
+endif
+if cPPS
+    minAnalysisDuration = max (minAnalysisDuration, 0.1)
+endif
+
 # ============================================================================
 # Create file list and validate
 # ============================================================================
@@ -175,6 +588,36 @@ if nFiles = 0
 endif
 
 # ============================================================================
+# Output folder and STOP sentinel
+# ============================================================================
+
+# WHY HERE. After the file list, so a mistyped extension does not leave an
+# empty output folder behind; before the batch range dialog and before a single
+# analysis, so a folder that cannot be written is reported in seconds rather
+# than after an hour of processing with the results still in a Table.
+#
+# THE ORDER MATTERS. Resolve first, then create, then write: resolving is
+# read-only and never touches a file, so the path handed to the writability
+# probe is already known to be free or ours.
+@emlResolveSentinelPath: output_folder$
+sentinelPath$ = emlResolveSentinelPath.path$
+sentinelDisplaced = emlResolveSentinelPath.displaced
+
+@emlEnsureOutputFolder: output_folder$, sentinelPath$
+if emlEnsureOutputFolder.writable = 0
+    removeObject: fileListId
+    exitScript: "Cannot write to the output folder:" + newline$
+        ... + output_folder$ + newline$ + newline$
+        ... + "It could not be created, or it is not writable. Check the "
+        ... + "spelling of the path, and that you have permission to write "
+        ... + "there — a drive that is full, read-only or not mounted will "
+        ... + "also fail here. No audio has been read and nothing has been "
+        ... + "written."
+endif
+
+@emlInitSentinel: sentinelPath$
+
+# ============================================================================
 # Batch range dialog (S10B)
 # ============================================================================
 
@@ -185,14 +628,66 @@ beginPause: "Batch range"
 clicked = endPause: "Quit", "Run", 2, 0
 if clicked = 1
     removeObject: fileListId
-    exitScript
+    exitScript: ""
+endif
+
+# BOTH ENDS OF THE RANGE, NOT JUST THE FLOOR (APPENDIX_D §7, "GUARD BOTH ENDS
+# OF EVERY BOUNDED RANGE"). `natural:` guards the floor for us — it refuses 0
+# and negatives — and nothing guarded the top, which is the half the appendix
+# calls out by name.
+#
+# WHAT THAT COST, MEASURED ON PRAAT 6.6.30, 14 AUGUST 2026. `Get string:` past
+# the end of a Strings list does not fail: it returns the EMPTY STRING. The
+# loop then builds "<sound folder>/" and hands that to `Read from file:`, which
+# does fail — "Cannot open file … Hint: this is a folder, not a file" — and
+# takes the whole script down with it (exit 255). The results Table is still in
+# the Objects window but `Save as comma-separated file:` sits after the loop and
+# never runs, so an overnight batch of 400 files that reached file 399 writes no
+# CSV at all. One mistyped digit in "End at file" is the entire failure.
+#
+# A start index past the end is the quieter half of the same mistake: the for
+# loop simply never runs, and the user gets an empty CSV and a summary reading
+# "Files processed: 0" with no explanation. Both are refused here, before any
+# audio is read and before the results Table exists — the same exit shape, and
+# the same tidy-up, as the Quit button immediately above.
+if end_at_file > nFiles
+    removeObject: fileListId
+    exitScript: "End at file (" + string$ (end_at_file) + ") is past the last "
+        ... + "file. Only " + string$ (nFiles) + " ." + file_extension$
+        ... + " files were found. Please re-run and choose a value no greater "
+        ... + "than " + string$ (nFiles) + "."
+endif
+if start_from_file > nFiles
+    removeObject: fileListId
+    exitScript: "Start from file (" + string$ (start_from_file) + ") is past "
+        ... + "the last file. Only " + string$ (nFiles) + " ."
+        ... + file_extension$ + " files were found."
+endif
+if start_from_file > end_at_file
+    removeObject: fileListId
+    exitScript: "Start from file (" + string$ (start_from_file) + ") is after "
+        ... + "End at file (" + string$ (end_at_file) + "), so no files would "
+        ... + "be processed. Please re-run and swap them."
 endif
 
 # ============================================================================
 # Build table columns (dynamic based on selected measures)
 # ============================================================================
 
-colNames$ = "file"
+# `status` IS NOT OPTIONAL AND IS NOT LAST. Every row carries it, whichever
+# measures were ticked, because it is the column that says whether the rest of
+# the row means anything: "ok" for a file that was analysed, "FAILED: …" for one
+# that could not be (14 August 2026 — see @emlAppendFailureRow). A status column
+# only present in runs that happened to hit a failure would be a schema that
+# changes shape depending on the data, which is worse for a reader than a column
+# of "ok"s.
+#
+# SECOND, beside the file name, not appended after the measures. A run with all
+# six measures and TextGrids puts it ten columns to the right if it goes last,
+# which in a spreadsheet is off the screen — and a status nobody scrolls to is
+# not a status. Existing readers name their columns (read.csv, Get value:), so
+# the position costs them nothing.
+colNames$ = "file status"
 if use_TextGrids
     colNames$ = colNames$ + " interval_label interval_start interval_end"
 endif
@@ -219,37 +714,68 @@ resultsId = Create Table with column names: "results", 0, colNames$
 currentRow = 0
 
 # ============================================================================
-# Auto-generate output filename (S9)
+# Auto-generate output filename
 # ============================================================================
 
-slashPos = rindex (sound_folder$, "/")
+# Last path component of the sound folder, used ONLY as a filename prefix.
+#
+# THE PREFIX MATTERS: the CSV does not land beside the recordings it
+# describes, but in an output folder the user
+# designates, which one user will point at from several corpora in turn. The
+# corpus name in the file name is now the only thing that says which run of
+# which folder a CSV came from.
+#
+# This is the one place in this script that PARSES a path instead of handing
+# one to Praat. Praat accepts "/" on Windows in every path it consumes, so
+# every "sound_folder$ + "/" + ..." elsewhere in this file is portable as
+# written — but a folder the user picked or typed on Windows arrives with
+# backslashes ("C:\Users\ian\Data"), and rindex for "/" alone then returns
+# 0. The old else-branch made folderName$ the WHOLE path, so csvPath$ became
+# "C:\Users\ian\Data/C:\Users\ian\Data_results_<date>.csv" — an invalid name
+# (embedded drive colon) that only fails at "Save as comma-separated file"
+# after the entire batch has run. Both separators must therefore be matched.
+#
+# A path that ends in a separator has no component of its own, so trailing
+# separators are dropped first; a bare root ("/" or "C:\") leaves nothing
+# usable and falls back to a fixed prefix.
+pathTail$ = sound_folder$
+while length (pathTail$) > 1 and (right$ (pathTail$, 1) = "/"
+    ... or right$ (pathTail$, 1) = "\")
+    pathTail$ = left$ (pathTail$, length (pathTail$) - 1)
+endwhile
+
+slashPos = max (rindex (pathTail$, "/"), rindex (pathTail$, "\"))
 if slashPos > 0
-    folderName$ = right$ (sound_folder$, length (sound_folder$) - slashPos)
+    folderName$ = right$ (pathTail$, length (pathTail$) - slashPos)
 else
-    folderName$ = sound_folder$
+    folderName$ = pathTail$
+endif
+
+if folderName$ = "" or right$ (folderName$, 1) = ":"
+    folderName$ = "batch"
 endif
 
 @emlBuildDateStamp
 proposedCsv$ = folderName$ + "_results_" + emlBuildDateStamp.result$ + ".csv"
-csvPath$ = sound_folder$ + "/" + proposedCsv$
+
+# THE NAME IS BUILT FROM THE SOUND FOLDER, THE PATH FROM THE OUTPUT FOLDER.
+# Both files this script writes go to output_folder$ — the sentinel above,
+# the results here.
+csvPath$ = output_folder$ + "/" + proposedCsv$
 
 # Non-colliding path (Rule 27)
 if fileReadable (csvPath$)
     baseCsv$ = folderName$ + "_results_" + emlBuildDateStamp.result$
     suffix = 2
     repeat
-        csvPath$ = sound_folder$ + "/" + baseCsv$ + "_"
+        csvPath$ = output_folder$ + "/" + baseCsv$ + "_"
             ... + string$ (suffix) + ".csv"
         suffix = suffix + 1
     until not fileReadable (csvPath$)
 endif
 
-# ============================================================================
-# Initialize STOP sentinel (S5)
-# ============================================================================
-
-sentinelPath$ = sound_folder$ + "/STOP.txt"
-@emlInitSentinel: sentinelPath$
+# The STOP sentinel was resolved, created and armed above, before the batch
+# Range dialog — see "Output folder and STOP sentinel".
 
 # ============================================================================
 # Info window header
@@ -268,12 +794,55 @@ if use_TextGrids
     line$ = "Tier: " + string$ (tier_number) + ", Label: " + target_label$
     appendInfoLine: line$
 endif
-line$ = "Output: " + csvPath$
+# BOTH FOLDERS ARE NAMED, because they are not the same folder and the
+# user chose them in two different fields. Printing only the CSV's full path
+# would leave "where did my results go" answerable only by reading a long
+# line.
+line$ = "Output folder: " + output_folder$
+appendInfoLine: line$
+line$ = "Results CSV: " + csvPath$
 appendInfoLine: line$
 appendInfoLine: ""
 line$ = "Sentinel file: " + sentinelPath$
 appendInfoLine: line$
 appendInfoLine: "To stop: open that file, change first line to STOP, save."
+
+# THE SENTINEL IS NOT ALWAYS CALLED STOP.txt, so the user has to be told when
+# it is not. @emlResolveSentinelPath found a STOP.txt in the output folder that
+# this script did not write and left it alone (it would have been TRUNCATED
+# before 14 August 2026); a user who then edits the STOP.txt they can see would
+# be editing the wrong file and the batch would never stop.
+if sentinelDisplaced
+    appendInfoLine: "NOTE: a STOP.txt already in that folder was not written"
+    appendInfoLine: "by this script. It has been left untouched, and this run"
+    appendInfoLine: "uses the sentinel file named above instead — edit that"
+    appendInfoLine: "one, not STOP.txt."
+endif
+
+# THE ONE SETTING THAT SWITCHES OFF A GUARD, SAID OUT LOUD AND SAID FIRST.
+#
+# The bounded-range guard in the segment loop (APPENDIX_D §7) needs a measured
+# F0 to compare against a search limit, and the only pitch tracks in a run are
+# the ones the ticked measures ask for. Tick CPPS alone and there is no track,
+# so the check against the 60-330 Hz cepstral peak search — the very case §7
+# works through — cannot run.
+#
+# IT IS ANNOUNCED RATHER THAN LEFT TO BE INFERRED, and that is the whole point
+# of these five lines. A guard that silently does not run is the failure the
+# guard was written against, moved one level up: the run finishes, the summary
+# says "Warnings: 0", and the zero means "nothing was checked" while reading
+# exactly like "nothing was wrong". Said here it costs the user one line and a
+# tickbox; unsaid it costs them the finding.
+#
+# BEFORE THE FIRST FILE IS READ, so acting on it costs nothing. Printed with
+# the summary it would arrive after the batch that could have been run
+# correctly.
+if cPPS and not mean_F0 and not needsRccPitch
+    appendInfoLine: "NOTE: CPPS is selected and no pitch measure is, so no"
+    appendInfoLine: "pitch track is created. The check that warns when a voice"
+    appendInfoLine: "approaches the 60-330 Hz CPPS search window cannot run on"
+    appendInfoLine: "this configuration. Tick Mean F0 to enable it."
+endif
 appendInfoLine: ""
 
 # ============================================================================
@@ -283,6 +852,13 @@ appendInfoLine: ""
 nProcessed = 0
 nSkipped = 0
 nWarnings = 0
+# FAILED IS ITS OWN COUNT, separate from skipped. A skip is the user's own
+# selection criterion doing its job — no TextGrid, no interval with the target
+# label — and is expected in a normal run. A failure is data that could not be
+# analysed at all, and the two must not be summed into one number, because the
+# first is routine and the second is the line that should make someone go and
+# look at the recordings.
+nFailed = 0
 
 # ============================================================================
 # Main processing loop
@@ -304,9 +880,11 @@ for iFile from start_from_file to end_at_file
     selectObject: fileListId
     fileName$ = Get string: iFile
     filePath$ = sound_folder$ + "/" + fileName$
-    soundId = Read from file: filePath$
 
-    # Extract base name for display and TextGrid pairing
+    # Extract base name for display and TextGrid pairing.
+    #
+    # BEFORE THE READ, not after it as until 14 August 2026, because the row a
+    # failed read now writes has to be able to name the file it failed on.
     dotPos = rindex (fileName$, ".")
     if dotPos > 1
         baseName$ = left$ (fileName$, dotPos - 1)
@@ -315,13 +893,81 @@ for iFile from start_from_file to end_at_file
     endif
 
     # --- Progress (S7A) ---
+    #
+    # BEFORE THE READ, for the same reason the base name is: a file that cannot
+    # be read prints "FAILED: …" indented under its own progress line, so the
+    # Info window and the CSV agree about which file it was. Printed after the
+    # read, as until 14 August 2026, a failure appeared with no heading at all.
     line$ = "[" + string$ (iFile) + "/" + string$ (end_at_file) + "] "
         ... + baseName$
     appendInfoLine: line$
 
+    # ────────────────────────────────────────────────────────────────────
+    # THE READ IS GUARDED. ONE BAD FILE MUST NOT COST THE WHOLE BATCH.
+    # ────────────────────────────────────────────────────────────────────
+    # `Read from file:` was unguarded until 14 August 2026, and it is the one
+    # command in this loop that meets user data before any of ours has looked
+    # at it. Measured on Praat 6.6.30, 14 August 2026:
+    #
+    #   0-byte  .wav   Error: No lines. / Data not read from text file …
+    #   text in a .wav  same — Praat falls back to its text-object reader
+    #
+    # Either ends the script at exit 255. The CSV is written after the loop, so
+    # a corpus with one zero-length take — what a stopped interface or a full
+    # disk leaves behind — produces NO results at all, however many files were
+    # analysed before it. That is the failure this guard exists for, and the
+    # row is the other half of it: the run must also say WHICH file.
+    #
+    # WHY THE SELECTION IS EMPTIED FIRST. `nocheck` swallows the error but
+    # leaves no return value to test, so the outcome has to be read off the
+    # Objects window — and that is only unambiguous if nothing was selected
+    # going in. After `minusObject: fileListId` the three outcomes separate
+    # cleanly (all measured, same session):
+    #
+    #   read succeeded          1 object selected, and it is a Sound
+    #   read failed             0 objects selected
+    #   read gave a non-Sound   1 object selected, 0 of them Sounds
+    #
+    # The third is not hypothetical: a TextGrid saved with a .wav extension
+    # reads perfectly well and is not something this script can analyse. It is
+    # removed here rather than left in the Objects window to accumulate.
+    #
+    # `Remove` IS ONLY EVER REACHED WITH EXACTLY THE NEW OBJECT SELECTED, which
+    # is why the selection is emptied rather than merely noted. A bare `Remove`
+    # under the old selection would have deleted the file list itself and taken
+    # the rest of the batch with it.
+    #
+    # readOk IS SET BEFORE THE nocheck AND ONLY RAISED INSIDE AN if — the same
+    # rule @emlEnsureOutputFolder follows, and for the same reason (M4 in
+    # audit/static: an assignment on the line after a failing nocheck cannot be
+    # trusted). Measured, 6.6.30: `nocheck x = <command>` does not assign x even
+    # when the command SUCCEEDS, so the id is taken with selected () instead.
+    minusObject: fileListId
+    readOk = 0
+    nocheck Read from file: filePath$
+    if numberOfSelected () = 1 and numberOfSelected ("Sound") = 1
+        readOk = 1
+    endif
+    if readOk = 1
+        soundId = selected ("Sound")
+    else
+        if numberOfSelected () > 0
+            Remove
+        endif
+        line$ = "  FAILED: " + fileName$ + " could not be read as a Sound "
+            ... + "— skipping this file."
+        appendInfoLine: line$
+        nFailed = nFailed + 1
+        nWarnings = nWarnings + 1
+        currentRow = currentRow + 1
+        @emlAppendFailureRow: resultsId, currentRow, baseName$,
+            ... "FAILED: unreadable or not a Sound file"
+        goto NEXT_FILE
+    endif
+
     # --- Channel handling ---
     # Matches the option text; Left channel only is the default.
-    # Provenance: PraatGen-only edit, 14 October 2026; not yet in the plugin source.
+    # Provenance: PraatGen-only edit, 14 October 2026, re-applied 28 November 2026; not yet in the plugin source.
     #   Was Mix to mono (default), Left, Right, matched by option number.
     selectObject: soundId
     nChannels = Get number of channels
@@ -353,6 +999,55 @@ for iFile from start_from_file to end_at_file
             goto NEXT_FILE
         endif
         gridId = Read from file: gridPath$
+
+        # THE TIER IS CHECKED BEFORE IT IS QUERIED, and this is a data-loss
+        # guard, not a tidiness one. `Tier number` is a `natural:` field, so
+        # Praat guarantees only that it is 1 or more; nothing ties it to the
+        # grids on disk. Measured on Praat 6.6.30, 14 August 2026, both of the
+        # ways it can be wrong ABORT THE SCRIPT rather than returning a value:
+        #
+        #   Get number of intervals: 5   on a 2-tier grid
+        #     -> "Your tier number (5) should not be greater than the number
+        #         of tiers (2)."
+        #   Get number of intervals: 2   where tier 2 is a POINT tier
+        #     -> "Your tier should be an interval tier."
+        #
+        # An abort here is not one bad file. `Save as comma-separated file:`
+        # runs after the loop, so every file already analysed is lost with it —
+        # one grid in a folder of five hundred, annotated with an extra tier or
+        # with the tier order transposed, and the run produces nothing.
+        #
+        # A MISMATCHED GRID IS THEREFORE A SKIP, exactly like a missing one.
+        # It is the same class of problem — this file cannot be segmented as
+        # asked — so it takes the same warn-count-skip path, and the batch
+        # carries on and still writes its CSV.
+        #
+        # `Get number of tiers` is checked FIRST because `Is interval tier:`
+        # aborts on an out-of-range tier too (measured, same session): the
+        # count has to be known before the type can be asked for.
+        selectObject: gridId
+        nTiers = Get number of tiers
+        if tier_number > nTiers
+            line$ = "  WARNING: " + baseName$ + " has " + string$ (nTiers)
+                ... + " tier(s); tier " + string$ (tier_number)
+                ... + " was requested — skipping."
+            appendInfoLine: line$
+            nSkipped = nSkipped + 1
+            nWarnings = nWarnings + 1
+            removeObject: gridId, soundId
+            goto NEXT_FILE
+        endif
+        isIntervalTier = Is interval tier: tier_number
+        if not isIntervalTier
+            line$ = "  WARNING: tier " + string$ (tier_number) + " of "
+                ... + baseName$ + " is a point tier, not an interval tier "
+                ... + "— skipping."
+            appendInfoLine: line$
+            nSkipped = nSkipped + 1
+            nWarnings = nWarnings + 1
+            removeObject: gridId, soundId
+            goto NEXT_FILE
+        endif
 
         # Find matching intervals
         selectObject: gridId
@@ -394,15 +1089,44 @@ for iFile from start_from_file to end_at_file
             segId = soundId
         endif
 
-        # Check segment duration
+        # --- Segment duration: a GUARD now, not a warning ---
+        #
+        # See "THE SHORTEST SEGMENT …" above for the measured thresholds and
+        # for what the old warning-and-carry-on cost. In short: below the
+        # window the analysis commands do not return undefined, they refuse,
+        # and a refusal here ends the script and discards the whole batch. So
+        # this segment gets a failed row and the analysis is not attempted.
+        #
+        # THE ROW IS WRITTEN EVEN THOUGH NOTHING WAS MEASURED, because the
+        # alternative is a file that is simply not in the CSV. In a TextGrid
+        # run this is a per-SEGMENT verdict: the other labelled intervals of
+        # the same file are analysed normally and get their own rows.
         selectObject: segId
         segDuration = Get total duration
-        if segDuration < 0.064
-            line$ = "  WARNING: Segment duration "
-                ... + fixed$ (segDuration, 3)
-                ... + " s — measures may be undefined."
+        if segDuration < minAnalysisDuration
+            line$ = "  FAILED: segment " + string$ (iSeg) + " is "
+                ... + fixed$ (segDuration, 3) + " s; the selected measures "
+                ... + "need at least " + fixed$ (minAnalysisDuration, 3)
+                ... + " s — not analysed."
             appendInfoLine: line$
+            nFailed = nFailed + 1
             nWarnings = nWarnings + 1
+            currentRow = currentRow + 1
+            @emlAppendFailureRow: resultsId, currentRow, baseName$,
+                ... "FAILED: too short (" + fixed$ (segDuration, 3) + " s)"
+            # The interval columns are still the truth about WHICH segment
+            # this was, so a TextGrid run can say which interval was refused.
+            if use_TextGrids
+                selectObject: resultsId
+                Set string value: currentRow, "interval_label",
+                    ... segLabel$[iSeg]
+                Set numeric value: currentRow, "interval_start",
+                    ... segStart[iSeg]
+                Set numeric value: currentRow, "interval_end",
+                    ... segEnd[iSeg]
+                removeObject: segId
+            endif
+            goto NEXT_SEGMENT
         endif
 
         # ========================================================
@@ -417,6 +1141,27 @@ for iFile from start_from_file to end_at_file
                 ... 0.5, 0.055, 0.35, 0.14
             selectObject: facPitchId
             meanF0Val = Get mean: 0, 0, "Hertz"
+            # THE EXTREMES, READ FOR THE RANGE GUARD BELOW AND FOR NOTHING
+            # ELSE. They are not written to the Table and they add no column:
+            # the CSV this module exports is byte-for-byte what it exported
+            # before these two lines existed, which is the property that makes
+            # adding them safe on a corpus already analysed.
+            #
+            # READ OFF THE SAME OBJECT WHILE IT IS STILL SELECTED. No
+            # selectObject: comes between the mean read above and these two,
+            # which matters twice over: it is one fewer place to point at the
+            # wrong pitch track, and the ADJACENCY of a selectObject: to the
+            # mean-F0 read is exactly what validate/v52_acoustic_calls.R pins
+            # to prove the mean comes off the filtered-autocorrelation object.
+            # Inserting a selection here would not fail Praat and would not
+            # change a number; it would quietly dissolve that check.
+            #
+            # "parabolic" is the interpolation named for these two queries in
+            # PraatGen's COMMANDS_Pitch.txt, verified there against the live
+            # signature; the mean takes no interpolation argument at all,
+            # which is why these two carry an argument the line above does not.
+            facMinF0 = Get minimum: 0, 0, "Hertz", "parabolic"
+            facMaxF0 = Get maximum: 0, 0, "Hertz", "parabolic"
         endif
 
         # --- Pitch for voice quality (raw cross-correlation, APPENDIX_D S1B) ---
@@ -425,6 +1170,17 @@ for iFile from start_from_file to end_at_file
             rccPitchId = noprogress To Pitch (raw cross-correlation):
                 ... 0.0, 75, rccPitchCeiling, 15, "no", 0.03,
                 ... 0.45, 0.01, 0.35, 0.14
+            # THE SECOND TRACK HAS A DIFFERENT FLOOR, AND THAT IS THE WHOLE
+            # REASON IT IS READ SEPARATELY. Filtered autocorrelation searches
+            # from 50 Hz; raw cross-correlation searches from 75. A bass at
+            # 80 Hz is comfortably inside the first and within 10% of the
+            # floor of the second — so his mean F0 is sound while the
+            # PointProcess his jitter and shimmer are measured from is built
+            # on a track that could not look below 75 Hz. Guarding only the
+            # FAC range would call that segment clean.
+            selectObject: rccPitchId
+            rccMinF0 = Get minimum: 0, 0, "Hertz", "parabolic"
+            rccMaxF0 = Get maximum: 0, 0, "Hertz", "parabolic"
         endif
 
         # --- PointProcess for jitter/shimmer (APPENDIX_D S3A) ---
@@ -477,8 +1233,27 @@ for iFile from start_from_file to end_at_file
         endif
 
         # ========================================================
-        # Plausibility warnings (APPENDIX_D S7)
+        # Plausibility warnings (APPENDIX_D S7, Rule 30)
         # ========================================================
+
+        # UNDEFINED IS REPORTED, NOT PASSED OVER. Rule 30 gives the pattern
+        # with an else branch — "WARNING: [measure] returned undefined." — and
+        # until 14 August 2026 every check here had the guard and none had the
+        # branch. An undefined measure fell through both ifs in silence.
+        #
+        # In a batch that silence is the whole problem. Praat returns undefined
+        # for an unvoiced or too-short segment and for a query that fails, which
+        # in a folder of field recordings is not the exception: a breath, a room
+        # tone, a mis-labelled interval. The Table takes it without complaint —
+        # `Set numeric value:` accepts undefined and the CSV writes the literal
+        # string --undefined-- (measured, 6.6.30, 14 Aug 2026) — so the run ends
+        # "Warnings: 0" while a column is a third empty, and the reader who
+        # opens the CSV a week later has nothing that says which files those
+        # were or that anything was wrong.
+        #
+        # These count toward nWarnings for the same reason: S7C's counter is
+        # what the summary reports, and a warning the summary does not count is
+        # a warning that scrolled past.
 
         if mean_F0
             if meanF0Val <> undefined
@@ -489,6 +1264,9 @@ for iFile from start_from_file to end_at_file
                     appendInfoLine: line$
                     nWarnings = nWarnings + 1
                 endif
+            else
+                appendInfoLine: "  WARNING: Mean F0 returned undefined."
+                nWarnings = nWarnings + 1
             endif
         endif
 
@@ -501,6 +1279,9 @@ for iFile from start_from_file to end_at_file
                     appendInfoLine: line$
                     nWarnings = nWarnings + 1
                 endif
+            else
+                appendInfoLine: "  WARNING: Jitter returned undefined."
+                nWarnings = nWarnings + 1
             endif
         endif
 
@@ -513,6 +1294,9 @@ for iFile from start_from_file to end_at_file
                     appendInfoLine: line$
                     nWarnings = nWarnings + 1
                 endif
+            else
+                appendInfoLine: "  WARNING: Shimmer returned undefined."
+                nWarnings = nWarnings + 1
             endif
         endif
 
@@ -525,6 +1309,9 @@ for iFile from start_from_file to end_at_file
                     appendInfoLine: line$
                     nWarnings = nWarnings + 1
                 endif
+            else
+                appendInfoLine: "  WARNING: HNR returned undefined."
+                nWarnings = nWarnings + 1
             endif
         endif
 
@@ -537,6 +1324,9 @@ for iFile from start_from_file to end_at_file
                     appendInfoLine: line$
                     nWarnings = nWarnings + 1
                 endif
+            else
+                appendInfoLine: "  WARNING: CPPS returned undefined."
+                nWarnings = nWarnings + 1
             endif
         endif
 
@@ -547,6 +1337,206 @@ for iFile from start_from_file to end_at_file
                     line$ = "  WARNING: Mean intensity = "
                         ... + fixed$ (intVal, 2)
                         ... + " dB — outside range (20 to 120)."
+                    appendInfoLine: line$
+                    nWarnings = nWarnings + 1
+                endif
+            else
+                appendInfoLine: "  WARNING: Mean intensity returned undefined."
+                nWarnings = nWarnings + 1
+            endif
+        endif
+
+        # ========================================================
+        # Bounded analysis ranges, both ends (APPENDIX_D S7, hard)
+        # ========================================================
+
+        # A PLAUSIBILITY BAND AND AN ANALYSIS RANGE ARE NOT THE SAME THING,
+        # and until this block existed only the first kind was guarded. The
+        # six checks above ask whether a RESULT is believable — is 1400 Hz a
+        # credible mean F0. This one asks something the result cannot answer:
+        # whether the SEARCH that produced it was wide enough to have found
+        # the answer at all. A pitch tracker asked to look between 50 and
+        # 1000 Hz does not report failure when the voice sits at 48; it
+        # reports 50-something, in band, in the CSV, indistinguishable from a
+        # measurement. The number is censored, not wrong, and nothing about
+        # its value says so.
+        #
+        # APPENDIX_D §7 states the rule as "GUARD BOTH ENDS OF EVERY BOUNDED
+        # RANGE (hard)" and gives the observed failure verbatim: a script
+        # warned when minimum F0 came within 10% of the pitch floor and had
+        # no equivalent at the top, and a real recording measured 322.87 Hz
+        # against a cepstral search ceiling of 330 — 98% of it — in silence.
+        # The 10% margin and the "widen the range or treat the result as
+        # censored" reading are the appendix's, not this file's.
+        #
+        # THREE BOUNDED RANGES LIVE IN THIS MODULE, and they do not coincide:
+        #
+        #   filtered autocorrelation   50 .. facPitchTop      mean F0
+        #   raw cross-correlation      75 .. rccPitchCeiling  jitter, shimmer
+        #   cepstral peak search       60 .. 330              CPPS
+        #
+        # The floors are 50, 75 and 60 Hz — three different numbers, so a
+        # single guard against the lowest of them would pass a segment that
+        # two of the three could not measure. The RCC floor is the one that
+        # bites in practice: an 80 Hz bass is 60% above the FAC floor and 7%
+        # above the RCC floor, so his mean F0 is trustworthy and the
+        # PointProcess underneath his jitter and shimmer is not.
+        #
+        # EVERY RANGE THAT EXISTS IS GUARDED AGAINST ITS OWN LIMITS, and the
+        # first draft of this block did not do that. It picked ONE track to
+        # speak for the segment — filtered autocorrelation when it existed —
+        # and guarded the 50 Hz FAC floor with it. On the very corpus written
+        # to test it, a 78 Hz take with all six measures ticked produced no
+        # warning at all: 78 clears the FAC floor by 56%, and the raw-cross-
+        # correlation track underneath its jitter and shimmer, which cannot
+        # look below 75, was never asked. A guard that inspects the widest of
+        # several ranges reports on the one least likely to bite.
+        #
+        # So each track answers for itself below, and the ONE PLACE a single
+        # representative F0 is genuinely needed — the CPPS search window and
+        # the stated-value comparison, neither of which has a track of its
+        # own — takes FAC when it exists, because F0 tracking is the purpose
+        # APPENDIX_D §1A appoints FAC to, and RCC when it is all there is.
+        # Neither existing is not a silent no-op: the header printed a NOTE
+        # before a single file was read, because a guard that quietly does not
+        # run is this block's own failure mode arriving one level up.
+        #
+        # NOTHING HERE TOUCHES A NUMBER. Every branch below appends to the
+        # Info window and increments nWarnings. No Table cell, no column, no
+        # exported value moves; a corpus re-analysed after this block was
+        # added yields the identical CSV, and that is checked rather than
+        # asserted (harness/batch, seven drives, CSVs byte-compared).
+        #
+        # THEY COUNT AS WARNINGS (S7C) for the same reason the plausibility
+        # checks do: the summary's "Warnings:" line is what a user reads, and
+        # a warning the summary does not count is a warning that scrolled
+        # past during a four-hour run.
+        #
+        # UNDEFINED IS GUARDED EXPLICITLY. Measured on Praat 6.6.30,
+        # 16 August 2026: on a fully unvoiced segment both queries return
+        # undefined, and BOTH `undefined < 55` and `undefined > 297` evaluate
+        # FALSE — so an unguarded comparison here would be silent rather than
+        # wrong. The `<> undefined` is kept anyway, because relying on that is
+        # relying on a detail of one build.
+        #
+        # THERE IS NO else BRANCH REPORTING THE UNDEFINED CASE, and that is
+        # the one deliberate departure from Rule 30 in this file. An unvoiced
+        # segment is ALREADY reported, once, by the mean-F0 check above; a
+        # second line saying the same thing in different words would double
+        # every unvoiced segment's contribution to the warning count and make
+        # the summary's number mean less, not more.
+        # THE WIDEST TRACK AVAILABLE IS THE ONE THAT ANSWERS, and this is the
+        # second correction this block needed. Filtered autocorrelation
+        # searches from 50 Hz, raw cross-correlation from 75; a track cannot
+        # report a value outside its own range, so the RCC track's minimum is
+        # PINNED AT 75 by construction and a guard reading it can only fire in
+        # the 75-82.5 Hz sliver.
+        #
+        # WHAT THAT COSTS, ON THIS PROJECT'S OWN FIXTURES. harness/batch's
+        # F_warn corpus carries a 60 Hz take with all six measures ticked.
+        # 60 Hz is comfortably below the raw-cross-correlation floor, so its
+        # jitter and shimmer come off a PointProcess built on a track that
+        # could not see the voice at all — and the RCC guard reading RCC's own
+        # clamped minimum said nothing, because RCC reported 75-plus like it
+        # always will. The guard was silent about exactly the file it was
+        # written for.
+        #
+        # So the representative estimate is established FIRST and the RCC
+        # range is guarded against IT. FAC is preferred because APPENDIX_D §1A
+        # appoints it to F0 tracking and because it is the wider window; RCC
+        # answers only when it is the only track there is, and in that case
+        # its own clamp is a limit this module cannot see past without
+        # creating a pitch object nobody asked for. The FAC range keeps its
+        # own extremes because 50 Hz is the lowest floor here, so nothing
+        # wider exists to check it with.
+        rangeF0Min = undefined
+        rangeF0Max = undefined
+        rangeSource$ = ""
+        if mean_F0
+            rangeF0Min = facMinF0
+            rangeF0Max = facMaxF0
+            rangeSource$ = "filtered autocorrelation"
+        elsif needsRccPitch
+            rangeF0Min = rccMinF0
+            rangeF0Max = rccMaxF0
+            rangeSource$ = "raw cross-correlation"
+        endif
+
+        if mean_F0
+            @emlWarnNearRangeEnd: facMinF0, facMaxF0, 50, facPitchTop,
+                ... "filtered-autocorrelation pitch range"
+            nWarnings = nWarnings + emlWarnNearRangeEnd.fired
+        endif
+        if needsRccPitch
+            @emlWarnNearRangeEnd: rangeF0Min, rangeF0Max, 75, rccPitchCeiling,
+                ... "raw-cross-correlation pitch range"
+            nWarnings = nWarnings + emlWarnNearRangeEnd.fired
+        endif
+
+        # THE CEPSTRAL PEAK SEARCH WINDOW, WHICH IS NOT THE PITCH RANGE. It
+        # is fixed at 60-330 Hz by the Maryn parameter set and does NOT widen
+        # with highest_expected_F0, so a soprano study whose pitch range the
+        # user correctly stated as 900 Hz still has its CPPS computed from a
+        # search that stops at 330. That is the §7 worked example exactly,
+        # and it is the case where the CPPS column can be quietly wrong while
+        # every other column on the row is right.
+        if cPPS and rangeSource$ <> ""
+            @emlWarnNearRangeEnd: rangeF0Min, rangeF0Max, cppsSearchFloor,
+                ... cppsSearchCeiling, "CPPS peak search window"
+            nWarnings = nWarnings + emlWarnNearRangeEnd.fired
+        endif
+
+        # ========================================================
+        # The stated range against the measurement (APPENDIX_D S7)
+        # ========================================================
+
+        # "CHECK THE USER'S STATED RANGE AGAINST THE MEASUREMENT (hard)".
+        # Highest expected F0 is the only acoustic parameter this dialog asks
+        # for, and it is not a label: it DERIVES both pitch ranges, twenty
+        # lines above —
+        #
+        #     facPitchTop     = max (2 * highest_expected_F0, 800)
+        #     rccPitchCeiling = max (1.1 * highest_expected_F0, 600)
+        #
+        # — so a wrong statement is not a wrong annotation, it propagates
+        # into every pitch, every PointProcess, and therefore into jitter and
+        # shimmer as well as F0. A user who types 300 for a corpus that
+        # reaches 450 gets the canonical 800/600 floors, which happen to
+        # cover it, and never learns the statement was wrong; the same user
+        # with a corpus reaching 1100 gets a ceiling of 800 and octave-halved
+        # F0 in an unknown share of rows, with nothing in the CSV to say
+        # which. The appendix's observed failure is the mild version of this:
+        # stated below 300, measured 322.87, nothing flagged.
+        #
+        # THE MESSAGE NAMES THE DERIVED PARAMETERS, because the appendix asks
+        # for exactly that — "state which parameters were derived from the
+        # stated value, and let the user decide whether to re-run". A warning
+        # that says only "your estimate was low" leaves the user to work out
+        # what it cost.
+        #
+        # ONE DIRECTION, NOT TWO, and this is a judgement rather than a
+        # reading of the appendix. Measured ABOVE stated is a defect: the
+        # search may have been too narrow. Measured far BELOW stated is
+        # ordinary — one quiet take in a corpus of sopranos — and warning on
+        # it would fire on most rows of most well-configured runs, which is
+        # how a warning column becomes something users filter out. An
+        # overstatement only ever WIDENS these two ranges, and a range too
+        # wide degrades pitch tracking gradually rather than censoring it.
+        # Warning on an overstatement too would be one `elsif`, and the
+        # threshold for it is a judgement this module does not make.
+        if rangeSource$ <> ""
+            if rangeF0Max <> undefined
+                if rangeF0Max > highest_expected_F0
+                    line$ = "  WARNING: measured F0 reached "
+                        ... + fixed$ (rangeF0Max, 2) + " Hz, above the stated "
+                        ... + "highest expected F0 of "
+                        ... + fixed$ (highest_expected_F0, 0) + " Hz."
+                    appendInfoLine: line$
+                    line$ = "           That value set the pitch top ("
+                        ... + fixed$ (facPitchTop, 0) + " Hz) and the pitch "
+                        ... + "ceiling (" + fixed$ (rccPitchCeiling, 0)
+                        ... + " Hz) — re-run with a higher estimate if this "
+                        ... + "corpus goes higher than stated."
                     appendInfoLine: line$
                     nWarnings = nWarnings + 1
                 endif
@@ -562,6 +1552,10 @@ for iFile from start_from_file to end_at_file
         currentRow = currentRow + 1
 
         Set string value: currentRow, "file", baseName$
+        # THE SUCCESS SIDE OF THE SAME COLUMN @emlAppendFailureRow writes. It
+        # is set here, on the row that carries real measures, so that "ok" can
+        # never be inherited: every row is stamped by the branch that made it.
+        Set string value: currentRow, "status", "ok"
 
         if use_TextGrids
             Set string value: currentRow, "interval_label",
@@ -617,6 +1611,9 @@ for iFile from start_from_file to end_at_file
             removeObject: segId
         endif
 
+        # The too-short guard above jumps here: the segment got its failed row
+        # and created no analysis objects, so there is nothing to clean up.
+        label NEXT_SEGMENT
     endfor
 
     # --- Clean up file-level objects ---
@@ -639,7 +1636,7 @@ selectObject: resultsId
 Save as comma-separated file: csvPath$
 
 # ============================================================================
-# Post-completion summary (S8)
+# Post-completion summary
 # ============================================================================
 
 sep$ = "============================================"
@@ -651,16 +1648,24 @@ line$ = "Files processed: " + string$ (nProcessed)
 appendInfoLine: line$
 line$ = "Files skipped:   " + string$ (nSkipped)
 appendInfoLine: line$
+line$ = "Failed:          " + string$ (nFailed)
+appendInfoLine: line$
 line$ = "Warnings:        " + string$ (nWarnings)
 appendInfoLine: line$
 line$ = "Data rows:       " + string$ (currentRow)
 appendInfoLine: line$
-line$ = "Output:          " + csvPath$
+# THE REAL PATH, and the sentinel with it. The summary is what a user copies
+# into a lab notebook, and since 14 August 2026 neither file is where a reader
+# of an older notebook would look for it — they are in the designated output
+# folder, not beside the recordings.
+line$ = "Results CSV:     " + csvPath$
+appendInfoLine: line$
+line$ = "Sentinel file:   " + sentinelPath$
 appendInfoLine: line$
 appendInfoLine: sep$
 appendInfoLine: ""
 appendInfoLine: "Results Table retained in Objects window."
-appendInfoLine: "Run stats or draw graphs from the EML Tools menu."
+appendInfoLine: "Run stats or draw graphs from the EML Stats & Graphs menu."
 
 # Reset sentinel for next run
 @emlInitSentinel: sentinelPath$

@@ -5,21 +5,43 @@
 # Version: 1.0
 # Date: 20 February 2026
 #
-# Part of the EML Stats library (EML Praat Tools).
-# Author: Ian Howell, Embodied Music Lab (www.embodiedmusiclab.com)
-# Development: Claude (Anthropic)
+# Part of the EML Stats library (EML Stats & Graphs).
 # License: GPL-3.0-or-later
 #
 # Provides: @emlRankVector, @emlCountIf, @emlSubset, @emlUniqueValues,
 #   @emlFrequency, @emlCumulativeSum, @emlDiff, @emlLag, @emlBinData,
 #   @emlZScore, @emlRemoveUndefined, @emlSortWithIndex,
-#   @emlConcatenateVectors, @emlRepeatVector
+#   @emlConcatenateVectors, @emlRepeatVector, @emlCommaListToVector
 #
 # Internal helpers: @eml_sortPairsByValue
 #
 # All procedures use the "eml" prefix (EML Stats) to avoid
 # namespace collisions with user scripts.
+#
+# ATTRIBUTION
+# Framework: EML PraatGen by Ian Howell
+#            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
+# Code generation: Claude (Anthropic)
+# Script author: Ian Howell — created and verified by this individual
+#
+# RESEARCH USE DISCLOSURE
+# If this script is used in research or publication, disclose AI use
+# per your target journal's policy. Suggested language:
+#
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
+#
+# The script author assumes responsibility for the correctness and
+# appropriate application of this code.
 # ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-core-utilities.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
 
 
 # ============================================================================
@@ -37,11 +59,6 @@
 #   .sortedValues# — sorted values (ascending)
 #   .sortedIndices# — indices permuted to match sorted order
 # ============================================================================
-# PKB copy: flattened from plugin_EML_Praat_Tools/stats/eml-core-utilities.praat
-#   Content is verbatim from plugin source; only the License line is
-#   normalized to the repo's GPL-3.0-or-later. Version above is the
-#   PLUGIN's version and must match it exactly — a mismatch means the
-#   PKB has drifted. PKB sync: 29 July 2026 (PraatGen v14.0.0).
 
 procedure eml_sortPairsByValue: .inputValues#, .inputIndices#
     .n = size (.inputValues#)
@@ -487,12 +504,8 @@ procedure emlDiff: .data#
         .error$ = "Input must have at least 2 elements for differencing"
     else
         .nOut = .n - 1
-        .result# = zero# (.nOut)
-        
-        for .i from 1 to .nOut
-            .iNext = .i + 1
-            .result#[.i] = .data#[.iNext] - .data#[.i]
-        endfor
+        # First difference: element i+1 minus element i, as two shifted slices.
+        .result# = part# (.data#, 2, .n) - part# (.data#, 1, .nOut)
     endif
 endproc
 
@@ -526,12 +539,15 @@ procedure emlLag: .data#, .k
         endfor
     else
         .result# = zero# (.n)
-        
+
+        ; VECTOR-EXEMPT: cat2 -- a lag is a shifted copy with an undefined prefix.
+        ; Praat 6.6.30 has no slice-write (v#[a:b] = ...) or vector concatenation
+        ; to assemble it, so the prefix and the shifted body are filled by loop.
         # First k elements are undefined
         for .i from 1 to .k
             .result#[.i] = undefined
         endfor
-        
+
         # Remaining elements are lagged values
         for .i from .k + 1 to .n
             .lagIdx = .i - .k
@@ -579,10 +595,8 @@ procedure emlBinData: .data#, .nBins
             
             # Create bin edges
             .nEdges = .nBins + 1
-            .binEdges# = zero# (.nEdges)
-            for .i from 1 to .nEdges
-                .binEdges#[.i] = .dataMin + (.i - 1) * .binWidth
-            endfor
+            # Equal-width edges: dataMin + 0,1,..,nBins times the width.
+            .binEdges# = .dataMin + from_to# (0, .nBins) * .binWidth
             
             # Ensure last edge exactly equals max (avoid floating-point issues)
             .binEdges#[.nEdges] = .dataMax
@@ -658,10 +672,7 @@ procedure emlZScore: .data#
             .result# = zero# (.n)
             .warning$ = "Standard deviation is zero; all z-scores set to 0"
         else
-            .result# = zero# (.n)
-            for .i from 1 to .n
-                .result#[.i] = (.data#[.i] - .mean) / .sd
-            endfor
+            .result# = (.data# - .mean) / .sd
         endif
     endif
 endproc
@@ -779,12 +790,15 @@ procedure emlConcatenateVectors: .v1#, .v2#
         .result# = .v1#
     else
         .result# = zero# (.nTotal)
-        
+
+        ; VECTOR-EXEMPT: cat2 -- Praat 6.6.30 has no vector concatenation
+        ; (combine#/append#/brace-concat) and no slice-write (v#[a:b] = ...),
+        ; so the two source vectors are copied into place element by element.
         # Copy first vector
         for .i from 1 to .n1
             .result#[.i] = .v1#[.i]
         endfor
-        
+
         # Copy second vector
         for .i from 1 to .n2
             .outIdx = .n1 + .i
@@ -817,7 +831,9 @@ procedure emlRepeatVector: .v#, .nReps
     else
         .nTotal = .nV * .nReps
         .result# = zero# (.nTotal)
-        
+
+        ; VECTOR-EXEMPT: cat2 -- no vector slice-write (v#[a:b] = ...) or tile
+        ; primitive in Praat 6.6.30, so each repetition is copied into place.
         for .rep from 1 to .nReps
             .offset = (.rep - 1) * .nV
             for .i from 1 to .nV
@@ -826,6 +842,264 @@ procedure emlRepeatVector: .v#, .nReps
             endfor
         endfor
     endif
+endproc
+
+
+# ============================================================================
+# @emlGenerateUniquePath -- THE NON-DESTRUCTIVE-SAVE PROMISE
+# ============================================================================
+# Every save in the plugin routes through this: the figure, the separately
+# saved legend, the CSV export, the recorded workflow script. Its whole job is
+# that an existing file is never silently overwritten.
+#
+# IT LIVED IN graphs/eml-graphs-form.praat UNTIL 13 AUGUST 2026, which was an
+# accident of where it was first needed rather than a decision. Two costs:
+# scripts/eml-record-save.praat already called it from outside the graphs
+# layer, and stats/eml-output.praat could NOT call it -- the graphs form is
+# included last, so @emlExportResultFiles had no way to collision-protect the
+# three-file export and had to document that as a gap. Core utilities is the
+# first include in both barrels, so everything can reach it from here.
+#
+# Arguments: .path$   the desired path
+# Outputs:   .result$ that path if it is free, else the first free
+#                     <base>_<n><ext> walking n upward from 1
+# ============================================================================
+# ============================================================================
+# @emlFileStamp
+# ============================================================================
+# A timestamp for a FILE NAME: YYYYMMDD_HHMMSS, local time.
+#
+# Outputs: .result$
+#
+# WHY A STAMP AT ALL. A save that proposes the same name twice either
+# overwrites the first run or, with @emlGenerateUniquePath behind it, produces
+# results_1 and results_2 -- protected, but with nothing to say which run is
+# which. A stamped default gives the user a name that cannot collide and that
+# sorts chronologically in their file browser, which is what a study folder
+# needs.
+#
+# WHAT OTHER APPLICATIONS DO, since this is a convention and not a discovery.
+# Three patterns exist. Praat itself, R's ggsave and most plotting libraries
+# silently overwrite. SPSS, JASP and jamovi prompt "file exists -- replace?".
+# MATLAB, Audacity, OBS and most capture and lab-data tools put the stamp in
+# the DEFAULT NAME and let the user edit or delete it. The third is what this
+# is: no modal to dismiss, no collision, sortable, and entirely overridable
+# because it arrives in an editable field rather than being bolted on at
+# write time.
+#
+# WHY date_iso$ () AND NOT date$ (). date$ () returns "Fri Aug 14 15:06:15
+# 2026" -- a month NAME, and a day that is space-padded when it is a single
+# digit, so slicing it means a month table and a pad test. date_iso$ ()
+# returns "2026-08-14T15:06:15+00:00", fixed width, every field already
+# numeric and already zero-padded. Measured on 6.6.30, 14 Aug 2026.
+#
+# THIS IS NOT THE RECORDER'S STAMP, deliberately. eml-record.praat keeps
+# emlRecordStamp$ in date$ () form because it is READ BY A PERSON at the top
+# of an emitted script, where "Fri Aug 14" beats "20260814". Two purposes,
+# two formats, and the difference is written down here so the next person does
+# not unify them into whichever one they met first.
+# ----------------------------------------------------------------------------
+procedure emlFileStamp
+    .iso$ = date_iso$ ()
+    .result$ = left$ (.iso$, 4) + mid$ (.iso$, 6, 2) + mid$ (.iso$, 9, 2)
+    ... + "_" + mid$ (.iso$, 12, 2) + mid$ (.iso$, 15, 2)
+    ... + mid$ (.iso$, 18, 2)
+endproc
+
+# ----------------------------------------------------------------------------
+# @emlGenerateUniquePath
+# Appends ascending integer to filename until path is available.
+# Arguments: .path$ (original desired path)
+# Outputs: .result$ (available path)
+# ----------------------------------------------------------------------------
+procedure emlGenerateUniquePath: .path$
+    if not fileReadable (.path$)
+        .result$ = .path$
+    else
+        # Split into directory, base, extension
+        .lastSlash = rindex (.path$, "/")
+        if .lastSlash > 0
+            .dir$ = left$ (.path$, .lastSlash)
+            .filename$ = mid$ (.path$, .lastSlash + 1, length (.path$) - .lastSlash)
+        else
+            .dir$ = ""
+            .filename$ = .path$
+        endif
+
+        .lastDot = rindex (.filename$, ".")
+        if .lastDot > 0
+            .base$ = left$ (.filename$, .lastDot - 1)
+            .ext$ = mid$ (.filename$, .lastDot, length (.filename$) - .lastDot + 1)
+        else
+            .base$ = .filename$
+            .ext$ = ""
+        endif
+
+        .counter = 1
+        .result$ = .dir$ + .base$ + "_" + string$ (.counter) + .ext$
+        while fileReadable (.result$)
+            .counter = .counter + 1
+            .result$ = .dir$ + .base$ + "_" + string$ (.counter) + .ext$
+        endwhile
+    endif
+endproc
+
+
+# ============================================================================
+# OBJECT-LIFETIME PRIMITIVES
+# ----------------------------------------------------------------------------
+# Praat gives object ids in strictly increasing order and never reuses them, so
+# a watermark taken on entry cleanly separates objects made before a scope from
+# objects made inside it. @emlObjMark records that watermark; @emlScopeClose and
+# its keep-selected / keep-vector variants remove everything created after the
+# mark (except keepers), in one batched removeObject; @emlKeepOnly is the
+# backstop that keeps only an explicit id list. The scan reads the whole
+# selection as a vector (selected#) so it stays cheap even near the 10,000-object
+# ceiling. Loops here range over the live-object list, never data rows.
+# ============================================================================
+
+procedure emlObjMark
+    select all
+    .n = numberOfSelected ()
+    if .n > 0
+        .id = max (selected# ())
+    else
+        .id = 0
+    endif
+endproc
+
+# Shared engine: remove every live object with id > .mark whose id is NOT in
+# the space-separated keep-list, in ONE batched removeObject call. Pass
+# .mark = -1 to consider every object (the keep-only backstop). The scan reads
+# the whole selection as a vector (selected#()); the removal is a single call.
+procedure eml_reap: .mark, .keep$
+    select all
+    .n = numberOfSelected ()
+    if .n > 0
+        .all# = selected# ()
+        .pad$ = " " + .keep$ + " "
+        # single pass: collect ids to remove into an over-allocated vector,
+        # then remove them all in ONE call. Trailing slots stay 0; id 0 is
+        # never a real object, and nocheck lets removeObject skip the padding.
+        .rm# = zero# (.n)
+        .j = 0
+        for .i to .n
+            if .all# [.i] > .mark and index (.pad$, " " + string$ (.all# [.i]) + " ") = 0
+                .j += 1
+                .rm# [.j] = .all# [.i]
+            endif
+        endfor
+        if .j > 0
+            nocheck removeObject: .rm#
+        endif
+    endif
+endproc
+
+# ids of the current selection as a space-separated string.
+procedure eml_selStr
+    .s$ = ""
+    .n = numberOfSelected ()
+    if .n > 0
+        .ids# = selected# ()
+        for .i to .n
+            .s$ = .s$ + " " + string$ (.ids# [.i])
+        endfor
+    endif
+endproc
+
+# vector of ids as a space-separated string.
+procedure eml_vecStr: .v#
+    .s$ = ""
+    for .i to size (.v#)
+        .s$ = .s$ + " " + string$ (.v# [.i])
+    endfor
+endproc
+
+# re-select a space-separated id list (restores a saved selection).
+procedure eml_reselect: .ids$
+    .ids$ = .ids$ + " "
+    .first = 1
+    .rest$ = .ids$
+    while .rest$ <> "" and index (.rest$, " ") > 0
+        .tok$ = left$ (.rest$, index (.rest$, " ") - 1)
+        .rest$ = mid$ (.rest$, index (.rest$, " ") + 1, 10000)
+        if .tok$ <> ""
+            if .first = 1
+                selectObject: number (.tok$)
+                .first = 0
+            else
+                plusObject: number (.tok$)
+            endif
+        endif
+    endwhile
+endproc
+
+# Close a scope keeping NOTHING: remove every object created after .mark.
+procedure emlScopeClose: .mark
+    @eml_reap: .mark, ""
+endproc
+
+# Close a scope keeping whatever is SELECTED (and restore that selection).
+procedure emlScopeCloseKeepSel: .mark
+    @eml_selStr
+    .keep$ = eml_selStr.s$
+    @eml_reap: .mark, .keep$
+    @eml_reselect: .keep$
+endproc
+
+# Close a scope keeping the objects whose ids are in the vector .keep# (any count).
+procedure emlScopeCloseKeepVec: .mark, .keep#
+    @eml_vecStr: .keep#
+    .keep$ = eml_vecStr.s$
+    @eml_reap: .mark, .keep$
+    @eml_reselect: .keep$
+endproc
+
+# Backstop GC: keep ONLY the space-separated ids in .keep$, remove all else.
+procedure emlKeepOnly: .keep$
+    @eml_reap: -1, .keep$
+endproc
+
+# ============================================================================
+# @emlCommaListToVector
+# ============================================================================
+# The one comma-string to string-vector bridge for every door that collects
+# its list as free text instead of a native vector -- the repeated-measures
+# and Friedman doors' condition list, built by the wizard from its condition
+# dropdowns and by the kit runner from matrix.tsv's col_a field. Both callers
+# convert here, so the comma convention lives in one place.
+#
+# The split is the interpreter's own splitBy$#. This procedure adds the two
+# things it does not: it trims each item of surrounding whitespace and drops
+# every empty item, so a trailing comma or a doubled comma never becomes a
+# blank condition.
+#
+# Input:
+#   .s$  a comma-separated string, e.g. "SPL_soft, SPL_medium, SPL_loud".
+#
+# Output:
+#   .v$#  string vector of the non-empty items, each trimmed of leading and
+#         trailing whitespace.
+#   .n  size of .v$# (0 for an empty or all-comma input).
+#
+# WHAT THIS DOES NOT DO. It does not resolve names against a table, does not
+# de-duplicate, and does not case-fold. A caller that needs those decisions
+# makes them on the returned vector.
+# ============================================================================
+procedure emlCommaListToVector: .s$
+    .raw$# = splitBy$# (.s$, ",")
+    .n = 0
+    for .i to size (.raw$#)
+        .tok$ = replace_regex$ (.raw$# [.i], "^\s+|\s+$", "", 0)
+        if .tok$ <> ""
+            .n += 1
+            .part$ [.n] = .tok$
+        endif
+    endfor
+    .v$# = empty$# (.n)
+    for .i to .n
+        .v$# [.i] = .part$ [.i]
+    endfor
 endproc
 
 

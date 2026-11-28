@@ -2,8 +2,6 @@
 # EML Graphs — Main Script (Entry Point)
 # ============================================================================
 # EML Graphs Plugin
-# Author: Ian Howell, Embodied Music Lab, www.embodiedmusiclab.com
-# Development: Claude (Anthropic)
 # License: GPL-3.0-or-later
 # Version: 3.0
 # Date: 4 April 2026
@@ -16,32 +14,33 @@
 # This file is the standalone entry point only. Stats wrappers and the
 # wizard call @emlGraphsWorkflow directly via their own includes.
 #
-# v3.0:  File split — form system and workflow extracted to
-#         eml-graphs-form.praat. This file becomes a thin entry point.
-#         See HANDOFF_CONVERGENCE_STEPS5-6_04_APR_2026.md for design.
-# v2.44: Line Chart CI toggle, Pitch Contour rename, dead code cleanup.
+#
+# ATTRIBUTION
+# Framework: EML PraatGen by Ian Howell
+#            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
+# Code generation: Claude (Anthropic)
+# Script author: Ian Howell — created and verified by this individual
+#
+# RESEARCH USE DISCLOSURE
+# If this script is used in research or publication, disclose AI use
+# per your target journal's policy. Suggested language:
+#
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
+#
+# The script author assumes responsibility for the correctness and
+# appropriate application of this code.
 # ============================================================================
-# PKB copy: flattened from plugin_EML_Praat_Tools/scripts/eml-graphs.praat
+# PKB copy: flattened from plugin_EML_StatsGraphs/scripts/eml-graphs.praat
 #   Content is verbatim from plugin source; only the License line is
 #   normalized to the repo's GPL-3.0-or-later. Version above is the
-#   PLUGIN's version and must match it exactly — a mismatch means the
-#   PKB has drifted. PKB sync: 29 July 2026 (PraatGen v14.0.0).
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
 
 
-# ⚠️ THE include LINES BELOW ARE PLUGIN-INTERNAL — NEVER COPY THEM INTO
-#    GENERATED CODE. They resolve only inside an installed EML plugin tree.
-#    A delivered script must be self-contained: paste the procedure bodies
-#    in, or ship them in a sibling folder next to the script. See Master
-#    Prompt retrieval protocol step 12. Emitting one of these lines produces
-#    a script that fails on any machine without the plugin.
-include ../graphs/eml-graph-procedures.praat
-include ../stats/eml-core-utilities.praat
-include ../stats/eml-core-descriptive.praat
-include ../stats/eml-extract.praat
-include ../stats/eml-output.praat
-include ../stats/eml-inferential.praat
-include ../graphs/eml-annotation-procedures.praat
-include ../graphs/eml-draw-procedures.praat
-include ../graphs/eml-graphs-form.praat
+include eml-lib.praat
 
 @emlGraphsWorkflow: 0

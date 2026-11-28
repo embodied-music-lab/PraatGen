@@ -1,0 +1,1859 @@
+# ============================================================================
+# EML Stats : Two-Way ANOVA Kernel
+# ============================================================================
+# Module: eml-anova-kernel.praat
+# Version: 1.0
+# Date: 1 September 2026
+#
+# WHY THIS FILE EXISTS. Praat's built-in `Report two-way anova` computes the
+# main-effect and interaction sums of squares by Khuri's (1998) unweighted-
+# means method, and recovers Error by SUBTRACTING those sums from a Total
+# centred on the unweighted mean of the cell means. That subtraction is only
+# valid when the design is balanced or proportional. Measured on Praat's own
+# manual example (Peterson-Barney 1952, F0 by Vowel x Type, a proportional
+# but unbalanced design): the built-in reports SS_Error = 1,600,534 where the
+# correct within-cell value is 914,449, and a Vowel F of 7.625 where the
+# correct value is 13.346 -- and on a genuinely NON-proportional design
+# Khuri's own EFFECT sums also disagree with Type I/II/III (all three of
+# which agree with each other on a proportional design, and generally do not
+# on a non-proportional one). See
+# mailbox/to-opus/RULING_CONSOLIDATED_KERNELS_2026-09-01.md section 1
+# (Class C) and section 2 for the ruling this file answers.
+#
+# This module computes the two-way table DIRECTLY from raw data -- no call
+# to `Report two-way anova` anywhere in this file -- for all of Type I,
+# Type II and Type III sums of squares, selectable, default Type III. It is
+# a standalone kernel: nothing here is wired into any menu, dialog, or
+# orchestrator (eml-inferential.praat / eml-analysis.praat). That wiring is
+# later, separate work.
+#
+# THE ARITHMETIC, IN PLAIN TERMS.
+#
+#   Type I  (sequential): fit intercept, then + A, then + B, then + A:B, in
+#            that order; each effect's SS is the drop in residual SS (RSS)
+#            when it is added. Depends on entry order for the two mains;
+#            the interaction is always entered last regardless of type.
+#   Type II (each main effect adjusted for the OTHER main effect, never for
+#            the interaction): SS_A = RSS(B) - RSS(A+B),
+#            SS_B = RSS(A) - RSS(A+B). Order-independent.
+#   Type III (each effect adjusted for everything else, including the
+#            interaction): computed here as a Wald quadratic form directly
+#            on the UNWEIGHTED cell means, per the ruling --
+#              v# = solve# (LDL'##, Lmu#)
+#              SS  = inner (Lmu#, v#)
+#            where mu# is the vector of the r*s cell means, L is a
+#            (df x r*s) contrast matrix picking out the effect (sum-to-zero
+#            contrasts, matching R's contr.sum), and D = diag(1/n_ij) is the
+#            variance shape of the cell means (up to the common sigma^2,
+#            which cancels out of the SS entirely -- D never carries an
+#            estimate of it). NEVER an explicit inverse: `inverse##` does
+#            not exist in Praat 6.6.30 and would be worse-conditioned than
+#            the linear solve even where it does. This is mathematically
+#            the same definition SAS/car use for Type III (the general
+#            linear hypothesis on a full-rank, sum-to-zero-coded model),
+#            specialised to the two-way cell-means parameterisation, which
+#            is exactly saturated (1 + (r-1) + (s-1) + (r-1)(s-1) = r*s
+#            parameters for r*s cells) -- so this is not an approximation
+#            of Type III, it IS Type III.
+#   Types I and II above are computed the same way car::Anova would get
+#   them for a two-factor model with an interaction: by RSS differences of
+#   nested OLS fits on a sum-coded (contr.sum) design matrix, via the
+#   normal equations (X'X) beta = X'y, solved with `solve#` -- again never
+#   an explicit inverse. y is centred on its grand mean first; every model
+#   fit here carries an intercept, so RSS is unchanged by that shift, and
+#   it keeps the (X'X)/(X'y) products near the scale of the data's spread
+#   rather than its raw magnitude.
+#   Error:  SS_E = sum over cells of within-cell squared deviations
+#           (equivalently sum(y^2) - sum_ij T_ij^2/n_ij; computed here via
+#           the centred form for the same reason eml-inferential.praat's
+#           own two-way path gives for choosing it -- numerical stability).
+#           df_E = N - r*s.
+#   Total:  SS_T = sum(y^2) - T^2/N, i.e. squared deviations about the
+#           ordinary OBSERVATION-WEIGHTED grand mean -- not the unweighted
+#           mean of the cell means. That substitution is the bug being
+#           fixed here. df_T = N - 1.
+#   F, p:   each effect's mean square (SS/df) against MS_Error, referred to
+#           fisherQ. Error is the same for all three SS types -- only the
+#           effect sums differ by type.
+#   Effect sizes: partial eta^2 = SS_effect / (SS_effect + SS_Error);
+#           eta^2 = SS_effect / SS_Total; omega^2 (Field 2013) =
+#           (SS_effect - df_effect * MS_Error) / (SS_Total + MS_Error).
+#   Levene: a standard Brown-Forsythe/Levene test (median-centred), grouped
+#           by the r*s cells (the interaction of both factors) -- the same
+#           grouping car::leveneTest(y ~ A*B) uses by default.
+#   Shapiro-Wilk: run on the ANOVA residuals (y_ijk - cell mean_ij) through
+#           the plugin's OWN existing @emlShapiroWilk
+#           (eml-core-descriptive.praat) -- not a second implementation.
+#
+# SCOPE, EXPLICITLY. This file computes the omnibus table: SS/df/MS/F/p for
+# both main effects and the interaction (Types I, II, III, all three always
+# computed; the requested type controls which one is reported as the
+# headline table), the three effect sizes, Levene's test, Shapiro-Wilk on
+# the residuals, and an explicit balance statement. It also computes the
+# UNWEIGHTED estimated marginal means and their standard errors/confidence
+# intervals (@emlAnovaKernelTwoWayEMM), post hoc pairwise comparisons on
+# those marginal means with a selectable adjustment (@emlAnovaKernelTwoWay
+# PostHoc), and simple effects -- the effect of one factor at each level of
+# the other, against the POOLED error term (@emlAnovaKernelTwoWaySimpleEffects)
+# -- per section 2 of the ruling this file answers. All three reuse the same
+# r*s cell means and counts @eml_ak2_gather already collects for Type III
+# (.cellMean#, .cellN#), and the simple-effects procedure reuses the very
+# same Wald-quadratic-form machinery Type III uses (@eml_ak2_typeIIIeffect),
+# just with an L matrix that picks out one row or column of the cell-mean
+# table instead of a whole main effect -- exactly the reuse this file's
+# own prior scope note predicted would make an EMM step "not an awkward"
+# addition. Post hoc's Bonferroni/Holm/Benjamini-Hochberg adjustments call
+# the plugin's existing @emlBonferroni/@emlHolm/@emlBenjaminiHochberg
+# (eml-inferential.praat) rather than reimplementing them; its Tukey leg
+# calls the validated studentized-range port (@emlStudentizedRangeQ /
+# @emlInvStudentizedRangeQ, eml-studentized-range.praat), and its Scheffe
+# leg uses the same Praat builtins (fisherQ/invFisherQ)
+# @emlScheffeInterval already uses elsewhere in this plugin, generalised
+# to the Tukey-Kramer form for the marginal means' unequal variances (see
+# @emlAnovaKernelTwoWayPostHoc's own header for the derivation). NEITHER
+# THIS FILE NOR ANY NEW PROCEDURE IN IT IS WIRED into any menu, dialog, or
+# orchestrator (eml-inferential.praat / eml-analysis.praat) -- that wiring
+# remains later, separate work, per the brief this section answers.
+#
+# COMPLETE DESIGNS ONLY. Every one of the r*s factor-level combinations
+# must have at least one observation. An empty cell makes Type III (and
+# this file's Type I/II normal-equation solves, which use the same
+# saturated, sum-coded design matrix) inestimable in the ordinary sense;
+# @eml_ak2_gather refuses with .error$ rather than silently dropping a
+# level or producing a singular solve. (Type III with unweighted marginal
+# means is meaningful only when every level combination has data to
+# average in the first place.)
+#
+# Part of the EML Stats library (EML Stats & Graphs).
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Provides: @emlAnovaKernelTwoWay, @emlLeveneTest, @emlAnovaKernelTwoWayEMM,
+#   @emlAnovaKernelTwoWayPostHoc, @emlAnovaKernelTwoWaySimpleEffects
+#   (private: @eml_ak2_gather, @eml_ak2_designSubset, @eml_ak2_ols,
+#    @eml_ak2_buildContrast, @eml_ak2_buildL, @eml_ak2_typeIIIeffect,
+#    @eml_ak2_buildLSlice)
+#
+# Dependencies: eml-core-descriptive.praat (@emlMedian, @emlShapiroWilk),
+#   eml-studentized-range.praat (@emlStudentizedRangeQ,
+#   @emlInvStudentizedRangeQ -- the Tukey leg), AND, as of the
+#   EMM/post-hoc/simple-effects addition, eml-inferential.praat
+#   (@emlBonferroni, @emlHolm, @emlBenjaminiHochberg -- called by
+#   @emlAnovaKernelTwoWayPostHoc's Bonferroni/Holm/BH legs; its Scheffe
+#   leg uses only Praat builtins, no procedure from that file).
+#   Callers must `include` all three files before this one
+#   (eml-inferential.praat is only actually EXERCISED if
+#   @emlAnovaKernelTwoWayPostHoc is called with .adjMethod$ "bonferroni",
+#   "holm" or "bh"; @emlAnovaKernelTwoWay, @emlLeveneTest,
+#   @emlAnovaKernelTwoWayEMM and @emlAnovaKernelTwoWaySimpleEffects need
+#   only eml-core-descriptive.praat, as before). This file does not read
+#   eml-analysis.praat or any menu/dialog machinery, and is not included
+#   by any of them.
+#
+# Praat functions used: zero#, zero##, transpose##, mul#, mul##, inner,
+#   solve# (never inverse## -- it does not exist in 6.6.30), sort# (inside
+#   @emlMedian), fisherQ, invFisherQ, studentQ, invStudentQ, floor, abs,
+#   sqrt.
+#
+# ATTRIBUTION
+# Framework: EML PraatGen by Ian Howell
+#            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
+# Code generation: Claude (Anthropic)
+# Script author: Ian Howell — created and verified by this individual
+#
+# RESEARCH USE DISCLOSURE
+# If this script is used in research or publication, disclose AI use per
+# your target journal's policy. Suggested language:
+#
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
+#
+# The script author assumes responsibility for the correctness and
+# appropriate application of this code.
+# ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-anova-kernel.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
+
+
+# ============================================================================
+# @emlAnovaKernelTwoWay
+# ============================================================================
+# Two-way ANOVA computed directly from raw data in a Table.
+#
+# Arguments:
+#   .tableId          - ID of a Table object (must be in the object list)
+#   .dataCol$         - name of the numeric data column
+#   .factor1$         - name of the first factor column (string levels)
+#   .factor2$         - name of the second factor column (string levels)
+#   .ssTypeRequested  - 1, 2, or 3 selects that SS type as the headline
+#                       table; anything else (0, undefined, 3, garbage)
+#                       defaults to Type III. All three are computed
+#                       regardless -- see .ssATypeI/.ssATypeII/.ssATypeIII
+#                       etc. below.
+#
+# Output:
+#   Status:
+#     .ok       - 1 on success, 0 on failure
+#     .error$   - "" on success, diagnostic message on failure
+#     .warning$ - non-fatal disclosure (unbalanced design, an internal
+#                 cross-check that did not match), or "" if none
+#   Which table:
+#     .ssType      - the resolved type actually reported (1, 2, or 3)
+#     .ssTypeLabel$ - "Type I" / "Type II" / "Type III"
+#   Design:
+#     .n, .r, .s, .rs   - N, factor-1 levels, factor-2 levels, r*s cells
+#     .minCellN, .maxCellN, .balanced, .balanceStatement$
+#   Headline table (the .ssType selected above):
+#     .dfA, .dfB, .dfAB, .dfError, .dfTotal
+#     .ssA, .ssB, .ssAB, .ssError, .ssTotal
+#     .msA, .msB, .msAB, .msError
+#     .fA, .fB, .fAB, .pA, .pB, .pAB
+#   Every SS type, always computed (df's are the same across types --
+#   .dfA/.dfB/.dfAB above -- only the sums differ):
+#     .ssATypeI,  .ssBTypeI,  .ssABTypeI
+#     .ssATypeII, .ssBTypeII, .ssABTypeII
+#     .ssATypeIII,.ssBTypeIII,.ssABTypeIII
+#   Effect sizes (computed from the headline table):
+#     .partialEtaSqA, .partialEtaSqB, .partialEtaSqAB
+#     .etaSqA, .etaSqB, .etaSqAB
+#     .omegaSqA, .omegaSqB, .omegaSqAB
+#   Levene's test (median-centred, grouped by the r*s cells):
+#     .leveneW, .levenePValue, .leveneDfBetween, .leveneDfWithin,
+#     .leveneError$
+#   Shapiro-Wilk on the residuals (y - cell mean), via the plugin's own
+#   @emlShapiroWilk:
+#     .shapiroW, .shapiroP, .shapiroN, .shapiroError$
+# ============================================================================
+procedure emlAnovaKernelTwoWay: .tableId, .dataCol$, .factor1$, .factor2$, .ssTypeRequested
+    # --- resolve the requested SS type; anything but 1 or 2 -> Type III ---
+    if .ssTypeRequested = 1
+        .ssType = 1
+    elsif .ssTypeRequested = 2
+        .ssType = 2
+    else
+        .ssType = 3
+    endif
+
+    # --- initialise every output. Procedure "locals" are namespaced
+    #     globals that persist between calls; a stale value from a prior
+    #     invocation must never leak into this one. ---
+    .ok = 0
+    .error$ = ""
+    .warning$ = ""
+    .ssTypeLabel$ = ""
+    .n = 0
+    .r = 0
+    .s = 0
+    .rs = 0
+    .balanced = 0
+    .balanceStatement$ = ""
+    .minCellN = undefined
+    .maxCellN = undefined
+    .dfA = undefined
+    .dfB = undefined
+    .dfAB = undefined
+    .dfError = undefined
+    .dfTotal = undefined
+    .ssA = undefined
+    .ssB = undefined
+    .ssAB = undefined
+    .ssError = undefined
+    .ssTotal = undefined
+    .msA = undefined
+    .msB = undefined
+    .msAB = undefined
+    .msError = undefined
+    .fA = undefined
+    .fB = undefined
+    .fAB = undefined
+    .pA = undefined
+    .pB = undefined
+    .pAB = undefined
+    .ssATypeI = undefined
+    .ssBTypeI = undefined
+    .ssABTypeI = undefined
+    .ssATypeII = undefined
+    .ssBTypeII = undefined
+    .ssABTypeII = undefined
+    .ssATypeIII = undefined
+    .ssBTypeIII = undefined
+    .ssABTypeIII = undefined
+    .partialEtaSqA = undefined
+    .partialEtaSqB = undefined
+    .partialEtaSqAB = undefined
+    .etaSqA = undefined
+    .etaSqB = undefined
+    .etaSqAB = undefined
+    .omegaSqA = undefined
+    .omegaSqB = undefined
+    .omegaSqAB = undefined
+    .leveneW = undefined
+    .levenePValue = undefined
+    .leveneDfBetween = undefined
+    .leveneDfWithin = undefined
+    .leveneError$ = ""
+    .shapiroW = undefined
+    .shapiroP = undefined
+    .shapiroN = 0
+    .shapiroError$ = ""
+
+    # --- gather the cell structure (levels, cell means/counts, residual
+    #     building blocks, the grand-mean-centred y) ---
+    @eml_ak2_gather: .tableId, .dataCol$, .factor1$, .factor2$
+    .error$ = eml_ak2_gather.error$
+
+    if .error$ = ""
+        .n = eml_ak2_gather.n
+        .r = eml_ak2_gather.r
+        .s = eml_ak2_gather.s
+        .rs = eml_ak2_gather.rs
+        .balanced = eml_ak2_gather.balanced
+        .balanceStatement$ = eml_ak2_gather.balanceStatement$
+        .minCellN = eml_ak2_gather.minCellN
+        .maxCellN = eml_ak2_gather.maxCellN
+        .dfA = .r - 1
+        .dfB = .s - 1
+        .dfAB = .dfA * .dfB
+        .dfError = eml_ak2_gather.dfError
+        .dfTotal = eml_ak2_gather.dfTotal
+        .ssError = eml_ak2_gather.ssError
+        .ssTotal = eml_ak2_gather.ssTotal
+        if .balanced = 0
+            .warning$ = "The design is unbalanced; Types I, II and III do "
+                ... + "not in general agree with each other, and none of "
+                ... + "their effect sums of squares need add up to the "
+                ... + "total sum of squares."
+        endif
+    endif
+
+    # --- Types I and II, via nested-model RSS differences on a sum-coded
+    #     (contr.sum) design matrix -- what car::Anova(type=1/2) computes
+    #     for a two-factor model with an interaction. Five nested fits:
+    #     intercept only; +A; +B; +A+B; the full (saturated) model. ---
+    if .error$ = ""
+        @eml_ak2_designSubset: .n, .r, .s,
+            ... eml_ak2_gather.aIdx#, eml_ak2_gather.bIdx#, 0, 0, 0
+        @eml_ak2_ols: eml_ak2_designSubset.x##, eml_ak2_gather.yc#
+        .rss0 = eml_ak2_ols.rss
+
+        @eml_ak2_designSubset: .n, .r, .s,
+            ... eml_ak2_gather.aIdx#, eml_ak2_gather.bIdx#, 1, 0, 0
+        @eml_ak2_ols: eml_ak2_designSubset.x##, eml_ak2_gather.yc#
+        .rssA = eml_ak2_ols.rss
+
+        @eml_ak2_designSubset: .n, .r, .s,
+            ... eml_ak2_gather.aIdx#, eml_ak2_gather.bIdx#, 0, 1, 0
+        @eml_ak2_ols: eml_ak2_designSubset.x##, eml_ak2_gather.yc#
+        .rssB = eml_ak2_ols.rss
+
+        @eml_ak2_designSubset: .n, .r, .s,
+            ... eml_ak2_gather.aIdx#, eml_ak2_gather.bIdx#, 1, 1, 0
+        @eml_ak2_ols: eml_ak2_designSubset.x##, eml_ak2_gather.yc#
+        .rssAB0 = eml_ak2_ols.rss
+
+        @eml_ak2_designSubset: .n, .r, .s,
+            ... eml_ak2_gather.aIdx#, eml_ak2_gather.bIdx#, 1, 1, 1
+        @eml_ak2_ols: eml_ak2_designSubset.x##, eml_ak2_gather.yc#
+        .rssFull = eml_ak2_ols.rss
+
+        # Type I (sequential, A then B then A:B)
+        .ssATypeI = .rss0 - .rssA
+        .ssBTypeI = .rssA - .rssAB0
+        .ssABTypeI = .rssAB0 - .rssFull
+
+        # Type II (each main effect adjusted for the other main effect
+        # only; the interaction term is identical to Type I's, order does
+        # not matter for it -- it is always last).
+        .ssATypeII = .rssB - .rssAB0
+        .ssBTypeII = .rssA - .rssAB0
+        .ssABTypeII = .rssAB0 - .rssFull
+    endif
+
+    # --- Type III, the Wald quadratic form on unweighted cell means ---
+    if .error$ = ""
+        @eml_ak2_buildContrast: .r
+        .cA## = eml_ak2_buildContrast.c##
+        @eml_ak2_buildContrast: .s
+        .cB## = eml_ak2_buildContrast.c##
+
+        @eml_ak2_buildL: .r, .s, .cA##, .cB##, 1, 0
+        .lA## = eml_ak2_buildL.l##
+        @eml_ak2_buildL: .r, .s, .cA##, .cB##, 0, 1
+        .lB## = eml_ak2_buildL.l##
+        @eml_ak2_buildL: .r, .s, .cA##, .cB##, 1, 1
+        .lAB## = eml_ak2_buildL.l##
+
+        @eml_ak2_typeIIIeffect: .lA##, eml_ak2_gather.cellMean#, eml_ak2_gather.cellN#
+        .ssATypeIII = eml_ak2_typeIIIeffect.ss
+        @eml_ak2_typeIIIeffect: .lB##, eml_ak2_gather.cellMean#, eml_ak2_gather.cellN#
+        .ssBTypeIII = eml_ak2_typeIIIeffect.ss
+        @eml_ak2_typeIIIeffect: .lAB##, eml_ak2_gather.cellMean#, eml_ak2_gather.cellN#
+        .ssABTypeIII = eml_ak2_typeIIIeffect.ss
+    endif
+
+    # --- internal cross-check: the interaction sum of squares is the
+    #     SAME quantity under all three types (it is always tested last,
+    #     adjusted for everything else) -- a mismatch here would mean a
+    #     bug in one of the two independent code paths above, not a
+    #     property of the data. ---
+    if .error$ = ""
+        .abScale = 1
+        if abs (.ssABTypeI) > .abScale
+            .abScale = abs (.ssABTypeI)
+        endif
+        if abs (.ssABTypeI - .ssABTypeIII) > 1e-6 * .abScale
+            .warning$ = .warning$
+                ... + " Internal check failed: the interaction sum of "
+                ... + "squares disagreed between the RSS-difference path "
+                ... + "and the Wald path by more than 1e-6 relative "
+                ... + "(RSS-difference " + string$ (.ssABTypeI)
+                ... + ", Wald " + string$ (.ssABTypeIII) + ")."
+        endif
+    endif
+
+    # --- select the headline table ---
+    if .error$ = ""
+        if .ssType = 1
+            .ssA = .ssATypeI
+            .ssB = .ssBTypeI
+            .ssAB = .ssABTypeI
+            .ssTypeLabel$ = "Type I"
+        elsif .ssType = 2
+            .ssA = .ssATypeII
+            .ssB = .ssBTypeII
+            .ssAB = .ssABTypeII
+            .ssTypeLabel$ = "Type II"
+        else
+            .ssA = .ssATypeIII
+            .ssB = .ssBTypeIII
+            .ssAB = .ssABTypeIII
+            .ssTypeLabel$ = "Type III"
+        endif
+
+        if .dfError > 0
+            .msError = .ssError / .dfError
+        else
+            .msError = undefined
+            .warning$ = .warning$ + " The error degrees of freedom is "
+                ... + string$ (.dfError) + ", so the error mean square, F "
+                ... + "and p are undefined."
+        endif
+
+        if .msError <> undefined
+            if .msError > 0
+                .msA = .ssA / .dfA
+                .msB = .ssB / .dfB
+                .msAB = .ssAB / .dfAB
+                .fA = .msA / .msError
+                .fB = .msB / .msError
+                .fAB = .msAB / .msError
+                .pA = fisherQ (.fA, .dfA, .dfError)
+                .pB = fisherQ (.fB, .dfB, .dfError)
+                .pAB = fisherQ (.fAB, .dfAB, .dfError)
+            else
+                .warning$ = .warning$ + " The error mean square is zero "
+                    ... + "(no within-cell variance), so F and p are "
+                    ... + "undefined."
+            endif
+        endif
+
+        # --- effect sizes, from the headline table ---
+        .partialEtaSqA = .ssA / (.ssA + .ssError)
+        .partialEtaSqB = .ssB / (.ssB + .ssError)
+        .partialEtaSqAB = .ssAB / (.ssAB + .ssError)
+        if .ssTotal > 0
+            .etaSqA = .ssA / .ssTotal
+            .etaSqB = .ssB / .ssTotal
+            .etaSqAB = .ssAB / .ssTotal
+        endif
+        if .msError <> undefined
+            .omegaSqA = (.ssA - .dfA * .msError) / (.ssTotal + .msError)
+            .omegaSqB = (.ssB - .dfB * .msError) / (.ssTotal + .msError)
+            .omegaSqAB = (.ssAB - .dfAB * .msError) / (.ssTotal + .msError)
+        endif
+    endif
+
+    # --- Levene's test, grouped by the r*s cells ---
+    if .error$ = ""
+        @emlLeveneTest: .n, eml_ak2_gather.y#, eml_ak2_gather.cellOf#, .rs
+        .leveneError$ = emlLeveneTest.error$
+        .leveneW = emlLeveneTest.w
+        .levenePValue = emlLeveneTest.p
+        .leveneDfBetween = emlLeveneTest.dfBetween
+        .leveneDfWithin = emlLeveneTest.dfWithin
+    endif
+
+    # --- Shapiro-Wilk on the residuals, through the plugin's own test ---
+    if .error$ = ""
+        .resid# = zero# (.n)
+        for .row from 1 to .n
+            .resid#[.row] = eml_ak2_gather.y#[.row]
+                ... - eml_ak2_gather.cellMean#[eml_ak2_gather.cellOf#[.row]]
+        endfor
+        @emlShapiroWilk: .resid#
+        .shapiroError$ = emlShapiroWilk.error$
+        .shapiroW = emlShapiroWilk.w
+        .shapiroP = emlShapiroWilk.p
+        .shapiroN = emlShapiroWilk.n
+    endif
+
+    if .error$ = ""
+        .ok = 1
+    else
+        .ok = 0
+    endif
+endproc
+
+
+# ============================================================================
+# @eml_ak2_gather   (private)
+# ============================================================================
+# Reads the whole table once to discover factor levels, then a second time
+# to resolve each row to a (factor-1 index, factor-2 index, r*s cell index)
+# and accumulate cell sums. Two passes rather than one because the r*s cell
+# index used everywhere downstream (row-major: cell (i,j) -> (i-1)*s + j)
+# needs s = the FINAL count of factor-2 levels, which is not known until
+# every row has been seen once.
+#
+# Output:
+#   .error$, .n, .r, .s, .rs
+#   .lev1$[1..r], .lev2$[1..s]          - level names, first-appearance order
+#   .y#, .aIdx#, .bIdx#, .cellOf#       - per-row (length .n)
+#   .cellN#, .cellSum#, .cellMean#      - per-cell (length .rs, row-major)
+#   .grandSum, .grandMean, .yc#         - .yc# = .y# centred on .grandMean
+#   .minCellN, .maxCellN, .balanced, .balanceStatement$
+#   .ssError, .dfError, .ssTotal, .dfTotal
+# ============================================================================
+procedure eml_ak2_gather: .tableId, .dataCol$, .factor1$, .factor2$
+    ; MEMOIZATION (9 Sep 2026 speed wave). One two-way cell asks this exact
+    ; (table, data column, factor1, factor2) question up to ~4 times --
+    ; from @emlAnovaKernelTwoWay, @emlAnovaKernelTwoWayEMM (once directly,
+    ; once more inside @emlAnovaKernelTwoWayPostHoc), and
+    ; @emlAnovaKernelTwoWaySimpleEffects -- and re-ran this O(rows) two-pass
+    ; scan every time. Same key/epoch scheme as @eml_getGroupData's cache
+    ; (eml-extract.praat): length-prefixed arguments plus eml_cacheEpoch,
+    ; which @emlRunAnovaAnalysis/@emlRunTwoWayAnalysis bump on entry, wiping
+    ; this cache along with it.
+    ;
+    ; .ak2Stage records how far THIS call's own computation got (0 = the
+    ; column/row-count guard failed before pass 1; 1 = pass 1 ran, so
+    ; .r/.s/.rs/.lev1$/.lev2$ are real; 2 = pass 2 also ran, so the per-row
+    ; and per-cell vectors and .grandSum/.grandMean/.minCellN/.maxCellN are
+    ; real; 3 = the final block ran too, so .cellMean# through .dfTotal are
+    ; real). A field past the reached stage is UNTOUCHED this call, exactly
+    ; as the uncached code already leaves it (Praat's procedure fields are
+    ; persistent, so it still holds whatever an earlier call left) -- the
+    ; cache mirrors that by storing and restoring only up to .ak2Stage,
+    ; never reading a field neither this call nor the cache is sure is set.
+    if not variableExists ("eml_cacheEpoch")
+        eml_cacheEpoch = 0
+    endif
+    ; Praat's "or" is not short-circuiting -- a single combined condition
+    ; would evaluate eml_ak2gCache.epoch even on the branch where it does not
+    ; exist yet, and abort. Two separate tests instead.
+    if not variableExists ("eml_ak2gCache.epoch")
+        eml_ak2gCache.count = 0
+        eml_ak2gCache.epoch = eml_cacheEpoch
+    elsif eml_ak2gCache.epoch <> eml_cacheEpoch
+        eml_ak2gCache.count = 0
+        eml_ak2gCache.epoch = eml_cacheEpoch
+    endif
+    .cacheKey$ = string$ (.tableId) + "|" + string$ (length (.dataCol$)) + ":" + .dataCol$
+        ... + "|" + string$ (length (.factor1$)) + ":" + .factor1$
+        ... + "|" + string$ (length (.factor2$)) + ":" + .factor2$
+        ... + "|" + string$ (eml_cacheEpoch)
+    .cacheHit = 0
+    for .ak2I from 1 to eml_ak2gCache.count
+        if .cacheHit = 0 and eml_ak2gCache.key$[.ak2I] = .cacheKey$
+            .cacheHit = .ak2I
+        endif
+    endfor
+    if .cacheHit > 0
+        .error$ = eml_ak2gCache.err$[.cacheHit]
+        .n = eml_ak2gCache.n[.cacheHit]
+        .ak2Stage = eml_ak2gCache.stage[.cacheHit]
+        if .ak2Stage >= 1
+            .r = eml_ak2gCache.r[.cacheHit]
+            .s = eml_ak2gCache.s[.cacheHit]
+            .rs = eml_ak2gCache.rs[.cacheHit]
+            for .ak2J from 1 to .r
+                .lev1$[.ak2J] = eml_ak2gCache.lev1'.cacheHit'$[.ak2J]
+            endfor
+            for .ak2J from 1 to .s
+                .lev2$[.ak2J] = eml_ak2gCache.lev2'.cacheHit'$[.ak2J]
+            endfor
+        endif
+        if .ak2Stage >= 2
+            .y# = eml_ak2gCache.y'.cacheHit'#
+            .aIdx# = eml_ak2gCache.aIdx'.cacheHit'#
+            .bIdx# = eml_ak2gCache.bIdx'.cacheHit'#
+            .cellOf# = eml_ak2gCache.cellOf'.cacheHit'#
+            .cellN# = eml_ak2gCache.cellN'.cacheHit'#
+            .cellSum# = eml_ak2gCache.cellSum'.cacheHit'#
+            .grandSum = eml_ak2gCache.grandSum[.cacheHit]
+            .grandMean = eml_ak2gCache.grandMean[.cacheHit]
+            .minCellN = eml_ak2gCache.minCellN[.cacheHit]
+            .maxCellN = eml_ak2gCache.maxCellN[.cacheHit]
+        endif
+        if .ak2Stage >= 3
+            .cellMean# = eml_ak2gCache.cellMean'.cacheHit'#
+            .balanced = eml_ak2gCache.balanced[.cacheHit]
+            .balanceStatement$ = eml_ak2gCache.balanceStatement$[.cacheHit]
+            .yc# = eml_ak2gCache.yc'.cacheHit'#
+            .ssError = eml_ak2gCache.ssError[.cacheHit]
+            .dfError = eml_ak2gCache.dfError[.cacheHit]
+            .ssTotal = eml_ak2gCache.ssTotal[.cacheHit]
+            .dfTotal = eml_ak2gCache.dfTotal[.cacheHit]
+        endif
+        goto AK2_GATHER_DONE
+    endif
+
+    .ak2Stage = 0
+    .error$ = ""
+    .n = 0
+    .r = 0
+    .s = 0
+    .rs = 0
+
+    selectObject: .tableId
+    .colD = Get column index: .dataCol$
+    .col1 = Get column index: .factor1$
+    .col2 = Get column index: .factor2$
+    if .colD = 0
+        .error$ = "Data column """ + .dataCol$ + """ was not found."
+    elsif .col1 = 0
+        .error$ = "First factor column """ + .factor1$ + """ was not found."
+    elsif .col2 = 0
+        .error$ = "Second factor column """ + .factor2$ + """ was not found."
+    endif
+
+    if .error$ = ""
+        .n = Get number of rows
+        if .n < 4
+            .error$ = "This test needs at least 4 observations; the table "
+                ... + "has " + string$ (.n) + "."
+        endif
+    endif
+
+    # --- pass 1: discover factor levels, first-appearance order ---
+    if .error$ = ""
+        ; VECTOR-EXEMPT: cat2 -- reads the two TEXT factor columns per row to
+        ; discover each factor's levels in first-appearance order; string reads
+        ; and first-seen dedup have no vector form.
+        for .row from 1 to .n
+            .l1$ = Get value: .row, .factor1$
+            .l2$ = Get value: .row, .factor2$
+
+            .seen1 = 0
+            for .i from 1 to .r
+                if .lev1$[.i] = .l1$
+                    .seen1 = 1
+                endif
+            endfor
+            if .seen1 = 0
+                .r = .r + 1
+                .lev1$[.r] = .l1$
+            endif
+
+            .seen2 = 0
+            for .j from 1 to .s
+                if .lev2$[.j] = .l2$
+                    .seen2 = 1
+                endif
+            endfor
+            if .seen2 = 0
+                .s = .s + 1
+                .lev2$[.s] = .l2$
+            endif
+        endfor
+        .rs = .r * .s
+
+        if .r < 2
+            .error$ = "The first factor """ + .factor1$ + """ needs at "
+                ... + "least 2 levels; found " + string$ (.r) + "."
+        elsif .s < 2
+            .error$ = "The second factor """ + .factor2$ + """ needs at "
+                ... + "least 2 levels; found " + string$ (.s) + "."
+        endif
+        .ak2Stage = 1
+    endif
+
+    # --- pass 2: resolve each row to (aIdx, bIdx, cellOf), accumulate ---
+    if .error$ = ""
+        .y# = zero# (.n)
+        .aIdx# = zero# (.n)
+        .bIdx# = zero# (.n)
+        .cellOf# = zero# (.n)
+        .cellN# = zero# (.rs)
+        .cellSum# = zero# (.rs)
+        .grandSum = 0
+
+        ; VECTOR-EXEMPT: cat2 -- resolves each row to a two-way cell by matching
+        ; the two TEXT factor columns (no vector string read). The numeric read
+        ; stays per row: a vector "Get all numbers in column:" raises on a missing
+        ; cell, and completeness of the data column is not guaranteed at this
+        ; level, so the per-row read preserves the original behavior.
+        for .row from 1 to .n
+            .yv = Get value: .row, .dataCol$
+            .l1$ = Get value: .row, .factor1$
+            .l2$ = Get value: .row, .factor2$
+
+            .ai = 0
+            for .i from 1 to .r
+                if .lev1$[.i] = .l1$
+                    .ai = .i
+                endif
+            endfor
+            .bi = 0
+            for .j from 1 to .s
+                if .lev2$[.j] = .l2$
+                    .bi = .j
+                endif
+            endfor
+            .c = (.ai - 1) * .s + .bi
+
+            .y#[.row] = .yv
+            .aIdx#[.row] = .ai
+            .bIdx#[.row] = .bi
+            .cellOf#[.row] = .c
+            .cellN#[.c] = .cellN#[.c] + 1
+            .cellSum#[.c] = .cellSum#[.c] + .yv
+            .grandSum = .grandSum + .yv
+        endfor
+        .grandMean = .grandSum / .n
+
+        # --- completeness ---
+        .nEmpty = 0
+        .minCellN = .cellN#[1]
+        .maxCellN = .cellN#[1]
+        for .c from 1 to .rs
+            if .cellN#[.c] = 0
+                .nEmpty = .nEmpty + 1
+            endif
+            if .cellN#[.c] < .minCellN
+                .minCellN = .cellN#[.c]
+            endif
+            if .cellN#[.c] > .maxCellN
+                .maxCellN = .cellN#[.c]
+            endif
+        endfor
+        if .nEmpty > 0
+            .error$ = "The design has " + string$ (.nEmpty) + " empty "
+                ... + "factor-level combination(s) out of " + string$ (.rs)
+                ... + "; this kernel (and Type III sums of squares in "
+                ... + "general) requires every cell to be non-empty."
+        endif
+        .ak2Stage = 2
+    endif
+
+    if .error$ = ""
+        .cellMean# = zero# (.rs)
+        for .c from 1 to .rs
+            .cellMean#[.c] = .cellSum#[.c] / .cellN#[.c]
+        endfor
+
+        .balanced = 1
+        if .minCellN <> .maxCellN
+            .balanced = 0
+        endif
+        if .balanced = 1
+            .balanceStatement$ = "The design is balanced: all "
+                ... + string$ (.rs) + " cells have n = " + string$ (.minCellN)
+                ... + " (N = " + string$ (.n) + ")."
+        else
+            .balanceStatement$ = "The design is unbalanced: cell sizes "
+                ... + "range from " + string$ (.minCellN) + " to "
+                ... + string$ (.maxCellN) + " across " + string$ (.rs)
+                ... + " cells (N = " + string$ (.n) + ")."
+        endif
+
+        # y centred on the grand mean. Every model fit downstream carries
+        # an intercept, so this shift changes none of their RSS values --
+        # it only keeps the normal-equation products near the scale of the
+        # data's spread rather than its raw magnitude, the same numerical
+        # motivation eml-linalg.praat's callers centre for elsewhere.
+        .yc# = zero# (.n)
+        for .row from 1 to .n
+            .yc#[.row] = .y#[.row] - .grandMean
+        endfor
+
+        # SS_Error: within-cell squared deviations. SS_Total: squared
+        # deviations about the observation-weighted grand mean (equal to
+        # inner(.yc#, .yc#), since .yc# is already that deviation) -- NOT
+        # the unweighted mean of the cell means, which is the bug in
+        # Praat's built-in `Report two-way anova` that this file exists to
+        # avoid reproducing.
+        .ssError = 0
+        for .row from 1 to .n
+            .dev = .y#[.row] - .cellMean#[.cellOf#[.row]]
+            .ssError = .ssError + .dev * .dev
+        endfor
+        .ssTotal = inner (.yc#, .yc#)
+        .dfError = .n - .rs
+        .dfTotal = .n - 1
+        .ak2Stage = 3
+    endif
+
+    label AK2_GATHER_DONE
+    if .cacheHit = 0
+        eml_ak2gCache.count = eml_ak2gCache.count + 1
+        .ak2Slot = eml_ak2gCache.count
+        eml_ak2gCache.key$[.ak2Slot] = .cacheKey$
+        eml_ak2gCache.err$[.ak2Slot] = .error$
+        eml_ak2gCache.n[.ak2Slot] = .n
+        eml_ak2gCache.stage[.ak2Slot] = .ak2Stage
+        if .ak2Stage >= 1
+            eml_ak2gCache.r[.ak2Slot] = .r
+            eml_ak2gCache.s[.ak2Slot] = .s
+            eml_ak2gCache.rs[.ak2Slot] = .rs
+            for .ak2J from 1 to .r
+                eml_ak2gCache.lev1'.ak2Slot'$[.ak2J] = .lev1$[.ak2J]
+            endfor
+            for .ak2J from 1 to .s
+                eml_ak2gCache.lev2'.ak2Slot'$[.ak2J] = .lev2$[.ak2J]
+            endfor
+        endif
+        if .ak2Stage >= 2
+            eml_ak2gCache.y'.ak2Slot'# = .y#
+            eml_ak2gCache.aIdx'.ak2Slot'# = .aIdx#
+            eml_ak2gCache.bIdx'.ak2Slot'# = .bIdx#
+            eml_ak2gCache.cellOf'.ak2Slot'# = .cellOf#
+            eml_ak2gCache.cellN'.ak2Slot'# = .cellN#
+            eml_ak2gCache.cellSum'.ak2Slot'# = .cellSum#
+            eml_ak2gCache.grandSum[.ak2Slot] = .grandSum
+            eml_ak2gCache.grandMean[.ak2Slot] = .grandMean
+            eml_ak2gCache.minCellN[.ak2Slot] = .minCellN
+            eml_ak2gCache.maxCellN[.ak2Slot] = .maxCellN
+        endif
+        if .ak2Stage >= 3
+            eml_ak2gCache.cellMean'.ak2Slot'# = .cellMean#
+            eml_ak2gCache.balanced[.ak2Slot] = .balanced
+            eml_ak2gCache.balanceStatement$[.ak2Slot] = .balanceStatement$
+            eml_ak2gCache.yc'.ak2Slot'# = .yc#
+            eml_ak2gCache.ssError[.ak2Slot] = .ssError
+            eml_ak2gCache.dfError[.ak2Slot] = .dfError
+            eml_ak2gCache.ssTotal[.ak2Slot] = .ssTotal
+            eml_ak2gCache.dfTotal[.ak2Slot] = .dfTotal
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# @eml_ak2_designSubset   (private)
+# ============================================================================
+# Builds a sum-coded (contr.sum) design matrix for one of the five nested
+# models this file needs: intercept only; +A; +B; +A+B; the full
+# (saturated) model. Column layout: intercept (1 column), then A's r-1
+# contrast columns (contrast k: +1 at level k, -1 at level r), then B's s-1
+# contrast columns (contrast l: +1 at level l, -1 at level s), then the
+# (r-1)(s-1) interaction columns (products of the A and B contrasts). Only
+# the block(s) named by .includeA/.includeB/.includeAB are actually built;
+# this file only ever calls it with .includeAB = 1 when both .includeA and
+# .includeB are also 1.
+#
+# Output: .x## (.n x p, p depending on which blocks were requested)
+# ============================================================================
+procedure eml_ak2_designSubset: .n, .r, .s, .aIdx#, .bIdx#, .includeA, .includeB, .includeAB
+    .pA = 0
+    if .includeA = 1
+        .pA = .r - 1
+    endif
+    .pB = 0
+    if .includeB = 1
+        .pB = .s - 1
+    endif
+    .pAB = 0
+    if .includeAB = 1
+        .pAB = .pA * .pB
+    endif
+    .p = 1 + .pA + .pB + .pAB
+    .x## = zero## (.n, .p)
+
+    for .row from 1 to .n
+        .a = .aIdx#[.row]
+        .b = .bIdx#[.row]
+        .x##[.row, 1] = 1
+        .col = 1
+
+        if .includeA = 1
+            for .k from 1 to .pA
+                .col = .col + 1
+                .val = 0
+                if .a = .k
+                    .val = 1
+                elsif .a = .r
+                    .val = -1
+                endif
+                .x##[.row, .col] = .val
+            endfor
+        endif
+
+        if .includeB = 1
+            for .l from 1 to .pB
+                .col = .col + 1
+                .val = 0
+                if .b = .l
+                    .val = 1
+                elsif .b = .s
+                    .val = -1
+                endif
+                .x##[.row, .col] = .val
+            endfor
+        endif
+
+        if .includeAB = 1
+            for .k from 1 to .pA
+                .valA = 0
+                if .a = .k
+                    .valA = 1
+                elsif .a = .r
+                    .valA = -1
+                endif
+                for .l from 1 to .pB
+                    .col = .col + 1
+                    .valB = 0
+                    if .b = .l
+                        .valB = 1
+                    elsif .b = .s
+                        .valB = -1
+                    endif
+                    .x##[.row, .col] = .valA * .valB
+                endfor
+            endfor
+        endif
+    endfor
+endproc
+
+
+# ============================================================================
+# @eml_ak2_ols   (private)
+# ============================================================================
+# Ordinary least squares via the normal equations, solved with `solve#` --
+# never an explicit inverse. RSS = y'y - beta'(X'y), which needs only the
+# solved beta and the already-computed X'y (no need to form X*beta and
+# subtract row by row).
+#
+# Output: .rss
+# ============================================================================
+procedure eml_ak2_ols: .x##, .y#
+    .xt## = transpose## (.x##)
+    .xtx## = mul## (.xt##, .x##)
+    .xty# = mul# (.xt##, .y#)
+    .beta# = solve# (.xtx##, .xty#)
+    .rss = inner (.y#, .y#) - inner (.beta#, .xty#)
+endproc
+
+
+# ============================================================================
+# @eml_ak2_buildContrast   (private)
+# ============================================================================
+# The (r-1) x r simple sum-to-zero contrast matrix for an r-level factor:
+# contrast k has +1 at level k, -1 at the reference level r. Any full-rank
+# basis of the same (r-1)-dimensional contrast space gives the identical
+# Type III SS through @eml_ak2_typeIIIeffect's Wald form (the quadratic
+# form is invariant to the choice of basis for L's row space), so this
+# particular choice of contrasts is a convenience, not a constraint on the
+# result.
+#
+# Output: .c## ((r-1) x r)
+# ============================================================================
+procedure eml_ak2_buildContrast: .r
+    .k = .r - 1
+    .c## = zero## (.k, .r)
+    for .i from 1 to .k
+        .c##[.i, .i] = 1
+        .c##[.i, .r] = -1
+    endfor
+endproc
+
+
+# ============================================================================
+# @eml_ak2_buildL   (private)
+# ============================================================================
+# Builds the Type III contrast matrix L for one effect, mapping the r*s
+# cell means (row-major: cell (i,j) at column (i-1)*s + j) to the effect's
+# contrast space:
+#   .isA=1, .isB=0 -> L_A  ((r-1) x rs): row k, column c = C_A[k, i(c)] / s
+#                     (the 1/s makes each row of L_A pick out the UNWEIGHTED
+#                     row mean's k-th contrast: the average of s cell means,
+#                     each cell counted once regardless of n_ij)
+#   .isA=0, .isB=1 -> L_B  ((s-1) x rs): row l, column c = C_B[l, j(c)] / r
+#   .isA=1, .isB=1 -> L_AB ((r-1)(s-1) x rs): row (k,l), column c =
+#                     C_A[k, i(c)] * C_B[l, j(c)]  -- no averaging factor;
+#                     the interaction contrast acts on individual cell
+#                     means directly.
+#
+# Output: .l## (k x rs, k depending on which effect was requested)
+# ============================================================================
+procedure eml_ak2_buildL: .r, .s, .cA##, .cB##, .isA, .isB
+    .rs = .r * .s
+
+    if .isA = 1 and .isB = 0
+        .k = .r - 1
+        .l## = zero## (.k, .rs)
+        for .c from 1 to .rs
+            .ic = floor ((.c - 1) / .s) + 1
+            for .kk from 1 to .k
+                .l##[.kk, .c] = .cA##[.kk, .ic] / .s
+            endfor
+        endfor
+    elsif .isA = 0 and .isB = 1
+        .k = .s - 1
+        .l## = zero## (.k, .rs)
+        for .c from 1 to .rs
+            .ic = floor ((.c - 1) / .s) + 1
+            .jc = .c - (.ic - 1) * .s
+            for .kk from 1 to .k
+                .l##[.kk, .c] = .cB##[.kk, .jc] / .r
+            endfor
+        endfor
+    else
+        .kA = .r - 1
+        .kB = .s - 1
+        .k = .kA * .kB
+        .l## = zero## (.k, .rs)
+        for .c from 1 to .rs
+            .ic = floor ((.c - 1) / .s) + 1
+            .jc = .c - (.ic - 1) * .s
+            for .kk from 1 to .kA
+                for .ll from 1 to .kB
+                    .p = (.kk - 1) * .kB + .ll
+                    .l##[.p, .c] = .cA##[.kk, .ic] * .cB##[.ll, .jc]
+                endfor
+            endfor
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @eml_ak2_typeIIIeffect   (private)
+# ============================================================================
+# The Wald quadratic form for one Type III effect, per the ruling:
+#   Lmu#   = L * mu#                          (mu# = the r*s cell means)
+#   LDL'## = L * diag(1/n_ij) * L'            (built directly as weighted
+#                                               inner products -- D is
+#                                               never formed as a matrix)
+#   v#     = solve# (LDL'##, Lmu#)            -- never inverse##
+#   SS     = inner (Lmu#, v#)
+#
+# Arguments: .l## (contrast matrix), .cellMean#, .cellN# (row-major, rs)
+# Output: .ss
+# ============================================================================
+procedure eml_ak2_typeIIIeffect: .l##, .cellMean#, .cellN#
+    .k = numberOfRows (.l##)
+    .rs = numberOfColumns (.l##)
+
+    .lmu# = mul# (.l##, .cellMean#)
+
+    .ldl## = zero## (.k, .k)
+    for .p from 1 to .k
+        for .q from .p to .k
+            .acc = 0
+            for .c from 1 to .rs
+                .acc = .acc + .l##[.p, .c] * .l##[.q, .c] / .cellN#[.c]
+            endfor
+            .ldl##[.p, .q] = .acc
+            .ldl##[.q, .p] = .acc
+        endfor
+    endfor
+
+    .v# = solve# (.ldl##, .lmu#)
+    .ss = inner (.lmu#, .v#)
+endproc
+
+
+# ============================================================================
+# @emlLeveneTest
+# ============================================================================
+# Standard Levene's test for homogeneity of variance, median-centred
+# (Brown & Forsythe 1974's variant, and the default of R's
+# car::leveneTest): for each group, z_i = |value_i - group median|; the
+# test statistic is the one-way ANOVA F of z on the grouping.
+#
+# Arguments:
+#   .n         - number of observations
+#   .value#    - the data, length .n
+#   .groupOf#  - integer group index (1..k) per observation, length .n
+#   .k         - number of groups
+#
+# Output:
+#   .w, .p, .dfBetween, .dfWithin, .error$ ("" on success)
+# ============================================================================
+procedure emlLeveneTest: .n, .value#, .groupOf#, .k
+    .error$ = ""
+    .w = undefined
+    .p = undefined
+    .dfBetween = undefined
+    .dfWithin = undefined
+
+    if .n < 2
+        .error$ = "Levene's test needs at least 2 observations; got "
+            ... + string$ (.n) + "."
+        goto END_LEVENE
+    endif
+    if .k < 2
+        .error$ = "Levene's test needs at least 2 groups; got "
+            ... + string$ (.k) + "."
+        goto END_LEVENE
+    endif
+
+    .gn# = zero# (.k)
+    for .row from 1 to .n
+        .g = .groupOf#[.row]
+        .gn#[.g] = .gn#[.g] + 1
+    endfor
+    .anyEmpty = 0
+    for .g from 1 to .k
+        if .gn#[.g] = 0
+            .anyEmpty = 1
+        endif
+    endfor
+    if .anyEmpty = 1
+        .error$ = "Levene's test needs every group to be non-empty."
+        goto END_LEVENE
+    endif
+
+    # per-group value vectors (dynamic names -- Praat's `'`-interpolation
+    # of a variable into another variable's name works inside a procedure
+    # body), so @emlMedian can be called on each group's own values.
+    for .g from 1 to .k
+        .gVals'.g'# = zero# (.gn#[.g])
+        .fillPos[.g] = 0
+    endfor
+    for .row from 1 to .n
+        .g = .groupOf#[.row]
+        .fillPos[.g] = .fillPos[.g] + 1
+        .gVals'.g'#[.fillPos[.g]] = .value#[.row]
+    endfor
+
+    .gMed# = zero# (.k)
+    for .g from 1 to .k
+        @emlMedian: .gVals'.g'#
+        .gMed#[.g] = emlMedian.result
+    endfor
+
+    .z# = zero# (.n)
+    .zGroupSum# = zero# (.k)
+    for .row from 1 to .n
+        .g = .groupOf#[.row]
+        .zv = abs (.value#[.row] - .gMed#[.g])
+        .z#[.row] = .zv
+        .zGroupSum#[.g] = .zGroupSum#[.g] + .zv
+    endfor
+
+    .zGrandSum = sum (.z#)
+    .zGrandMean = .zGrandSum / .n
+
+    .zGroupMean# = zero# (.k)
+    .ssBetween = 0
+    for .g from 1 to .k
+        .zGroupMean#[.g] = .zGroupSum#[.g] / .gn#[.g]
+        .diffg = .zGroupMean#[.g] - .zGrandMean
+        .ssBetween = .ssBetween + .gn#[.g] * .diffg * .diffg
+    endfor
+
+    .ssWithin = 0
+    for .row from 1 to .n
+        .g = .groupOf#[.row]
+        .d = .z#[.row] - .zGroupMean#[.g]
+        .ssWithin = .ssWithin + .d * .d
+    endfor
+
+    .dfBetween = .k - 1
+    .dfWithin = .n - .k
+    if .dfWithin <= 0
+        .error$ = "Levene's test needs within-group degrees of freedom "
+            ... + "greater than 0; got " + string$ (.dfWithin) + "."
+        goto END_LEVENE
+    endif
+
+    .msBetween = .ssBetween / .dfBetween
+    .msWithin = .ssWithin / .dfWithin
+    if .msWithin <= 0
+        .error$ = "Levene's test found zero within-group variance in the "
+            ... + "absolute deviations from the group medians; W and p "
+            ... + "are undefined."
+        goto END_LEVENE
+    endif
+
+    .w = .msBetween / .msWithin
+    .p = fisherQ (.w, .dfBetween, .dfWithin)
+
+    label END_LEVENE
+endproc
+
+
+# ============================================================================
+# @emlAnovaKernelTwoWayEMM
+# ============================================================================
+# Estimated marginal means (EMMs) for both factors of a two-way design,
+# computed directly from raw data -- no fitted model object, same style as
+# @emlAnovaKernelTwoWay itself.
+#
+# THE DEFINITION. Each EMM is the UNWEIGHTED average of the cell means that
+# make it up -- factor 1's level i EMM is the average of its s cell means,
+# each cell counted once regardless of n_ij; factor 2's level j EMM is the
+# average of its r cell means, likewise. This is what R's emmeans computes
+# by default (weights = "equal") for a two-way lm with an interaction, and
+# it is deliberately the SAME hypothesis Type III's main-effect contrasts
+# test -- @eml_ak2_buildL's own header already notes its 1/s and 1/r
+# averaging factors exist for exactly this reason. A Type III table without
+# these means leaves the user unable to interpret what the test found; that
+# is why this procedure exists.
+#
+# THE STANDARD ERROR. Var(EMM_i) = msError * (1/s^2) * sum_j (1/n_ij) for
+# factor 1 (symmetrically for factor 2, with r in place of s) -- the
+# variance of an unweighted average of independent cell means, each with
+# variance sigma^2/n_ij, using the pooled error mean square msError = SS
+# Error / dfError as the estimate of sigma^2 (the same error term, and the
+# same dfError = N - rs, that @emlAnovaKernelTwoWay's headline table
+# already uses -- an EMM's confidence interval is only comparable to that
+# table's F-tests if both rest on the same error term). No covariance term
+# is needed between two different levels of the SAME factor: EMM_i and
+# EMM_i' are built from entirely disjoint sets of cells, so they are
+# independent given the model's homoscedasticity assumption.
+#
+# Verified against real emmeans 1.10.0 (validate/v156_marginal_means.R):
+# on all four kit fixtures, EMM and SE match to the standard tolerance
+# (relative 1e-9, absolute 1e-12).
+#
+# Arguments:
+#   .tableId   - ID of a Table object (must be in the object list)
+#   .dataCol$  - name of the numeric data column
+#   .factor1$  - name of the first factor column (string levels)
+#   .factor2$  - name of the second factor column (string levels)
+#   .alpha     - 1 - confidence level for the interval (e.g. 0.05 for 95%
+#                CIs); must be strictly between 0 and 1
+#
+# Output:
+#   .ok, .error$, .warning$  - same outcome contract as @emlAnovaKernelTwoWay
+#   .r, .s, .rs              - design shape (same meaning as the omnibus kernel)
+#   .dfError, .msError, .ssError - the pooled error term (identical to
+#                                @emlAnovaKernelTwoWay's own .dfError/
+#                                .ssError on the same table/columns)
+#   .lev1$[1..r], .lev2$[1..s] - level names, first-appearance order (same
+#                                order @eml_ak2_gather always uses)
+#   Factor 1's marginal means (length .r):
+#     .emmA#, .seA#, .lowA#, .highA#
+#   Factor 2's marginal means (length .s):
+#     .emmB#, .seB#, .lowB#, .highB#
+# ============================================================================
+procedure emlAnovaKernelTwoWayEMM: .tableId, .dataCol$, .factor1$, .factor2$, .alpha
+    .ok = 0
+    .error$ = ""
+    .warning$ = ""
+    .r = 0
+    .s = 0
+    .rs = 0
+    .dfError = undefined
+    .msError = undefined
+    .ssError = undefined
+
+    @eml_ak2_gather: .tableId, .dataCol$, .factor1$, .factor2$
+    .error$ = eml_ak2_gather.error$
+
+    if .error$ = ""
+        .r = eml_ak2_gather.r
+        .s = eml_ak2_gather.s
+        .rs = eml_ak2_gather.rs
+        .dfError = eml_ak2_gather.dfError
+        .ssError = eml_ak2_gather.ssError
+        for .i from 1 to .r
+            .lev1$[.i] = eml_ak2_gather.lev1$[.i]
+        endfor
+        for .j from 1 to .s
+            .lev2$[.j] = eml_ak2_gather.lev2$[.j]
+        endfor
+        if eml_ak2_gather.balanced = 0
+            .warning$ = "The design is unbalanced; the marginal means "
+                ... + "reported here are UNWEIGHTED (each cell counted "
+                ... + "once regardless of n), matching the hypothesis "
+                ... + "Type III tests -- they are not the same numbers as "
+                ... + "a simple observation-weighted average within each "
+                ... + "level."
+        endif
+    endif
+
+    if .error$ = ""
+        if .dfError <= 0
+            .error$ = "The error degrees of freedom is " + string$ (.dfError)
+                ... + ", so estimated marginal means (which need the "
+                ... + "pooled error mean square for their standard errors) "
+                ... + "are undefined."
+        else
+            .msError = .ssError / .dfError
+        endif
+    endif
+
+    if .error$ = ""
+        if .alpha = undefined or .alpha <= 0 or .alpha >= 1
+            .error$ = "Alpha must be strictly between 0 and 1; got "
+                ... + string$ (.alpha) + "."
+        endif
+    endif
+
+    if .error$ = ""
+        # invStudentQ (0, df) never converges -- .alpha's range is already
+        # guarded above, so .alpha/2 here is strictly inside (0, 0.5).
+        .tCrit = invStudentQ (.alpha / 2, .dfError)
+
+        .emmA# = zero# (.r)
+        .seA# = zero# (.r)
+        .lowA# = zero# (.r)
+        .highA# = zero# (.r)
+        for .i from 1 to .r
+            .sumMean = 0
+            .sumInvN = 0
+            for .j from 1 to .s
+                .c = (.i - 1) * .s + .j
+                .sumMean = .sumMean + eml_ak2_gather.cellMean#[.c]
+                .sumInvN = .sumInvN + 1 / eml_ak2_gather.cellN#[.c]
+            endfor
+            .emmA#[.i] = .sumMean / .s
+            .varA = .msError * .sumInvN / (.s * .s)
+            .seA#[.i] = sqrt (.varA)
+            .halfWidth = .tCrit * .seA#[.i]
+            .lowA#[.i] = .emmA#[.i] - .halfWidth
+            .highA#[.i] = .emmA#[.i] + .halfWidth
+        endfor
+
+        .emmB# = zero# (.s)
+        .seB# = zero# (.s)
+        .lowB# = zero# (.s)
+        .highB# = zero# (.s)
+        for .j from 1 to .s
+            .sumMean = 0
+            .sumInvN = 0
+            for .i from 1 to .r
+                .c = (.i - 1) * .s + .j
+                .sumMean = .sumMean + eml_ak2_gather.cellMean#[.c]
+                .sumInvN = .sumInvN + 1 / eml_ak2_gather.cellN#[.c]
+            endfor
+            .emmB#[.j] = .sumMean / .r
+            .varB = .msError * .sumInvN / (.r * .r)
+            .seB#[.j] = sqrt (.varB)
+            .halfWidth = .tCrit * .seB#[.j]
+            .lowB#[.j] = .emmB#[.j] - .halfWidth
+            .highB#[.j] = .emmB#[.j] + .halfWidth
+        endfor
+
+        .ok = 1
+    endif
+endproc
+
+
+# ============================================================================
+# @eml_ak2_buildLSlice   (private)
+# ============================================================================
+# Builds the Wald contrast matrix L for ONE SIMPLE EFFECT -- factor 1 within
+# one fixed level of factor 2, or factor 2 within one fixed level of factor
+# 1 -- as opposed to @eml_ak2_buildL's MAIN-effect L, which averages over
+# every level of the other factor. Same (k x rs) shape and row-major column
+# convention (cell (i,j) at column (i-1)*s + j) as @eml_ak2_buildL, and the
+# same C_A/C_B contrast blocks (@eml_ak2_buildContrast) -- only the pattern
+# of which columns are nonzero differs: here, only the columns belonging to
+# the fixed level of the OTHER factor, with NO 1/s or 1/r averaging factor
+# (there is nothing left to average over once the other factor is fixed --
+# this is exactly the "no marginalising" case @eml_ak2_buildL's own header
+# already draws the line at for the interaction contrast).
+#
+# Fed into the existing @eml_ak2_typeIIIeffect exactly as a main-effect L
+# is: SS = Lmu' (L D L')^-1 Lmu, D = diag(1/n_ij), never an explicit
+# inverse. Verified (validate/v156_marginal_means.R) to reproduce
+# emmeans::joint_tests(model, by = <the other factor>)'s F exactly on
+# every kit fixture -- both compute the same pooled-error Wald test on the
+# cell means within one slice.
+#
+# Arguments:
+#   .r, .s      - design shape
+#   .cA##       - factor 1's (r-1) x r sum-to-zero contrasts (@eml_ak2_buildContrast: .r)
+#   .cB##       - factor 2's (s-1) x s sum-to-zero contrasts (@eml_ak2_buildContrast: .s)
+#   .isA, .isB  - exactly one of these is 1: .isA=1 -> factor 1 within
+#                 factor 2 = .fixedLevel; .isB=1 -> factor 2 within
+#                 factor 1 = .fixedLevel
+#   .fixedLevel - the held-fixed level of the OTHER factor (1..s if
+#                 .isA=1, 1..r if .isB=1)
+#
+# Output: .l## (k x rs; k = r-1 if .isA=1, else s-1)
+# ============================================================================
+procedure eml_ak2_buildLSlice: .r, .s, .cA##, .cB##, .isA, .isB, .fixedLevel
+    .rs = .r * .s
+
+    if .isA = 1
+        .k = .r - 1
+        .l## = zero## (.k, .rs)
+        for .c from 1 to .rs
+            .ic = floor ((.c - 1) / .s) + 1
+            .jc = .c - (.ic - 1) * .s
+            if .jc = .fixedLevel
+                for .kk from 1 to .k
+                    .l##[.kk, .c] = .cA##[.kk, .ic]
+                endfor
+            endif
+        endfor
+    else
+        .k = .s - 1
+        .l## = zero## (.k, .rs)
+        for .c from 1 to .rs
+            .ic = floor ((.c - 1) / .s) + 1
+            .jc = .c - (.ic - 1) * .s
+            if .ic = .fixedLevel
+                for .ll from 1 to .k
+                    .l##[.ll, .c] = .cB##[.ll, .jc]
+                endfor
+            endif
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlAnovaKernelTwoWaySimpleEffects
+# ============================================================================
+# Simple effects: the effect of factor 1 at each level of factor 2, and the
+# effect of factor 2 at each level of factor 1. This is what should be
+# reported when the interaction is significant -- no choice of SS type
+# substitutes for it, per the brief this procedure answers.
+#
+# THE DENOMINATOR, A DELIBERATE DEFINITIONAL CHOICE. Every simple-effect F
+# here is tested against the POOLED error mean square from the FULL
+# two-way model -- @eml_ak2_gather's own .ssError/.dfError, the SAME error
+# term @emlAnovaKernelTwoWay's headline table and @emlAnovaKernelTwoWayEMM
+# both use -- NOT a separate error term recomputed from only the rows at
+# that one slice. This is the definition R's emmeans::joint_tests(model,
+# by = <the other factor>) uses on an `lm` fit of the full model, and it is
+# what @eml_ak2_buildLSlice's SS feeds a pooled-.msError F against below.
+# It is NOT the only defensible definition -- SPSS's "simple effects" dialog
+# offers a level-specific error term as an alternative (refit the error
+# variance from only the data at that slice; different df, and a different,
+# generally larger, standard error whenever variances differ across cells
+# outside the slice) -- but the pooled form is what this procedure computes,
+# because it is the one that stays consistent with the omnibus Type III
+# table and the EMMs above sharing one error term throughout, and it is
+# emmeans' own default. Verified exactly against emmeans::joint_tests on
+# every kit fixture (validate/v156_marginal_means.R) -- not merely close,
+# bit-for-bit to the standard tolerance.
+#
+# Arguments:
+#   .tableId   - ID of a Table object (must be in the object list)
+#   .dataCol$  - name of the numeric data column
+#   .factor1$  - name of the first factor column (string levels)
+#   .factor2$  - name of the second factor column (string levels)
+#
+# Output:
+#   .ok, .error$, .warning$
+#   .r, .s, .dfError, .msError
+#   .lev1$[1..r], .lev2$[1..s]
+#   Factor 1 within each level of factor 2 (.s tests, each df1 = r - 1):
+#     .dfAwithinB, .ssAwithinB#, .fAwithinB#, .pAwithinB#   (length .s,
+#     indexed by factor 2's level)
+#   Factor 2 within each level of factor 1 (.r tests, each df1 = s - 1):
+#     .dfBwithinA, .ssBwithinA#, .fBwithinA#, .pBwithinA#   (length .r,
+#     indexed by factor 1's level)
+#   .dfErrorSimple (= .dfError, echoed under this procedure's own name for
+#     a caller that reads only this procedure's outputs)
+# ============================================================================
+procedure emlAnovaKernelTwoWaySimpleEffects: .tableId, .dataCol$, .factor1$, .factor2$
+    .ok = 0
+    .error$ = ""
+    .warning$ = ""
+    .r = 0
+    .s = 0
+    .dfError = undefined
+    .dfErrorSimple = undefined
+    .msError = undefined
+    .dfAwithinB = undefined
+    .dfBwithinA = undefined
+
+    @eml_ak2_gather: .tableId, .dataCol$, .factor1$, .factor2$
+    .error$ = eml_ak2_gather.error$
+
+    if .error$ = ""
+        .r = eml_ak2_gather.r
+        .s = eml_ak2_gather.s
+        .dfError = eml_ak2_gather.dfError
+        for .i from 1 to .r
+            .lev1$[.i] = eml_ak2_gather.lev1$[.i]
+        endfor
+        for .j from 1 to .s
+            .lev2$[.j] = eml_ak2_gather.lev2$[.j]
+        endfor
+        if eml_ak2_gather.balanced = 0
+            .warning$ = "The design is unbalanced; these simple effects use "
+                ... + "the POOLED error term from the full two-way model "
+                ... + "(matching emmeans::joint_tests(model, by = ...)), "
+                ... + "not a separate error term recomputed within each "
+                ... + "slice -- see this procedure's own header."
+        endif
+        if .dfError <= 0
+            .error$ = "The error degrees of freedom is " + string$ (.dfError)
+                ... + ", so simple effects (tested against the pooled "
+                ... + "error mean square) are undefined."
+        else
+            .msError = eml_ak2_gather.ssError / .dfError
+            .dfErrorSimple = .dfError
+        endif
+    endif
+
+    if .error$ = ""
+        @eml_ak2_buildContrast: .r
+        .cA## = eml_ak2_buildContrast.c##
+        @eml_ak2_buildContrast: .s
+        .cB## = eml_ak2_buildContrast.c##
+
+        .dfAwithinB = .r - 1
+        .ssAwithinB# = zero# (.s)
+        .fAwithinB# = zero# (.s)
+        .pAwithinB# = zero# (.s)
+        for .b from 1 to .s
+            @eml_ak2_buildLSlice: .r, .s, .cA##, .cB##, 1, 0, .b
+            @eml_ak2_typeIIIeffect: eml_ak2_buildLSlice.l##,
+                ... eml_ak2_gather.cellMean#, eml_ak2_gather.cellN#
+            .ssAwithinB#[.b] = eml_ak2_typeIIIeffect.ss
+            .fAwithinB#[.b] = (.ssAwithinB#[.b] / .dfAwithinB) / .msError
+            .pAwithinB#[.b] = fisherQ (.fAwithinB#[.b], .dfAwithinB, .dfError)
+        endfor
+
+        .dfBwithinA = .s - 1
+        .ssBwithinA# = zero# (.r)
+        .fBwithinA# = zero# (.r)
+        .pBwithinA# = zero# (.r)
+        for .a from 1 to .r
+            @eml_ak2_buildLSlice: .r, .s, .cA##, .cB##, 0, 1, .a
+            @eml_ak2_typeIIIeffect: eml_ak2_buildLSlice.l##,
+                ... eml_ak2_gather.cellMean#, eml_ak2_gather.cellN#
+            .ssBwithinA#[.a] = eml_ak2_typeIIIeffect.ss
+            .fBwithinA#[.a] = (.ssBwithinA#[.a] / .dfBwithinA) / .msError
+            .pBwithinA#[.a] = fisherQ (.fBwithinA#[.a], .dfBwithinA, .dfError)
+        endfor
+
+        .ok = 1
+    endif
+endproc
+
+
+# ============================================================================
+# @emlAnovaKernelTwoWayPostHoc
+# ============================================================================
+# Post hoc pairwise comparisons on ONE factor's estimated marginal means
+# (@emlAnovaKernelTwoWayEMM), with a selectable adjustment: Bonferroni,
+# Holm, Benjamini-Hochberg, Tukey or Scheffe. Calls the plugin's EXISTING
+# adjustment machinery rather than reimplementing it -- @emlBonferroni,
+# @emlHolm, @emlBenjaminiHochberg (eml-inferential.praat) for the first
+# three; the validated studentized-range port
+# (@emlStudentizedRangeQ/@emlInvStudentizedRangeQ, the same port
+# @eml_tukeyPairwiseFromGroups calls) for Tukey, and Praat's own
+# invFisherQ (the same builtin @emlScheffeInterval already uses
+# elsewhere in this plugin) for Scheffe.
+#
+# THE RAW TEST. Every pairwise comparison of two marginal means is a t-test
+# against the pooled error term: t = (EMM_i - EMM_i') / SE_diff, SE_diff =
+# sqrt(Var(EMM_i) + Var(EMM_i')) (no covariance term -- the two marginal
+# means are built from disjoint sets of cells), df = dfError (the pooled
+# model error df, same as the omnibus table and the EMMs). Two-sided raw p
+# = 2 * studentQ (abs (t), dfError), the same signed-studentQ idiom
+# @emlTTest already uses in this plugin.
+#
+# THE FIVE METHODS.
+#   bonferroni / holm / bh -- the raw t-test p-values above, in (i, j),
+#     i < j pair order, handed as one vector to @emlBonferroni / @emlHolm /
+#     @emlBenjaminiHochberg and mapped back into the (i, j) matrix.
+#   tukey  -- Tukey-Kramer generalisation for unequal marginal-mean
+#     variances. In the balanced, single-n case the textbook studentized
+#     range statistic is q = |diff| / SE(one mean) = |diff| * sqrt(2) /
+#     SE_diff (since SE_diff = sqrt(2) * SE(one mean) when both means share
+#     one variance) -- exactly @eml_tukeyPairwiseFromGroups' own .se =
+#     sqrt (msWithin * (1/n_i + 1/n_j) / 2) worked backwards. This
+#     procedure keeps that same q = |diff| * sqrt(2) / SE_diff relationship
+#     but with SE_diff computed from each marginal mean's OWN (possibly
+#     unequal, unbalanced-design) variance rather than the single-n
+#     formula -- the standard Tukey-Kramer approximation, referred to the
+#     studentized range distribution via @emlStudentizedRangeQ/
+#     @emlInvStudentizedRangeQ with the family size k = the number of
+#     levels in the factor being
+#     compared and df = dfError. This is what emmeans' own adjust =
+#     "tukey" computes for an unbalanced design.
+#   scheffe -- F_Scheffe = (diff / SE_diff)^2 / (k - 1), referred to
+#     fisherQ (., k - 1, dfError) -- the same construction
+#     @emlScheffeInterval already documents, generalised from a one-way
+#     factor's k groups to this factor's k marginal-mean levels.
+#
+# THE COHERENCE LAW. An interval is printed only when its coverage matches
+# the correction in force: Bonferroni prints at level 1 - alpha/m per pair
+# (m = the number of pairs in this family); Tukey and Scheffe print their
+# own simultaneous interval (both ARE their own correction, at the full
+# alpha, per @emlScheffeInterval's own header on why alpha is never
+# divided a second time there). Holm and Benjamini-Hochberg define no
+# per-pair confidence level at all (their adjustment operates step-wise on
+# the ranked p-values, not on a shared per-comparison alpha), so NO
+# interval is printed for them -- .lowCI##/.highCI## are left undefined
+# rather than silently reusing the raw or Bonferroni interval.
+#
+# A ZERO OR UNDEFINED PAIRWISE SE (degenerate variance) makes that pair's
+# statistic, p-value and interval undefined rather than defaulting to
+# p = 1 -- the same fails-closed convention eml_tukeyPairwiseFromGroups'
+# own header already documents and justifies.
+#
+# Verified against real emmeans 1.10.0 pairs()/confint() on every kit
+# fixture, all five adjustment methods (validate/v156_marginal_means.R).
+#
+# Arguments:
+#   .tableId      - ID of a Table object (must be in the object list)
+#   .dataCol$     - name of the numeric data column
+#   .factor1$     - name of the first factor column (string levels)
+#   .factor2$     - name of the second factor column (string levels)
+#   .factorSelect - 1 -> post hoc on factor 1's marginal means (.emmA#);
+#                   2 -> post hoc on factor 2's marginal means (.emmB#)
+#   .adjMethod$   - "bonferroni", "holm", "bh", "tukey" or "scheffe"
+#                   (lowercase, the same keys @emlBonferroni/@emlHolm/
+#                   @emlBenjaminiHochberg and the plugin's own dialogs use)
+#   .alpha        - the analysis alpha (e.g. 0.05) -- for bonferroni this
+#                   is divided by the pair count for the INTERVAL only (the
+#                   p-value correction is @emlBonferroni's own, on the raw
+#                   p-values, not a divided alpha); for tukey/scheffe it is
+#                   the family-wise alpha their own critical value already
+#                   spends in full (never divided again -- see the header
+#                   note above)
+#
+# Output:
+#   .ok, .error$, .warning$
+#   .k              - number of levels in the selected factor
+#   .levelName$[1..k]
+#   .nPairs         - k * (k - 1) / 2
+#   .dfError, .msError
+#   .diff##         - k x k antisymmetric marginal-mean differences
+#                     (.diff##[i,j] = EMM_i - EMM_j)
+#   .se##           - k x k symmetric standard error of the difference
+#   .stat##         - k x k: t (bonferroni/holm/bh), q (tukey), or F
+#                     (scheffe) -- symmetric, diagonal 0; undefined where
+#                     the pairwise SE was zero or undefined
+#   .pAdj##         - k x k final reported p-value per pair (already
+#                     carrying whatever correction .adjMethod$ selected;
+#                     symmetric, diagonal 1); undefined where .stat## is
+#   .lowCI##, .highCI## - k x k interval bounds, populated only for
+#                     bonferroni/tukey/scheffe (per the coherence law
+#                     above); left undefined throughout for holm/bh
+#   .intervalMethod$ - a one-line description of the interval's coverage,
+#                     or "" when .adjMethod$ is holm or bh (no interval)
+#   .qCritical      - the Tukey critical q at .alpha (tukey only, else undefined)
+#   .fCritical      - the Scheffe critical F at .alpha (scheffe only, else undefined)
+#   .nUndefined     - number of pairs with a zero/undefined SE
+# ============================================================================
+procedure emlAnovaKernelTwoWayPostHoc: .tableId, .dataCol$, .factor1$, .factor2$, .factorSelect, .adjMethod$, .alpha
+    .ok = 0
+    .error$ = ""
+    .warning$ = ""
+    .k = 0
+    .nPairs = 0
+    .dfError = undefined
+    .msError = undefined
+    .qCritical = undefined
+    .fCritical = undefined
+    .intervalMethod$ = ""
+    .nUndefined = 0
+
+    if .factorSelect <> 1 and .factorSelect <> 2
+        .error$ = "factorSelect must be 1 (factor 1's marginal means) or "
+            ... + "2 (factor 2's); got " + string$ (.factorSelect) + "."
+    endif
+
+    if .error$ = ""
+        if .adjMethod$ <> "bonferroni" and .adjMethod$ <> "holm"
+            ... and .adjMethod$ <> "bh" and .adjMethod$ <> "tukey"
+            ... and .adjMethod$ <> "scheffe"
+            .error$ = "Unrecognised adjustment method """ + .adjMethod$
+                ... + """; expected bonferroni, holm, bh, tukey or scheffe."
+        endif
+    endif
+
+    if .error$ = ""
+        @emlAnovaKernelTwoWayEMM: .tableId, .dataCol$, .factor1$, .factor2$, .alpha
+        .error$ = emlAnovaKernelTwoWayEMM.error$
+        .warning$ = emlAnovaKernelTwoWayEMM.warning$
+    endif
+
+    if .error$ = ""
+        .dfError = emlAnovaKernelTwoWayEMM.dfError
+        .msError = emlAnovaKernelTwoWayEMM.msError
+        if .factorSelect = 1
+            .k = emlAnovaKernelTwoWayEMM.r
+            .mean# = emlAnovaKernelTwoWayEMM.emmA#
+            .var# = zero# (.k)
+            for .i from 1 to .k
+                .var#[.i] = emlAnovaKernelTwoWayEMM.seA#[.i]
+                    ... * emlAnovaKernelTwoWayEMM.seA#[.i]
+                .levelName$[.i] = emlAnovaKernelTwoWayEMM.lev1$[.i]
+            endfor
+        else
+            .k = emlAnovaKernelTwoWayEMM.s
+            .mean# = emlAnovaKernelTwoWayEMM.emmB#
+            .var# = zero# (.k)
+            for .i from 1 to .k
+                .var#[.i] = emlAnovaKernelTwoWayEMM.seB#[.i]
+                    ... * emlAnovaKernelTwoWayEMM.seB#[.i]
+                .levelName$[.i] = emlAnovaKernelTwoWayEMM.lev2$[.i]
+            endfor
+        endif
+
+        if .k < 2
+            .error$ = "Post hoc comparisons need at least 2 levels; found "
+                ... + string$ (.k) + "."
+        endif
+    endif
+
+    if .error$ = ""
+        .nPairs = .k * (.k - 1) / 2
+        .diff## = zero## (.k, .k)
+        .se## = zero## (.k, .k)
+        .stat## = zero## (.k, .k)
+        .pAdj## = zero## (.k, .k)
+        .lowCI## = zero## (.k, .k)
+        .highCI## = zero## (.k, .k)
+        .hasInterval = 0
+        if .adjMethod$ = "bonferroni" or .adjMethod$ = "tukey"
+            ... or .adjMethod$ = "scheffe"
+            .hasInterval = 1
+        endif
+
+        for .i from 1 to .k
+            .pAdj##[.i, .i] = 1
+        endfor
+
+        # raw pairwise differences, SEs and (for bonferroni/holm/bh) t-test
+        # raw p-values, in (i, j), i < j pair order
+        .rawP# = zero# (.nPairs)
+        .idx = 0
+        for .i from 1 to .k - 1
+            for .j from .i + 1 to .k
+                .idx = .idx + 1
+                .pairI[.idx] = .i
+                .pairJ[.idx] = .j
+                .d = .mean#[.i] - .mean#[.j]
+                .sed = sqrt (.var#[.i] + .var#[.j])
+                .diff##[.i, .j] = .d
+                .diff##[.j, .i] = -.d
+                .se##[.i, .j] = .sed
+                .se##[.j, .i] = .sed
+                if .sed > 0
+                    .t = .d / .sed
+                    .rawP#[.idx] = 2 * studentQ (abs (.t), .dfError)
+                else
+                    .t = undefined
+                    .rawP#[.idx] = undefined
+                    .nUndefined = .nUndefined + 1
+                endif
+                .stat##[.i, .j] = .t
+                .stat##[.j, .i] = .t
+            endfor
+        endfor
+
+        ; ERROR-READ EXEMPT -- the only failure modes are an empty input (unreachable: nGroups
+        ; >= 2 is already guaranteed earlier) or all-undefined p-values, which already yields
+        ; an honest all-undefined .adjusted# -- reading .error$ here would be redundant.
+        if .adjMethod$ = "bonferroni"
+            @emlBonferroni: .rawP#
+            .adjP# = emlBonferroni.adjusted#
+            .levelCI = 1 - .alpha / .nPairs
+            .intervalMethod$ = "Bonferroni simultaneous interval, coverage "
+                ... + "1 - alpha/m per pair (m = " + string$ (.nPairs) + ")"
+        elsif .adjMethod$ = "holm"
+            @emlHolm: .rawP#
+            .adjP# = emlHolm.adjusted#
+            .intervalMethod$ = ""
+        elsif .adjMethod$ = "bh"
+            @emlBenjaminiHochberg: .rawP#
+            .adjP# = emlBenjaminiHochberg.adjusted#
+            .intervalMethod$ = ""
+        elsif .adjMethod$ = "tukey"
+            @emlInvStudentizedRangeQ: .alpha, .k, .dfError, 1
+            if emlInvStudentizedRangeQ.error$ = ""
+                .qCritical = emlInvStudentizedRangeQ.q
+            else
+                .qCritical = undefined
+                .warning$ = .warning$ + " The Tukey critical q is undefined ("
+                    ... + emlInvStudentizedRangeQ.error$ + "); simultaneous "
+                    ... + "interval bounds are undefined."
+            endif
+            .intervalMethod$ = "Tukey HSD simultaneous interval (studentized "
+                ... + "range, Tukey-Kramer for unequal n), family size "
+                ... + string$ (.k)
+        else
+            .fCritical = invFisherQ (.alpha, .k - 1, .dfError)
+            .intervalMethod$ = "Scheffe simultaneous interval, family df1 = "
+                ... + string$ (.k - 1)
+        endif
+
+        for .idx from 1 to .nPairs
+            .i = .pairI[.idx]
+            .j = .pairJ[.idx]
+            .d = .diff##[.i, .j]
+            .sed = .se##[.i, .j]
+
+            if .adjMethod$ = "bonferroni" or .adjMethod$ = "holm"
+                ... or .adjMethod$ = "bh"
+                .p = .adjP#[.idx]
+            elsif .adjMethod$ = "tukey"
+                if .sed > 0
+                    .qForQ = sqrt (2) * abs (.d) / .sed
+                    @emlStudentizedRangeQ: .qForQ, .k, .dfError, 1
+                    if emlStudentizedRangeQ.error$ = ""
+                        .p = emlStudentizedRangeQ.p
+                    else
+                        .p = undefined
+                    endif
+                    .stat##[.i, .j] = .qForQ
+                    .stat##[.j, .i] = .qForQ
+                else
+                    .p = undefined
+                endif
+            else
+                if .sed > 0
+                    .fVal = (.d / .sed) ^ 2 / (.k - 1)
+                    .p = fisherQ (.fVal, .k - 1, .dfError)
+                    .stat##[.i, .j] = .fVal
+                    .stat##[.j, .i] = .fVal
+                else
+                    .p = undefined
+                endif
+            endif
+            .pAdj##[.i, .j] = .p
+            .pAdj##[.j, .i] = .p
+
+            if .hasInterval = 1 and .sed > 0
+                if .adjMethod$ = "bonferroni"
+                    .tCrit = invStudentQ ((1 - .levelCI) / 2, .dfError)
+                    .halfWidth = abs (.tCrit) * .sed
+                elsif .adjMethod$ = "tukey"
+                    .halfWidth = .qCritical * .sed / sqrt (2)
+                else
+                    .halfWidth = sqrt ((.k - 1) * .fCritical) * .sed
+                endif
+                .lowCI##[.i, .j] = .d - .halfWidth
+                .highCI##[.i, .j] = .d + .halfWidth
+                .lowCI##[.j, .i] = - .d - .halfWidth
+                .highCI##[.j, .i] = - .d + .halfWidth
+            else
+                .lowCI##[.i, .j] = undefined
+                .highCI##[.i, .j] = undefined
+                .lowCI##[.j, .i] = undefined
+                .highCI##[.j, .i] = undefined
+            endif
+        endfor
+
+        if .nUndefined > 0
+            .warning$ = .warning$ + " " + string$ (.nUndefined) + " of "
+                ... + string$ (.nPairs) + " comparisons have a zero "
+                ... + "standard error; their statistics, p-values and "
+                ... + "intervals are undefined, not defaulted to p = 1."
+        endif
+
+        .ok = 1
+    endif
+endproc

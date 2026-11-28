@@ -2,23 +2,18 @@
 # EML Stats : Core Descriptive Statistics
 # ============================================================================
 # Module: eml-core-descriptive.praat
-# Version: 1.1
-# Date: 12 April 2026
+# Version: 1.2
+# Date: 2 August 2026
 #
-# v1.1: Added @emlShapiroWilk (Royston 1995, AS R94) and helper
-#        @eml_swPoly. Shapiro-Wilk W test for normality, n = 3–5000.
-#        Verified against scipy.stats.shapiro and R shapiro.test.
 #
-# Part of the EML Stats library (EML Praat Tools).
-# Author: Ian Howell, Embodied Music Lab (www.embodiedmusiclab.com)
-# Development: Claude (Anthropic)
+# Part of the EML Stats library (EML Stats & Graphs).
 # License: GPL-3.0-or-later
 #
 # Provides: @emlMean, @emlMedian, @emlMode, @emlPercentile, @emlQuartiles,
 #   @emlVariance, @emlSD, @emlSEM, @emlSkewness, @emlKurtosis,
 #   @emlGeometricMean, @emlHarmonicMean, @emlTrimmedMean,
 #   @emlWinsorizedMean, @emlMAD, @emlRange, @emlCI, @emlDescribe,
-#   @emlShapiroWilk, @eml_swPoly
+#   @emlShapiroWilk, @eml_swPoly, @eml_hasUndefined, @emlGaussianLogLik
 #
 # All procedures use the "eml" prefix (EML Stats) to avoid
 # namespace collisions with user scripts.
@@ -27,8 +22,53 @@
 #   include eml-core-descriptive.praat
 #   myData# = {1, 2, 3, 4, 5}
 #   @emlDescribe: myData#
-#   appendInfoLine: emlDescribe.summary$
+#   appendInfoLine: "Mean: " + fixed$ (emlDescribe.mean, 4)
+#
+# ATTRIBUTION
+# Framework: EML PraatGen by Ian Howell
+#            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
+# Code generation: Claude (Anthropic)
+# Script author: Ian Howell — created and verified by this individual
+#
+# RESEARCH USE DISCLOSURE
+# If this script is used in research or publication, disclose AI use
+# per your target journal's policy. Suggested language:
+#
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
+#
+# The script author assumes responsibility for the correctness and
+# appropriate application of this code.
 # ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-core-descriptive.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
+
+
+# ----------------------------------------------------------------------------
+# @eml_hasUndefined
+# Internal helper: does a numeric vector contain any undefined element?
+# Input:  v# — numeric vector
+# Output: .result — 1 if at least one element is undefined, else 0
+# Needed because sort# raises a hard error ("Vector contains one or more
+# undefined elements. Cannot sort.") that aborts the whole calling script.
+# The loop runs to completion rather than breaking early: Praat has no
+# loop-break statement, and the cost is negligible next to sort#.
+# ----------------------------------------------------------------------------
+procedure eml_hasUndefined: .v#
+    .result = 0
+    .nv = size (.v#)
+    for .i from 1 to .nv
+        if .v#[.i] = undefined
+            .result = 1
+        endif
+    endfor
+endproc
 
 
 # ----------------------------------------------------------------------------
@@ -37,11 +77,6 @@
 # Input:  data# — numeric vector
 # Output: .result — arithmetic mean (undefined if empty)
 # ----------------------------------------------------------------------------
-# PKB copy: flattened from plugin_EML_Praat_Tools/stats/eml-core-descriptive.praat
-#   Content is verbatim from plugin source; only the License line is
-#   normalized to the repo's GPL-3.0-or-later. Version above is the
-#   PLUGIN's version and must match it exactly — a mismatch means the
-#   PKB has drifted. PKB sync: 29 July 2026 (PraatGen v14.0.0).
 procedure emlMean: .data#
     .n = size (.data#)
     if .n = 0
@@ -139,12 +174,19 @@ endproc
 # Compute the p-th percentile using linear interpolation (R type=7).
 # Input:  data# — numeric vector
 #         p     — percentile (0–100)
-# Output: .result — interpolated percentile value
+# Output: .result — interpolated percentile value; undefined if the vector
+#                   is empty, contains an undefined element, or p is
+#                   undefined or outside 0–100
 # Algorithm: h = (n-1)*p/100 + 1; linear interpolation between order stats.
 # ----------------------------------------------------------------------------
 procedure emlPercentile: .data#, .p
     .n = size (.data#)
+    @eml_hasUndefined: .data#
     if .n = 0
+        .result = undefined
+    elsif eml_hasUndefined.result = 1
+        .result = undefined
+    elsif .p = undefined
         .result = undefined
     elsif .p < 0 or .p > 100
         .result = undefined
@@ -247,27 +289,65 @@ endproc
 
 
 # ----------------------------------------------------------------------------
+# @eml_pairwiseSum
+# Sum a vector by folding it in half and adding the two halves, repeated until
+# one value remains.
+# Praat's built-in sum() reduces a vector in an order the machine's SIMD width
+# chooses, so its last bit can differ between machines. This fold fixes the
+# tree shape, and an elementwise vector add gives the same bit on any machine,
+# so the result reproduces everywhere. A lone middle element on an odd length
+# rides to the next round unchanged. The standardised third and fourth moments
+# carry heavy cancellation, which is where the order reaches the reported
+# digits. The work is log2(n) whole-vector adds.
+# By decision (8 September 2026): skewness and kurtosis sum their centred
+# moments (the cubed and fourth-power standardised deviations) with this
+# fold, and this is the settled canon for those two statistics. No other
+# statistic in this file uses this fold — everything else keeps its
+# existing summation (built-in sum/mean/stdev).
+# Input:  .v# — numeric vector
+# Output: .result — the sum
+# ----------------------------------------------------------------------------
+procedure eml_pairwiseSum: .v#
+    .a# = .v#
+    while size (.a#) > 1
+        .n = size (.a#)
+        .h = .n div 2
+        .folded# = part# (.a#, 1, .h) + part# (.a#, .h + 1, 2 * .h)
+        if .n mod 2 = 1
+            .a# = combine# (.folded#, part# (.a#, .n, .n))
+        else
+            .a# = .folded#
+        endif
+    endwhile
+    .result = .a# [1]
+endproc
+
+
+# ----------------------------------------------------------------------------
 # @emlSkewness
 # Sample skewness (Fisher's definition).
 # Input:  data# — numeric vector
-# Output: .result — skewness (undefined if n < 3)
+# Output: .result — skewness (undefined if n < 3 or if sd = 0)
+#         .error$ — reason .result is undefined, else empty
 # Formula: (n / ((n-1)(n-2))) * sum((xi - mean) / sd)^3
 # ----------------------------------------------------------------------------
 procedure emlSkewness: .data#
     .n = size (.data#)
+    .error$ = ""
     if .n < 3
         .result = undefined
+        .error$ = "Skewness is undefined for n < 3."
     else
         .m = mean (.data#)
         .s = stdev (.data#)
         if .s = 0
-            .result = 0
+            .result = undefined
+            .error$ = "Skewness is undefined when all values are identical"
+            .error$ = .error$ + " (standard deviation is zero)."
         else
-            .sumCubed = 0
-            for .i from 1 to .n
-                .z = (.data#[.i] - .m) / .s
-                .sumCubed = .sumCubed + .z * .z * .z
-            endfor
+            .z# = (.data# - .m) / .s
+            @eml_pairwiseSum: .z# * .z# * .z#
+            .sumCubed = eml_pairwiseSum.result
             .result = (.n / ((.n - 1) * (.n - 2))) * .sumCubed
         endif
     endif
@@ -278,27 +358,30 @@ endproc
 # @emlKurtosis
 # Excess kurtosis (Fisher's definition, normal = 0).
 # Input:  data# — numeric vector
-# Output: .result — excess kurtosis (undefined if n < 4)
+# Output: .result — excess kurtosis (undefined if n < 4 or if sd = 0)
+#         .error$ — reason .result is undefined, else empty
 # Formula: ((n(n+1)) / ((n-1)(n-2)(n-3))) * sum((xi-mean)/sd)^4
 #          - (3(n-1)^2) / ((n-2)(n-3))
 # ----------------------------------------------------------------------------
 procedure emlKurtosis: .data#
     .n = size (.data#)
+    .error$ = ""
     if .n < 4
         .result = undefined
+        .error$ = "Excess kurtosis is undefined for n < 4."
     else
         .m = mean (.data#)
         .s = stdev (.data#)
         if .s = 0
-            # All values identical: platykurtic extreme
-            .result = -3 * (.n - 1) * (.n - 1) / ((.n - 2) * (.n - 3))
+            # All values identical: the standardised moment is 0/0.
+            .result = undefined
+            .error$ = "Excess kurtosis is undefined when all values are"
+            .error$ = .error$ + " identical (standard deviation is zero)."
         else
-            .sumFourth = 0
-            for .i from 1 to .n
-                .z = (.data#[.i] - .m) / .s
-                .z2 = .z * .z
-                .sumFourth = .sumFourth + .z2 * .z2
-            endfor
+            .z# = (.data# - .m) / .s
+            .z2# = .z# * .z#
+            @eml_pairwiseSum: .z2# * .z2#
+            .sumFourth = eml_pairwiseSum.result
             .term1 = (.n * (.n + 1)) / ((.n - 1) * (.n - 2) * (.n - 3))
             .term2 = (3 * (.n - 1) * (.n - 1)) / ((.n - 2) * (.n - 3))
             .result = .term1 * .sumFourth - .term2
@@ -343,10 +426,7 @@ procedure emlHarmonicMean: .data#
     elsif min (.data#) <= 0
         .result = undefined
     else
-        .recipSum = 0
-        for .i from 1 to .n
-            .recipSum = .recipSum + 1 / .data#[.i]
-        endfor
+        .recipSum = sum (.data# ^ -1)
         .result = .n / .recipSum
     endif
 endproc
@@ -362,7 +442,12 @@ endproc
 # ----------------------------------------------------------------------------
 procedure emlTrimmedMean: .data#, .proportion
     .n = size (.data#)
+    @eml_hasUndefined: .data#
     if .n = 0
+        .result = undefined
+    elsif eml_hasUndefined.result = 1
+        .result = undefined
+    elsif .proportion = undefined
         .result = undefined
     elsif .proportion < 0 or .proportion >= 0.5
         .result = undefined
@@ -375,10 +460,7 @@ procedure emlTrimmedMean: .data#, .proportion
         if .nTrimmed <= 0
             .result = undefined
         else
-            .sum = 0
-            for .i from .k + 1 to .n - .k
-                .sum = .sum + .sorted#[.i]
-            endfor
+            .sum = sum (part# (.sorted#, .k + 1, .n - .k))
             .result = .sum / .nTrimmed
         endif
     endif
@@ -395,7 +477,12 @@ endproc
 # ----------------------------------------------------------------------------
 procedure emlWinsorizedMean: .data#, .proportion
     .n = size (.data#)
+    @eml_hasUndefined: .data#
     if .n = 0
+        .result = undefined
+    elsif eml_hasUndefined.result = 1
+        .result = undefined
+    elsif .proportion = undefined
         .result = undefined
     elsif .proportion < 0 or .proportion >= 0.5
         .result = undefined
@@ -412,9 +499,7 @@ procedure emlWinsorizedMean: .data#, .proportion
             .upperVal = .sorted#[.upperIdx]
             # Sum: k copies of lowerVal + middle values + k copies of upperVal
             .sum = .k * .lowerVal + .k * .upperVal
-            for .i from .k + 1 to .upperIdx
-                .sum = .sum + .sorted#[.i]
-            endfor
+            ... + sum (part# (.sorted#, .k + 1, .upperIdx))
             .result = .sum / .n
         endif
     endif
@@ -431,7 +516,11 @@ endproc
 # ----------------------------------------------------------------------------
 procedure emlMAD: .data#
     .n = size (.data#)
+    @eml_hasUndefined: .data#
     if .n = 0
+        .result = undefined
+        .rawMAD = undefined
+    elsif eml_hasUndefined.result = 1
         .result = undefined
         .rawMAD = undefined
     else
@@ -439,10 +528,7 @@ procedure emlMAD: .data#
         @emlMedian: .data#
         .med = emlMedian.result
         # Compute absolute deviations
-        .deviations# = zero# (.n)
-        for .i from 1 to .n
-            .deviations#[.i] = abs (.data#[.i] - .med)
-        endfor
+        .deviations# = abs# (.data# - .med)
         # Get median of deviations
         @emlMedian: .deviations#
         .rawMAD = emlMedian.result
@@ -482,11 +568,25 @@ endproc
 #         .upper         — upper bound
 #         .mean          — sample mean
 #         .marginOfError — half-width of CI
+# All outputs are undefined if n < 2, or if confidenceLevel is undefined or
+# outside the open interval (0, 1).
 # Formula: mean +/- invStudentQ((1 - conf) / 2, n-1) * SEM
 # ----------------------------------------------------------------------------
 procedure emlCI: .data#, .confidenceLevel
     .n = size (.data#)
+    .badLevel = 0
+    if .confidenceLevel = undefined
+        .badLevel = 1
+    elsif .confidenceLevel <= 0 or .confidenceLevel >= 1
+        # invStudentQ (0, df) never converges — it hangs the script.
+        .badLevel = 1
+    endif
     if .n < 2
+        .lower = undefined
+        .upper = undefined
+        .mean = undefined
+        .marginOfError = undefined
+    elsif .badLevel = 1
         .lower = undefined
         .upper = undefined
         .mean = undefined
@@ -506,16 +606,51 @@ endproc
 # ----------------------------------------------------------------------------
 # @emlDescribe
 # Comprehensive descriptive statistics summary.
-# Input:  data# — numeric vector
+# Input:  data#            — numeric vector
+#         trim             — proportion trimmed from each tail for
+#                             .trimmedMean/.winsorizedMean (0 <= trim < 0.5);
+#                             the CALLER validates this range and this
+#                             procedure does not repeat the refusal -- see
+#                             @emlTrimmedMean/@emlWinsorizedMean, which
+#                             already return undefined outside it.
+#         confidenceLevel  — as a proportion (e.g. 0.95), passed straight to
+#                             @emlCI. NOT a literal here (API completion
+#                             wave, order section 4.6): the caller is what
+#                             knows the alpha in force, and this file sits
+#                             BELOW stats/eml-analysis.praat (where
+#                             @emlReportAlpha lives) in the include order --
+#                             several dev suites load this file alone, so
+#                             reading that global here would break them.
+#                             A caller with no alpha control of its own
+#                             passes 0.95, the old hardcoded level.
 # Output: .n, .mean, .sd, .variance, .sem
 #         .median, .q1, .q3, .iqr
 #         .min, .max, .range
 #         .skewness, .kurtosis
-#         .ci95Lower, .ci95Upper
-#         .summary$ — multi-line formatted string
+#         .ciLow, .ciHigh (at confidenceLevel)
+#         .mode, .modeUnique, .modeCount
+#         .mad (scaled by 1.4826), .madRaw
+#         .geoMean, .harmMean (undefined when any value <= 0)
+#         .trimmedMean, .winsorizedMean, .trimK (floor(n*trim))
 # Calls all other pp procedures and assembles results.
+#
+# This does NOT build a .summary$ as well — sixteen string concatenations
+# rendering the same fifteen numbers as a pre-formatted multi-line block, on
+# every call. Nothing in the shipped plugin ever read it. The Info window is
+# written by @emlReportDescriptives (stats/eml-output.praat), which lays the
+# same values out itself through @emlReportLine, and that is the only
+# rendering a user sees.
+#
+# It was not merely unused, it was actively harmful: two renderings of one
+# set of numbers drift, and this pair had already drifted — .summary$ said
+# "Kurtosis (excess)" while the report path said "Kurtosis" for the same
+# excess-kurtosis value. Not carrying a copy nobody reads removes
+# the drift rather than re-synchronising it.
+#
+# If a caller ever needs a pre-formatted block, render it from these outputs
+# at the point of use. Do not reintroduce a second renderer here.
 # ----------------------------------------------------------------------------
-procedure emlDescribe: .data#
+procedure emlDescribe: .data#, .trim, .confidenceLevel
     .n = size (.data#)
     if .n = 0
         .mean = undefined
@@ -531,9 +666,18 @@ procedure emlDescribe: .data#
         .range = undefined
         .skewness = undefined
         .kurtosis = undefined
-        .ci95Lower = undefined
-        .ci95Upper = undefined
-        .summary$ = "Descriptive Statistics (n = 0): no data"
+        .ciLow = undefined
+        .ciHigh = undefined
+        .mode = undefined
+        .modeUnique = 0
+        .modeCount = 0
+        .mad = undefined
+        .madRaw = undefined
+        .geoMean = undefined
+        .harmMean = undefined
+        .trimmedMean = undefined
+        .winsorizedMean = undefined
+        .trimK = undefined
     else
         @emlMean: .data#
         .mean = emlMean.result
@@ -554,28 +698,46 @@ procedure emlDescribe: .data#
         .max = emlRange.max
         .range = emlRange.range
         @emlSkewness: .data#
-        .skewness = emlSkewness.result
+        if emlSkewness.error$ = ""
+            .skewness = emlSkewness.result
+        else
+            .skewness = undefined
+        endif
         @emlKurtosis: .data#
-        .kurtosis = emlKurtosis.result
-        @emlCI: .data#, 0.95
-        .ci95Lower = emlCI.lower
-        .ci95Upper = emlCI.upper
-        # Build summary string
-        .summary$ = "Descriptive Statistics (n = " + string$ (.n) + ")" + newline$
-        .summary$ = .summary$ + "  Mean:       " + fixed$ (.mean, 4) + newline$
-        .summary$ = .summary$ + "  Median:     " + fixed$ (.median, 4) + newline$
-        .summary$ = .summary$ + "  SD:         " + fixed$ (.sd, 4) + newline$
-        .summary$ = .summary$ + "  Variance:   " + fixed$ (.variance, 4) + newline$
-        .summary$ = .summary$ + "  SEM:        " + fixed$ (.sem, 4) + newline$
-        .summary$ = .summary$ + "  Min:        " + fixed$ (.min, 4) + newline$
-        .summary$ = .summary$ + "  Max:        " + fixed$ (.max, 4) + newline$
-        .summary$ = .summary$ + "  Range:      " + fixed$ (.range, 4) + newline$
-        .summary$ = .summary$ + "  Q1:         " + fixed$ (.q1, 4) + newline$
-        .summary$ = .summary$ + "  Q3:         " + fixed$ (.q3, 4) + newline$
-        .summary$ = .summary$ + "  IQR:        " + fixed$ (.iqr, 4) + newline$
-        .summary$ = .summary$ + "  Skewness:   " + fixed$ (.skewness, 4) + newline$
-        .summary$ = .summary$ + "  Kurtosis (excess): " + fixed$ (.kurtosis, 4) + newline$
-        .summary$ = .summary$ + "  95% CI:     [" + fixed$ (.ci95Lower, 4) + ", " + fixed$ (.ci95Upper, 4) + "]"
+        if emlKurtosis.error$ = ""
+            .kurtosis = emlKurtosis.result
+        else
+            .kurtosis = undefined
+        endif
+        ; THE LEVEL IS THE CALLER'S (see the header note above) -- never a
+        ; literal here.
+        @emlCI: .data#, .confidenceLevel
+        .ciLow = emlCI.lower
+        .ciHigh = emlCI.upper
+
+        ; SIX MORE, NAMED ON THE DOOR (API completion wave, order section
+        ; 4.6): the mean-family and shape kernels @emlDescribe never called,
+        ; reached only from nothing or from the graphs layer before this.
+        @emlMode: .data#
+        .mode = emlMode.result
+        .modeUnique = emlMode.isUnique
+        .modeCount = emlMode.count
+        @emlMAD: .data#
+        .mad = emlMAD.result
+        .madRaw = emlMAD.rawMAD
+        @emlGeometricMean: .data#
+        .geoMean = emlGeometricMean.result
+        @emlHarmonicMean: .data#
+        .harmMean = emlHarmonicMean.result
+        @emlTrimmedMean: .data#, .trim
+        .trimmedMean = emlTrimmedMean.result
+        @emlWinsorizedMean: .data#, .trim
+        .winsorizedMean = emlWinsorizedMean.result
+        if .trim = undefined
+            .trimK = undefined
+        else
+            .trimK = floor (.n * .trim)
+        endif
     endif
 endproc
 
@@ -613,7 +775,7 @@ endproc
 #   1. Sort data, compute Blom normal order statistics via invGaussQ
 #   2. Compute pair-weight coefficients with polynomial corrections:
 #      - Outermost pair: m[n]/ssumm2 + poly(c1, 1/sqrt(n))
-#      - Second pair (n>=7): m[n-1]/ssumm2 + poly(c2, 1/sqrt(n))
+#      - Second pair (n>=6): m[n-1]/ssumm2 + poly(c2, 1/sqrt(n))
 #      - Middle pairs: proportional to m, scaled so sum(a^2) = 0.5
 #   3. W = (sum a[i] * (x[n+1-i] - x[i]))^2 / SS
 #   4. P-value transformation:
@@ -706,14 +868,14 @@ procedure emlShapiroWilk: .data#
             @eml_swPoly: .c1#, .swU
             .a#[1] = .m#[.n] / .ssumm2 + eml_swPoly.result
 
-            if .n >= 7
+            if .n >= 6
                 # Second outermost coefficient
                 @eml_swPoly: .c2#, .swU
                 .a#[2] = .m#[.n - 1] / .ssumm2 + eml_swPoly.result
                 .startFill = 3
                 .swTarget = 0.5 - .a#[1] * .a#[1] - .a#[2] * .a#[2]
             else
-                # n = 4, 5, or 6: only outermost from polynomial
+                # n = 4 or 5: only outermost from polynomial
                 .startFill = 2
                 .swTarget = 0.5 - .a#[1] * .a#[1]
             endif
@@ -788,4 +950,27 @@ procedure emlShapiroWilk: .data#
             endif
         endif
     endif
+endproc
+
+
+# ----------------------------------------------------------------------------
+# @emlGaussianLogLik
+# Gaussian/OLS log-likelihood, AIC and BIC for a least-squares fit — the
+# closed-form numbers R reports for lm() and aov() via logLik()/AIC()/BIC().
+# Input:  rss  — residual sum of squares
+#         nobs — number of observations
+#         k    — number of fitted parameters, INCLUDING the residual
+#                variance (e.g. intercept + slope + sigma^2 = 3 for simple
+#                linear regression; nGroups means + sigma^2 for one-way ANOVA)
+# Output: .logLik — Gaussian maximum log-likelihood
+#         .aic    — Akaike information criterion
+#         .bic    — Bayesian (Schwarz) information criterion
+# Formula: logLik = -0.5 * nobs * (ln(2*pi) + ln(rss/nobs) + 1)
+#          AIC = -2 * logLik + 2 * k
+#          BIC = -2 * logLik + ln(nobs) * k
+# ----------------------------------------------------------------------------
+procedure emlGaussianLogLik: .rss, .nobs, .k
+    .logLik = -0.5 * .nobs * (ln (2 * pi) + ln (.rss / .nobs) + 1)
+    .aic = -2 * .logLik + 2 * .k
+    .bic = -2 * .logLik + ln (.nobs) * .k
 endproc

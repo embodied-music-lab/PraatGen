@@ -1,0 +1,3129 @@
+# ============================================================================
+# EML Stats & Graphs — Info-window report writers
+# ============================================================================
+# Module: eml-report.praat
+# Version: 1.0
+# Date: 20 September 2026
+#
+#
+# Part of the EML Stats library (EML Stats & Graphs).
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+#
+# Purpose: these are the Info-window report writers the analysis doors call
+#          to print a finished result — two-group, one-way and two-way ANOVA
+#          (plus its Brown-Forsythe/Welch/Games-Howell heteroscedastic arm),
+#          Kruskal-Wallis, paired comparisons, correlation, regression
+#          (including Theil-Sen) and normality, along with the shared
+#          confidence-alpha reader every one of them defers to for its
+#          interval width. Each reporter reads the relevant test's result
+#          globals and appends the matching CSV rows via
+#          @emlCSVAdd / @emlCSVAddStr / @emlCSVAddDescriptives
+#          (eml-output.praat) so @emlExportStatsCSV can later write the same
+#          result to file.
+#
+#          Moved here from graphs/eml-annotation-procedures.praat on
+#          20 September 2026 so the statistical surface loads and runs
+#          without the graphs layer — every one of these reporters was
+#          already called only from stats/ doors, and none of them draws.
+# ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-report.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
+
+
+# ----------------------------------------------------------------------------
+# @emlCIAlphaInForce
+# The alpha every confidence interval in this module is built at.
+#
+# ONE ANSWER, SO THE FIGURE AND ITS REPORT CANNOT DISAGREE. The stars, the
+# error bars, the mean intervals and every bracket a report prints all read
+# the alpha the user set on the graph dialog, and they read it from here, so
+# a figure cannot carry a 99% error bar beside a 95% correlation band.
+#
+# annotAlpha is a graphs-layer global and an API or headless caller can reach
+# these reporters without one, so the guard is the same shape @emlFormatStars
+# uses and falls back to the same documented default of 0.05. A value outside
+# the open interval (0, 1) is refused for the same reason: invStudentQ (0, df)
+# never converges and invGaussQ is undefined above 1, so a quantile taken
+# from one is a hang or a garbage bracket rather than a wrong number.
+#
+# Arguments: none (reads the global)
+# Output:
+#   .alpha  — the two-sided tail probability in force, strictly in (0, 1)
+# ----------------------------------------------------------------------------
+procedure emlCIAlphaInForce
+    .alpha = 0.05
+    if variableExists ("annotAlpha")
+        if annotAlpha <> undefined
+            if annotAlpha > 0 and annotAlpha < 1
+                .alpha = annotAlpha
+            endif
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# SHARED REPORTERS
+# ============================================================================
+# These procedures produce identical Info window output regardless of
+# whether the user started from a stats wrapper or the graphs tool.
+# They read from test result globals — callers must run the relevant
+# test procedures BEFORE calling these reporters.
+#
+# Each reporter also populates CSV rows via @emlCSVAdd / @emlCSVAddStr /
+# @emlCSVAddDescriptives (eml-output.praat) so @emlExportStatsCSV can write
+# results to file. (There is no procedure that writes a whole analysis in one
+# call; each of these appends one field of one term.)
+# ============================================================================
+
+
+# ============================================================================
+# @emlReportTwoGroupComparison
+# ============================================================================
+procedure emlReportTwoGroupComparison: .tableName$, .dataCol$, .groupCol$, .group1$, .group2$, .n1, .mean1, .sd1, .median1, .n2, .mean2, .sd2, .median2, .testType$
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .dataCol$
+    .displayData$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .groupCol$
+    .displayGroup$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .group1$
+    .displayG1$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .group2$
+    .displayG2$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Two-Group Comparison"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Data column", .displayData$
+    @emlReportLineString: "Group column", .displayGroup$
+    @emlReportBlank
+    @emlReportDescriptiveHeader
+    @emlReportDescriptiveRow: .displayG1$, .n1, .mean1, .sd1, .median1
+    @emlReportDescriptiveRow: .displayG2$, .n2, .mean2, .sd2, .median2
+
+    ; THE DIRECTION IS STATED ONCE, FOR BOTH ARMS. The mean-difference row
+    ; below names its own subtraction, but t, Cohen's d, Hedges' g, the
+    ; Mann-Whitney z and the rank-biserial r are signed too and carry the
+    ; same direction: the group this report lists first against the group it
+    ; lists second. Which group is listed first follows the group order in
+    ; force, so it changes with the ordering setting and cannot be inferred
+    ; from the names.
+    @emlReportNote: "Sign: every difference below is " + .displayG1$
+    ... + " minus " + .displayG2$ + ", and t, z and the effect sizes carry "
+    ... + "that direction."
+
+    if .testType$ = "parametric" or .testType$ = "both"
+        @emlFormatEffectLabel: emlCohenD.d, "d"
+        @emlReportBlank
+        @emlReportSection: emlTTest.method$
+        if emlShowExplanations
+            ; ITEM 1.2 — EXPLANATION LINES, THROUGH THE EXPLAIN HELPER,
+            ; WHICH NEVER BUFFERS. The outer `if emlShowExplanations` stays:
+            ; it is the shape every explanation site in this file has, and
+            ; @emlExplainLine guards again so no route can print one with the
+            ; toggle off. .wrap = 0 because these print verbatim on one line,
+            ; exactly as they always did.
+            if emlTTest.method$ = "Welch"
+                @emlExplainLine: "  Why: Compares means of two independent "
+                ... + "groups (robust to unequal variances).", 0
+            else
+                @emlExplainLine: "  Why: Compares means of two independent "
+                ... + "groups (assumes equal variances).", 0
+            endif
+        endif
+        if emlShowExplanations
+            @emlWizardExplainT: emlTTest.t
+        endif
+        @emlReportLine: "t", emlTTest.t, 3
+        if emlShowExplanations
+            @emlWizardExplainDfTTest: emlTTest.df, emlTTest.method$
+        endif
+        @emlReportLine: "df", emlTTest.df, 1
+        if emlShowExplanations
+            @emlWizardExplainP: emlTTest.p
+        endif
+        ; A row label of "p" beside a value of "p = .032" would say "p"
+        ; twice, and the < .001 floor hides the real value.
+        ; @emlReportPWithExact prints the bare APA form and, when the label
+        ; is floored, the unrounded value beside it.
+        @emlReportPWithExact: "p", emlTTest.p
+        if emlShowExplanations
+            .diff = .mean1 - .mean2
+            if .diff > 0
+                @eml_fixed: abs (.diff), 2
+                .fx1$ = eml_fixed.result$
+                emlWizardExplain$ = .displayG1$ + " mean is " + .fx1$ + " units higher"
+            else
+                @eml_fixed: abs (.diff), 2
+                .fx1$ = eml_fixed.result$
+                emlWizardExplain$ = .displayG2$ + " mean is " + .fx1$ + " units higher"
+            endif
+        endif
+        ; "Mean difference" alone never said which group was subtracted
+        ; from which, so the sign was unreadable without inferring it from the
+        ; descriptives table. The label now names the direction, using the same
+        ; ordered group labels that table printed.
+        .diffLabel$ = "Mean diff (" + .displayG1$ + " − " + .displayG2$ + ")"
+        if length (.diffLabel$) >= 20
+            ; @emlPadRight leaves an over-long label unpadded, which would run
+            ; the value straight into the ")". One space keeps them apart.
+            .diffLabel$ = .diffLabel$ + " "
+        endif
+        @emlReportLine: .diffLabel$, emlTTest.meanDiff, 4
+        ; @emlTTest exposes no interval, so it is rebuilt here from the
+        ; three quantities it does expose. Both the Student and the Welch
+        ; branch form t as meanDiff / SE, so SE = meanDiff / t recovers the
+        ; standard error exactly, whichever branch ran.
+        .ciOK = 0
+        if emlTTest.t <> undefined and emlTTest.df <> undefined
+            if emlTTest.t <> 0 and emlTTest.df >= 1
+                .ciOK = 1
+            endif
+        endif
+        if .ciOK = 1
+            ; THE LEVEL IS THE USER'S. The quantile comes from the alpha in
+            ; force, so this interval states the same confidence as the stars
+            ; above it and the error bars on the figure beside it, and the
+            ; label carries that level with it — a reader never has to know
+            ; which alpha was set to read the bracket.
+            @emlCIAlphaInForce
+            .ciAlpha = emlCIAlphaInForce.alpha
+            .seDiff = abs (emlTTest.meanDiff / emlTTest.t)
+            .tCritDiff = invStudentQ (.ciAlpha / 2, emlTTest.df)
+            .diffLo = emlTTest.meanDiff - .tCritDiff * .seDiff
+            .diffHi = emlTTest.meanDiff + .tCritDiff * .seDiff
+            @eml_fixed: .diffLo, 4
+            .fx1$ = eml_fixed.result$
+            @eml_fixed: .diffHi, 4
+            .fx2$ = eml_fixed.result$
+            @emlCILevelLabel: .ciAlpha
+            .ciDiffLabel$ = emlCILevelLabel.percent$ + "% CI of diff"
+            @emlReportLineString: .ciDiffLabel$,
+            ... "[" + .fx1$ + ", " + .fx2$ + "]"
+        endif
+        @emlReportBlank
+        @emlReportSection: "Effect Size"
+        if emlShowExplanations
+            @emlWizardExplainEffectD: emlCohenD.d
+        endif
+        @emlReportLine: "Cohen's d", emlCohenD.d, 3
+        if emlShowExplanations
+            @emlWizardExplainEffectG: emlCohenD.g
+        endif
+        @emlReportLine: "Hedges' g", emlCohenD.g, 3
+        @emlReportLineString: "Magnitude", emlFormatEffectLabel.labelPhrase$
+        # Named fields, and an absent value writes no row.
+        @emlCSVSetTable: .tableName$
+        @emlCSVTermType: "contrast"
+        .contrast$ = .group1$ + " vs " + .group2$
+        @emlCSVAddStr: emlTTest.method$, .contrast$, "data_column", .dataCol$
+        @emlCSVAddStr: emlTTest.method$, .contrast$, "group_column", .groupCol$
+        @emlCSVAdd: emlTTest.method$, .contrast$, "t", emlTTest.t
+        @emlCSVAdd: emlTTest.method$, .contrast$, "df", emlTTest.df
+        @emlCSVAdd: emlTTest.method$, .contrast$, "p", emlTTest.p
+        @emlCSVAdd: emlTTest.method$, .contrast$, "cohens_d", emlCohenD.d
+        @emlCSVAddStr: emlTTest.method$, .contrast$, "effect_label",
+        ... emlFormatEffectLabel.label$
+        @emlCSVAddDescriptives: emlTTest.method$, .group1$,
+        ... .n1, .mean1, .sd1, .median1
+        @emlCSVAddDescriptives: emlTTest.method$, .group2$,
+        ... .n2, .mean2, .sd2, .median2
+    endif
+
+    if .testType$ = "nonparametric" or .testType$ = "both"
+        @emlFormatEffectLabel: abs (emlRankBiserialR.r), "r"
+        @emlReportBlank
+        @emlReportSection: "Mann-Whitney U Test"
+        if emlShowExplanations
+            ; ITEM 1.2 — EXPLANATION; never buffers.
+            @emlExplainLine: "  Why: Compares distributions of two "
+            ... + "independent groups without assuming normality.", 0
+        endif
+        if emlShowExplanations
+            ; This gloss opened "Sum of
+            ; ranks:", and U is not a sum of ranks. The rank sum is R1;
+            ; @emlMannWhitneyU computes U1 = R1 - n1(n1+1)/2, which SUBTRACTS
+            ; the smallest rank total group 1 could possibly have had. On the
+            ; verification table R1 = 274 against the printed U1 = 64 --
+            ; the printed number was right and the sentence next to it named
+            ; a different statistic. Ian's readers are voice teachers who
+            ; quote these lines to students, so a wrong name here becomes a
+            ; wrong definition in a studio.
+            ;
+            ; What U actually counts is pairs: take every value in group 1
+            ; against every value in group 2, n1 x n2 comparisons in all, and
+            ; U1 is how many group 1 wins (ties count a half each). That is
+            ; the interpretation the rest of the old sentence was already
+            ; reaching for, which is why only the opening two words were
+            ; wrong -- and why the replacement keeps the same shape.
+            ;
+            ; ASCII "x" and not the multiplication sign, deliberately: this
+            ; string is also written to the plain-text report file, and the
+            ; two neighbouring Wilcoxon glosses are ASCII throughout.
+            emlWizardExplain$ = "U: how often a value from one group exceeds a value from the other, out of n1 x n2 possible pairs"
+        endif
+        @emlReportLine: "U1", emlMannWhitneyU.u1, 1
+        @emlReportLine: "U2", emlMannWhitneyU.u2, 1
+        if emlMannWhitneyU.z <> undefined
+            @emlReportLine: "z", emlMannWhitneyU.z, 3
+        endif
+        if emlShowExplanations
+            @emlWizardExplainP: emlMannWhitneyU.p
+        endif
+        @emlReportPWithExact: "p", emlMannWhitneyU.p
+        ; ITEM 22 (language batch, Fable's ruling 27 August 2026): the
+        ; disclosure row naming HOW the p above was computed. ALWAYS
+        ; prints, never gated on emlShowExplanations -- @emlReportLineString
+        ; itself never gates the row, only the third-column gloss beside it.
+        ; "exact" prints bare; any approximation prints with EVERY reason
+        ; that ruled out the exact branch, comma-separated, no precedence.
+        .pMethod$ = emlMannWhitneyU.method$
+        if emlMannWhitneyU.method$ <> "exact"
+            .pMethod$ = .pMethod$ + " (" + emlMannWhitneyU.methodReason$ + ")"
+        endif
+        @emlReportLineString: "p method", .pMethod$
+        # Report the method @emlMannWhitneyU actually used. Read it
+        # defensively — a build of eml-inferential.praat that does not expose
+        # .method$ must not abort the report. The routing rule is R's
+        # wilcox.test rule: exact enumeration iff BOTH groups have n < 50 AND
+        # there are no ties; otherwise the normal approximation with
+        # continuity and tie corrections. The old gloss claimed the rule was
+        # a total-n threshold, which is wrong in both directions.
+        .mwuMethod$ = "not reported"
+        if variableExists ("emlMannWhitneyU.method$")
+            .mwuMethod$ = emlMannWhitneyU.method$
+        endif
+        if emlShowExplanations
+            if .mwuMethod$ = "exact"
+                emlWizardExplain$ = "P-value computed by exact enumeration"
+                ... + " (used when both groups have n < 50 and there are no ties)"
+            elsif .mwuMethod$ = "not reported"
+                emlWizardExplain$ = "P-value method not reported by the test"
+                ... + " procedure"
+            else
+                emlWizardExplain$ = "P-value computed by normal approximation"
+                ... + " with continuity and tie corrections (used when either"
+                ... + " group has n >= 50, or ties are present)"
+            endif
+        endif
+        ; Legacy "Method" row retired 27 Aug 2026: it duplicated the
+        ; "p method" disclosure row above. One fact, one row -- Fable.
+        @emlReportBlank
+        @emlReportSection: "Nonparametric Effect Size"
+        if emlShowExplanations
+            @emlWizardExplainEffectR: emlRankBiserialR.r
+        endif
+        @emlReportLine: "Rank-biserial r", emlRankBiserialR.r, 3
+        @emlReportLineString: "Magnitude", emlFormatEffectLabel.labelPhrase$
+
+        ; |r| = 1 IS A CEILING, NOT A RECORD. Rank-biserial r is the
+        ; proportion of cross-group pairs favouring one group minus the
+        ; proportion favouring the other, so it reaches 1 exactly when every
+        ; observation in one group outranks every observation in the other.
+        ; That is complete separation and it is the largest value the
+        ; statistic can take -- which means it cannot distinguish a large
+        ; difference from an enormous one, and it says nothing on its own
+        ; about how much the groups differ BY. It is also cheap at small n:
+        ; three against three separate completely by chance about once in ten
+        ; runs. Called out because "1.000" beside "large" reads as the
+        ; strongest possible finding when it is a boundary being touched.
+        ; Praat does not short-circuit `and`, so the guard is nested.
+        if emlRankBiserialR.r <> undefined
+            if abs (emlRankBiserialR.r) >= 0.999999
+                @emlReportNote: "Note: r = 1 means the two groups do not "
+                ... + "overlap at all -- every value in one group outranks "
+                ... + "every value in the other. This is the largest value "
+                ... + "the statistic can take, so it marks complete "
+                ... + "separation rather than measuring how far apart the "
+                ... + "groups are, and it occurs readily in small samples. "
+                ... + "Read it beside the group medians and n."
+            endif
+        endif
+        if emlMannWhitneyU.z <> undefined
+            .mwuDf = emlMannWhitneyU.z
+        else
+            .mwuDf = 0
+        endif
+        # The Mann-Whitney has no df at all, so no df row is written
+        # rather than a zero standing in for one.
+        @emlCSVSetTable: .tableName$
+        @emlCSVTermType: "contrast"
+        .contrast$ = .group1$ + " vs " + .group2$
+        @emlCSVAddStr: "Mann-Whitney U", .contrast$, "data_column", .dataCol$
+        @emlCSVAddStr: "Mann-Whitney U", .contrast$, "group_column", .groupCol$
+        @emlCSVAdd: "Mann-Whitney U", .contrast$, "U", emlMannWhitneyU.u1
+        @emlCSVAdd: "Mann-Whitney U", .contrast$, "p", emlMannWhitneyU.p
+        @emlCSVAdd: "Mann-Whitney U", .contrast$, "rank_biserial_r",
+        ... emlRankBiserialR.r
+        @emlCSVAddStr: "Mann-Whitney U", .contrast$, "effect_label",
+        ... emlFormatEffectLabel.label$
+        @emlCSVAddDescriptives: "Mann-Whitney U", .group1$,
+        ... .n1, .mean1, .sd1, .median1
+        @emlCSVAddDescriptives: "Mann-Whitney U", .group2$,
+        ... .n2, .mean2, .sd2, .median2
+    endif
+
+    @emlReportFooter
+endproc
+
+
+# ============================================================================
+# @emlReportAnovaComparison
+# ============================================================================
+procedure emlReportAnovaComparison: .tableName$, .dataCol$, .groupCol$, .tableId, .nGroups, .doTukey
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .dataCol$
+    .displayData$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .groupCol$
+    .displayGroup$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "One-Way ANOVA"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Data column", .displayData$
+    @emlReportLineString: "Group column", .displayGroup$
+    @emlReportLine: "Groups", .nGroups, 0
+    .groupList$ = ""
+    for .iGroup from 1 to .nGroups
+        if .iGroup > 1
+            .groupList$ = .groupList$ + ", "
+        endif
+        .groupList$ = .groupList$
+            ... + replace$ (emlOneWayAnova.groupLabel$[.iGroup], "_", " ", 0)
+    endfor
+    @emlReportGroupOrderLine: .groupList$
+
+    # ANOVA table
+    @emlReportBlank
+    @emlReportSection: "ANOVA Table"
+    if emlShowExplanations
+        ; ITEM 1.2 — EXPLANATION; never buffers.
+        @emlExplainLine: "  Why: Tests whether group means differ "
+        ... + "when normality and equal variances hold.", 0
+    endif
+    ; ITEM 1.2 — FACTUAL TABLE, THROUGH THE ONE EMIT HELPER. The
+    ; comma-separated arguments become one concatenated string, because
+    ; appendInfoLine joins its arguments with nothing between them: the
+    ; printed bytes are unchanged and the buffer holds the line the reader
+    ; sees, character for character.
+    @emlEmit: "", ""
+    @emlEmit: left$ ("Source" + "                    ", 20)
+    ... + left$ ("SS" + "                ", 16)
+    ... + left$ ("df" + "      ", 6)
+    ... + left$ ("MS" + "                ", 16)
+    ... + left$ ("F" + "            ", 12)
+    ... + "p", ""
+
+    # This cell was fixed$ (p, 6): "0.000019" under a column headed "p",
+    # in the same report whose Games-Howell matrix prints the bare APA form
+    # (".584") — one report, two spellings of the same quantity. It now takes
+    # @emlFormatP's bare form, which is the shape the two-way source table
+    # already uses: no leading
+    # zero, floored at .001. Nothing is lost by the floor here — the "p" row
+    # printed a few lines below goes through @emlReportPWithExact, which
+    # restates the unrounded value in parentheses whenever the floor bites.
+    @emlFormatP: emlOneWayAnova.p
+    .pCell$ = emlFormatP.bare$
+
+    @eml_fixed: emlOneWayAnova.ssBetween, 2
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlOneWayAnova.msBetween, 2
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: emlOneWayAnova.fValue, 4
+    .fx3$ = eml_fixed.result$
+    @emlEmit: left$ ("Between" + "                    ", 20)
+    ... + left$ (.fx1$ + "                ", 16)
+    ... + left$ (string$ (emlOneWayAnova.dfBetween) + "      ", 6)
+    ... + left$ (.fx2$ + "                ", 16)
+    ... + left$ (.fx3$ + "            ", 12)
+    ... + .pCell$, ""
+    @eml_fixed: emlOneWayAnova.ssWithin, 2
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlOneWayAnova.msWithin, 2
+    .fx2$ = eml_fixed.result$
+    @emlEmit: left$ ("Within" + "                    ", 20)
+    ... + left$ (.fx1$ + "                ", 16)
+    ... + left$ (string$ (emlOneWayAnova.dfWithin) + "      ", 6)
+    ... + left$ (.fx2$ + "                ", 16), ""
+    @eml_fixed: emlOneWayAnova.ssTotal, 2
+    .fx1$ = eml_fixed.result$
+    @emlEmit: left$ ("Total" + "                    ", 20)
+    ... + left$ (.fx1$ + "                ", 16)
+    ... + left$ (string$ (emlOneWayAnova.dfTotal) + "      ", 6), ""
+
+    @emlReportBlank
+    if emlShowExplanations
+        @emlWizardExplainF: emlOneWayAnova.fValue
+    endif
+    @eml_fixed: emlOneWayAnova.fValue, 4
+    .fx1$ = eml_fixed.result$
+    @emlReportLineString: "F", .fx1$
+    if emlShowExplanations
+        @emlWizardExplainP: emlOneWayAnova.p
+    endif
+    @emlReportPWithExact: "p", emlOneWayAnova.p
+    .etaSq = emlOneWayAnova.etaSquared
+    if emlShowExplanations
+        @emlWizardExplainEffectEta2: .etaSq
+    endif
+    @eml_fixed: .etaSq, 4
+    .fx1$ = eml_fixed.result$
+    @emlReportLineString: "Effect size", "eta-squared = " + .fx1$
+
+    ; --- Equal-spread check (conditional show-both) ------------------------
+    ; Brown-Forsythe runs ALWAYS and prints ALWAYS. The test above is never
+    ; replaced and never switched: what the plugin reports as Student's F it
+    ; goes on calling Student's F, whatever this line says. When the check
+    ; rejects, a second block is appended below with Welch's F and
+    ; Games-Howell, so the user is handed the tolerant version rather than
+    ; only being told there is a problem.
+    ;
+    ; Wording is deliberate. This is a smoke alarm, not a verdict -- at small
+    ; n it misses real inequality, at large n it flags inequality too small to
+    ; matter. It never says the data failed anything.
+    @emlBrownForsythe: .tableId, .dataCol$, .groupCol$
+    .bfRan = 0
+    .bfFlags = 0
+    if emlBrownForsythe.error$ = ""
+        .bfRan = 1
+        if emlBrownForsythe.p < 0.05
+            .bfFlags = 1
+        endif
+    endif
+
+    if .bfRan
+        if emlShowExplanations
+            ; ITEM 1.2 — EXPLANATION; never buffers.
+            @emlExplainLine: "  Why: The ANOVA above pools one within-group "
+            ... + "spread across all groups. This checks whether that is a "
+            ... + "fair thing to do here.", 0
+        endif
+        @eml_fixed: emlBrownForsythe.f, 4
+        .fx1$ = eml_fixed.result$
+        @emlReportLineString: "Equal spread",
+        ... "Brown-Forsythe F(" + string$ (emlBrownForsythe.df1) + ", "
+        ... + string$ (emlBrownForsythe.df2) + ") = "
+        ... + .fx1$
+        @emlReportPWithExact: "Equal-spread p", emlBrownForsythe.p
+        if .bfFlags
+            @emlReportNote: "Note: the groups differ in spread more than "
+            ... + "this ANOVA's pooled error term likes. The result above is "
+            ... + "still the one being reported. A version that tolerates "
+            ... + "unequal spread is printed at the end of this report, "
+            ... + "under If the spreads are unequal; compare the two."
+        endif
+    endif
+
+    @emlFormatEffectLabel: .etaSq, "eta_squared"
+    .etaLabel$ = emlFormatEffectLabel.label$
+    # A wide schema would end this row in eight zeros meaning "not
+    # applicable".
+    # Both df now have their own field, so F(2,42) survives export.
+    @emlCSVSetTable: .tableName$
+    @emlCSVTermType: "omnibus"
+    @emlCSVAddStr: "One-way ANOVA", "", "data_column", .dataCol$
+    @emlCSVAddStr: "One-way ANOVA", "", "group_column", .groupCol$
+    @emlCSVAdd: "One-way ANOVA", "", "F", emlOneWayAnova.fValue
+    @emlCSVAdd: "One-way ANOVA", "", "df1", emlOneWayAnova.dfBetween
+    @emlCSVAdd: "One-way ANOVA", "", "df2", emlOneWayAnova.dfWithin
+    @emlCSVAdd: "One-way ANOVA", "", "p", emlOneWayAnova.p
+    @emlCSVAdd: "One-way ANOVA", "", "eta_squared", .etaSq
+    @emlCSVAddStr: "One-way ANOVA", "", "effect_label", .etaLabel$
+    @emlCSVAdd: "One-way ANOVA", "", "ss_between", emlOneWayAnova.ssBetween
+    @emlCSVAdd: "One-way ANOVA", "", "ss_within", emlOneWayAnova.ssWithin
+    @emlCSVAdd: "One-way ANOVA", "", "ms_between", emlOneWayAnova.msBetween
+    @emlCSVAdd: "One-way ANOVA", "", "ms_within", emlOneWayAnova.msWithin
+    @emlCSVAdd: "One-way ANOVA", "", "n_groups", emlOneWayAnova.nGroups
+
+    # Group descriptives
+    @emlReportBlank
+    @emlReportSection: "Group Descriptives"
+    @emlReportDescriptiveHeader
+
+    for .gIdx from 1 to .nGroups
+        ; reuse emlOneWayAnova's cached group vector -- no re-extraction (memory).
+        ; The reporter runs only after emlOneWayAnova succeeded, so every group's
+        ; cache vector exists and holds >= 2 observations.
+        .gData# = emlOneWayAnova.groupData'.gIdx'#
+        .gDisplayLabel$ = replace$ (emlOneWayAnova.groupLabel$[.gIdx], "_", " ", 0)
+        .gN = size (.gData#)
+        .gMean = mean (.gData#)
+        .gSD = stdev (.gData#)
+        .gSorted# = sort# (.gData#)
+        .gMidIdx = ceiling (.gN / 2)
+        if .gN mod 2 = 1
+            .gMedian = .gSorted# [.gMidIdx]
+        else
+            .gMedian = (.gSorted# [.gMidIdx] + .gSorted# [.gMidIdx + 1]) / 2
+        endif
+        @emlReportDescriptiveRow: .gDisplayLabel$, .gN, .gMean, .gSD, .gMedian
+    endfor
+
+    # Tukey pairwise p-values (only when Tukey ran)
+    if .doTukey
+        @emlReportBlank
+        @emlReportSection: "Tukey HSD Pairwise Comparisons (p-values)"
+        @emlEmit: "", ""
+        .headerLine$ = left$ ("" + "                ", 14)
+        for .jGroup from 1 to .nGroups
+            .colName$ = replace$ (emlOneWayAnova.groupLabel$[.jGroup], "_", " ", 0)
+            if length (.colName$) > 10
+                .colName$ = left$ (.colName$, 10)
+            endif
+            .headerLine$ = .headerLine$ + left$ (.colName$ + "            ", 12)
+        endfor
+        @emlEmit: .headerLine$, ""
+        for .iGroup from 1 to .nGroups
+            .rowName$ = replace$ (emlOneWayAnova.groupLabel$[.iGroup], "_", " ", 0)
+            if length (.rowName$) > 12
+                .rowName$ = left$ (.rowName$, 12)
+            endif
+            .rowLine$ = left$ (.rowName$ + "                ", 14)
+            for .jGroup from 1 to .nGroups
+                if .iGroup = .jGroup
+                    .cellText$ = "---"
+                else
+                    ; Was a hand-rolled floor plus fixed$ (p, 4), so
+                    ; this matrix printed "0.4918" while the Games-Howell
+                    ; matrix 35 lines below printed ".584" — the same
+                    ; quantity, two formats, visible together in one report.
+                    ; @emlFormatP is the single spelling: no leading zero,
+                    ; the .001 floor, and the .999 ceiling and the undefined
+                    ; case that the hand-rolled branch did not cover (an
+                    ; undefined p fell through to fixed$ and rendered as
+                    ; "--undefined--").
+                    .pVal = emlOneWayAnova.pMatrix##[.iGroup, .jGroup]
+                    @emlFormatP: .pVal
+                    .cellText$ = emlFormatP.bare$
+                endif
+                .rowLine$ = .rowLine$ + left$ (.cellText$ + "            ", 12)
+            endfor
+            @emlEmit: .rowLine$, ""
+        endfor
+
+        # The matrix above reports adjusted p and nothing else, so a
+        # reader cannot state a result — the quantity a result is stated in is
+        # the mean difference and its interval. No new numerics are needed:
+        # @emlOneWayAnova already exposes the signed differences, the critical
+        # q at the alpha it was called with (emlOneWayAnova.alpha), MS_within
+        # and the group sizes, so the family-wise half-width is
+        # qCritical * sqrt(MSw/2 * (1/ni + 1/nj)). The heading and the column
+        # label name that level through @emlCILevelLabel, so a run at another
+        # alpha never prints under "95%".
+        @emlCILevelLabel: emlOneWayAnova.alpha
+        .tukeyPct$ = emlCILevelLabel.percent$
+        @emlReportBlank
+        @emlReportSection: "Tukey HSD Mean Differences (" + .tukeyPct$ + "% family-wise CI)"
+        @emlEmit: "", ""
+        ; THE COMPARISON COLUMN IS MEASURED, NOT ASSUMED. A fixed cut at 24
+        ; characters is silent when it bites: two groups whose names share a
+        ; prefix -- "Soprano belt trained" and "Soprano belt untrained" --
+        ; give two different comparisons whose first 24 characters are
+        ; identical, so two rows print under one label with nothing on the
+        ; page to tell them apart, and a reader attributes an interval to the
+        ; wrong pair. The width is therefore taken from the widest comparison
+        ; this table actually holds and no name is cut.
+        ;
+        ; ORDINARY REPORTS ARE UNCHANGED. The floor is the 26 this table has
+        ; always been laid out on, so any table whose longest comparison fits
+        ; in 24 characters prints exactly as it did; only a table that would
+        ; otherwise have collided gets a wider column, and a wide column is
+        ; visible where a collision is not.
+        .cmpWidth = 26
+        for .iGroup from 1 to .nGroups - 1
+            for .jGroup from .iGroup + 1 to .nGroups
+                .measure$ = replace$ (emlOneWayAnova.groupLabel$[.iGroup],
+                ... "_", " ", 0)
+                ... + " − "
+                ... + replace$ (emlOneWayAnova.groupLabel$[.jGroup],
+                ... "_", " ", 0)
+                if length (.measure$) + 2 > .cmpWidth
+                    .cmpWidth = length (.measure$) + 2
+                endif
+            endfor
+        endfor
+        @emlPadRight: "Comparison", .cmpWidth
+        ; ITEM 1.2 — factual table header.
+        @emlEmit: emlPadRight.result$
+        ... + left$ ("Difference" + "              ", 14)
+        ... + .tukeyPct$ + "% CI", ""
+        for .iGroup from 1 to .nGroups - 1
+            for .jGroup from .iGroup + 1 to .nGroups
+                .ciName$ = replace$ (emlOneWayAnova.groupLabel$[.iGroup], "_", " ", 0)
+                ... + " − "
+                ... + replace$ (emlOneWayAnova.groupLabel$[.jGroup], "_", " ", 0)
+                .tukeyDiff = emlOneWayAnova.meanDiff## [.iGroup, .jGroup]
+                .tukeyHalf = undefined
+                if emlOneWayAnova.qCritical <> undefined
+                    .tukeyHalf = emlOneWayAnova.qCritical
+                    ... * sqrt (emlOneWayAnova.msWithin / 2
+                    ... * (1 / emlOneWayAnova.groupN[.iGroup]
+                    ... + 1 / emlOneWayAnova.groupN[.jGroup]))
+                endif
+                if .tukeyHalf = undefined or .tukeyDiff = undefined
+                    .ciText$ = "not available"
+                else
+                    @eml_fixed: .tukeyDiff - .tukeyHalf, 4
+                    .fx1$ = eml_fixed.result$
+                    @eml_fixed: .tukeyDiff + .tukeyHalf, 4
+                    .fx2$ = eml_fixed.result$
+                    .ciText$ = "[" + .fx1$
+                    ... + ", " + .fx2$ + "]"
+                endif
+                @eml_fixed: .tukeyDiff, 4
+                .fx1$ = eml_fixed.result$
+                ; @emlPadRight pads and never cuts, and .cmpWidth was
+                ; measured to be at least two wider than this name, so the
+                ; gutter before the Difference column survives every name.
+                @emlPadRight: .ciName$, .cmpWidth
+                ; ITEM 1.2 — factual table row.
+                @emlEmit: emlPadRight.result$
+                ... + left$ (.fx1$ + "              ", 14)
+                ... + .ciText$, ""
+            endfor
+        endfor
+
+        # CSV rows for Tukey pairwise
+        for .iGroup from 1 to .nGroups - 1
+            for .jGroup from .iGroup + 1 to .nGroups
+                .pVal = emlOneWayAnova.pMatrix##[.iGroup, .jGroup]
+                .g1Label$ = emlOneWayAnova.groupLabel$[.iGroup]
+                .g2Label$ = emlOneWayAnova.groupLabel$[.jGroup]
+                ; reuse emlOneWayAnova's cached group vectors -- no re-extraction (memory)
+                .v1# = emlOneWayAnova.groupData'.iGroup'#
+                .n1 = size (.v1#)
+                .v2# = emlOneWayAnova.groupData'.jGroup'#
+                .n2 = size (.v2#)
+                .pairD = emlOneWayAnova.dMatrix## [.iGroup, .jGroup]
+                @emlMean: .v1#
+                .m1 = emlMean.result
+                @emlSD: .v1#
+                .s1 = emlSD.result
+                @emlMedian: .v1#
+                .md1 = emlMedian.result
+                @emlMean: .v2#
+                .m2 = emlMean.result
+                @emlSD: .v2#
+                .s2 = emlSD.result
+                @emlMedian: .v2#
+                .md2 = emlMedian.result
+                @emlFormatEffectLabel: .pairD, "d"
+                .dLabel$ = emlFormatEffectLabel.label$
+                @emlCSVSetTable: .tableName$
+                @emlCSVTermType: "contrast"
+                .contrast$ = .g1Label$ + " vs " + .g2Label$
+                @emlCSVAdd: "Tukey HSD", .contrast$, "q",
+                ... emlOneWayAnova.qMatrix## [.iGroup, .jGroup]
+                @emlCSVAdd: "Tukey HSD", .contrast$, "df",
+                ... emlOneWayAnova.dfWithin
+                @emlCSVAdd: "Tukey HSD", .contrast$, "p_adjusted", .pVal
+                @emlCSVAdd: "Tukey HSD", .contrast$, "cohens_d", .pairD
+                @emlCSVAddStr: "Tukey HSD", .contrast$, "effect_label", .dLabel$
+                @emlCSVAddDescriptives: "Tukey HSD", .g1Label$,
+                ... .n1, .m1, .s1, .md1
+                @emlCSVAddDescriptives: "Tukey HSD", .g2Label$,
+                ... .n2, .m2, .s2, .md2
+            endfor
+        endfor
+
+        ; THE POST-HOC RAN, AND THE OMNIBUS MAY NOT HAVE. Under the ruled
+        ; policy Tukey is never gated on the ANOVA, so this report can
+        ; carry a pairwise table under an F that did not reach the level
+        ; in force. The caveat is stated in a sentence rather than left
+        ; implicit in the table's absence. See @emlPostHocCaution for the
+        ; routing and for where the level comes from.
+        @emlPostHocCaution: emlOneWayAnova.p
+    endif
+
+    # Pairwise Cohen's d (ALWAYS — bug #11 fix)
+    # When called via orchestrator, dMatrix## is pre-computed.
+    # When called directly (backward compat), compute it here.
+    if .doTukey = 0
+        emlOneWayAnova.dMatrix## = zero## (.nGroups, .nGroups)
+        for .i from 1 to .nGroups - 1
+            ; reuse emlOneWayAnova's cached group vectors -- no re-extraction (memory)
+            .tmpV1# = emlOneWayAnova.groupData'.i'#
+            .tmpV1Error$ = ""
+            for .j from .i + 1 to .nGroups
+                .tmpV2# = emlOneWayAnova.groupData'.j'#
+                if .tmpV1Error$ <> ""
+                    ; Punch list 9.1, the sibling of the fix in
+                    ; stats/eml-analysis.praat: a failed pair must not read
+                    ; as a true zero effect. The print loop below now shows
+                    ; "n/a" for it.
+                    emlOneWayAnova.dMatrix## [.i, .j] = undefined
+                    emlOneWayAnova.dMatrix## [.j, .i] = undefined
+                else
+                    @emlCohenD: .tmpV1#, .tmpV2#
+                    if emlCohenD.error$ = ""
+                        emlOneWayAnova.dMatrix## [.i, .j] = emlCohenD.d
+                        emlOneWayAnova.dMatrix## [.j, .i] = -emlCohenD.d
+                    else
+                        ; Punch list 9.1, the sibling of the fix in
+                        ; stats/eml-analysis.praat: a failed pair must not read
+                        ; as a true zero effect. The print loop below now shows
+                        ; "n/a" for it.
+                        emlOneWayAnova.dMatrix## [.i, .j] = undefined
+                        emlOneWayAnova.dMatrix## [.j, .i] = undefined
+                    endif
+                endif
+            endfor
+        endfor
+    endif
+    @emlReportBlank
+    @emlReportSection: "Pairwise Effect Sizes (Cohen's d)"
+    ; WITH TUKEY OFF THIS GRID IS THE ONLY PAIRWISE THING IN THE REPORT, and
+    ; an unlabelled grid under a heading reading "pairwise" is read as
+    ; significance by someone skimming. The caption says what was not
+    ; computed; its disclosure half prints whatever the explanations toggle
+    ; says. Nothing is said when Tukey DID run — the adjusted p-values are
+    ; right above.
+    if .doTukey = 0
+        @emlEffectMatrixCaption
+    endif
+    @emlEmit: "", ""
+    .dHeaderLine$ = left$ ("" + "                ", 14)
+    for .jGroup from 1 to .nGroups
+        .colName$ = replace$ (emlOneWayAnova.groupLabel$[.jGroup], "_", " ", 0)
+        if length (.colName$) > 10
+            .colName$ = left$ (.colName$, 10)
+        endif
+        .dHeaderLine$ = .dHeaderLine$ + left$ (.colName$ + "            ", 12)
+    endfor
+    @emlEmit: .dHeaderLine$, ""
+    for .iGroup from 1 to .nGroups
+        .rowName$ = replace$ (emlOneWayAnova.groupLabel$[.iGroup], "_", " ", 0)
+        if length (.rowName$) > 12
+            .rowName$ = left$ (.rowName$, 12)
+        endif
+        .dRowLine$ = left$ (.rowName$ + "                ", 14)
+        for .jGroup from 1 to .nGroups
+            if .iGroup = .jGroup
+                .cellText$ = "---"
+            else
+                .dVal = emlOneWayAnova.dMatrix## [.iGroup, .jGroup]
+                if .dVal = undefined
+                    ; Punch list 9.1. A failed pair prints as unavailable,
+                    ; never as 0 -- same convention as @emlPairwiseT's own
+                    ; d matrix above in this report.
+                    .cellText$ = "n/a"
+                else
+                    @eml_fixed: .dVal, 3
+                    .cellText$ = eml_fixed.result$
+                endif
+            endif
+            .dRowLine$ = .dRowLine$ + left$ (.cellText$ + "            ", 12)
+        endfor
+        @emlEmit: .dRowLine$, ""
+    endfor
+    ; The Tukey p matrix above is SYMMETRIC and this one is ANTISYMMETRIC:
+    ; d[i, j] is -d[j, i], so the sign here is the direction of the
+    ; difference and not the strength of the effect. The convention is the
+    ; one @emlReportPairwiseComparison prints under its own d matrix, in the
+    ; same words, because a reader meeting both should meet one rule.
+    @emlReportNote: "Row minus column: a negative d means the ROW group's "
+    ... + "mean is lower than the COLUMN group's. |d| is the effect size."
+
+    # CSV rows for Cohen's d only (when Tukey did NOT run)
+    if .doTukey = 0
+        for .iGroup from 1 to .nGroups - 1
+            for .jGroup from .iGroup + 1 to .nGroups
+                .g1Label$ = emlOneWayAnova.groupLabel$[.iGroup]
+                .g2Label$ = emlOneWayAnova.groupLabel$[.jGroup]
+                ; reuse emlOneWayAnova's cached group vectors -- no re-extraction (memory)
+                .v1# = emlOneWayAnova.groupData'.iGroup'#
+                .n1 = size (.v1#)
+                .v2# = emlOneWayAnova.groupData'.jGroup'#
+                .n2 = size (.v2#)
+                .pairD = emlOneWayAnova.dMatrix## [.iGroup, .jGroup]
+                @emlMean: .v1#
+                .m1 = emlMean.result
+                @emlSD: .v1#
+                .s1 = emlSD.result
+                @emlMedian: .v1#
+                .md1 = emlMedian.result
+                @emlMean: .v2#
+                .m2 = emlMean.result
+                @emlSD: .v2#
+                .s2 = emlSD.result
+                @emlMedian: .v2#
+                .md2 = emlMedian.result
+                @emlFormatEffectLabel: .pairD, "d"
+                .dLabel$ = emlFormatEffectLabel.label$
+                # This branch has no test statistic and
+                # no p, so writing 0, 0, 0 would make the row read as the
+                # most significant result in the file. It now writes the
+                # effect size it actually has and nothing else.
+                @emlCSVSetTable: .tableName$
+                @emlCSVTermType: "contrast"
+                .contrast$ = .g1Label$ + " vs " + .g2Label$
+                @emlCSVAdd: "Pairwise Cohen's d", .contrast$, "cohens_d",
+                ... .pairD
+                @emlCSVAddStr: "Pairwise Cohen's d", .contrast$,
+                ... "effect_label", .dLabel$
+                @emlCSVAddDescriptives: "Pairwise Cohen's d", .g1Label$,
+                ... .n1, .m1, .s1, .md1
+                @emlCSVAddDescriptives: "Pairwise Cohen's d", .g2Label$,
+                ... .n2, .m2, .s2, .md2
+            endfor
+        endfor
+    endif
+
+    ; --- The tolerant version, printed only when the check rejected --------
+    ; Never replace, never auto-switch, never make the reported
+    ; primary test depend on the data. This block is ADDITIONAL. When
+    ; Brown-Forsythe does not reject, a run looks exactly as it did before
+    ; this feature existed, apart from the two equal-spread lines above --
+    ; which is what keeps every committed capture, and Tier A property A1
+    ; (F = t^2 at k = 2, an identity that Welch's F does NOT satisfy against
+    ; Student's t), valid.
+    if .bfFlags
+        @emlReportBlank
+        @emlReportSection: "If the spreads are unequal"
+        @emlReportNote: "Welch's F does not pool the within-group spread, "
+        ... + "and Games-Howell uses each pair's own spread instead of one "
+        ... + "shared error term. Where these land on the same side of the "
+        ... + "5% threshold as the block above, the unequal spread did not "
+        ... + "change the thresholded decision in this sample -- which is "
+        ... + "not the same as the two methods agreeing, and says nothing "
+        ... + "about the next sample. Where they disagree, prefer these; "
+        ... + "that is what they are for."
+
+        @emlWelchAnova: .tableId, .dataCol$, .groupCol$
+        if emlWelchAnova.error$ <> ""
+            @emlReportLineString: "Welch's F",
+            ... "not available -- " + emlWelchAnova.error$
+        else
+            @emlReportBlank
+            @eml_fixed: emlWelchAnova.df2, 2
+            .fx1$ = eml_fixed.result$
+            @eml_fixed: emlWelchAnova.f, 4
+            .fx2$ = eml_fixed.result$
+            @emlReportLineString: "Welch's F",
+            ... "F(" + string$ (emlWelchAnova.df1) + ", "
+            ... + .fx1$ + ") = "
+            ... + .fx2$
+            @emlReportPWithExact: "Welch p", emlWelchAnova.p
+
+            @emlCSVSetTable: .tableName$
+            @emlCSVTermType: "omnibus"
+            @emlCSVAddStr: "Welch ANOVA", "", "data_column", .dataCol$
+            @emlCSVAddStr: "Welch ANOVA", "", "group_column", .groupCol$
+            @emlCSVAdd: "Welch ANOVA", "", "F", emlWelchAnova.f
+            @emlCSVAdd: "Welch ANOVA", "", "df1", emlWelchAnova.df1
+            @emlCSVAdd: "Welch ANOVA", "", "df2", emlWelchAnova.df2
+            @emlCSVAdd: "Welch ANOVA", "", "p", emlWelchAnova.p
+            @emlCSVAdd: "Welch ANOVA", "", "n_groups", emlWelchAnova.nGroups
+        endif
+
+        ; Games-Howell only when there is more than one pair to draw. At
+        ; k = 2 Welch's F above already IS that comparison, and a one-cell
+        ; matrix would restate it.
+        if .nGroups > 2
+            @emlGamesHowell: .tableId, .dataCol$, .groupCol$, 0.05
+            if emlGamesHowell.error$ <> ""
+                @emlReportLineString: "Games-Howell",
+                ... "not available -- " + emlGamesHowell.error$
+            else
+                @emlReportBlank
+                @emlReportSection:
+                ... "Games-Howell Pairwise Comparisons (p-values)"
+                @emlEmit: "", ""
+                .ghHeader$ = left$ ("" + "                ", 14)
+                for .jGroup from 1 to .nGroups
+                    .ghCol$ = replace$ (emlGamesHowell.groupName$[.jGroup],
+                    ... "_", " ", 0)
+                    if length (.ghCol$) > 10
+                        .ghCol$ = left$ (.ghCol$, 10)
+                    endif
+                    .ghHeader$ = .ghHeader$
+                    ... + left$ (.ghCol$ + "            ", 12)
+                endfor
+                @emlEmit: .ghHeader$, ""
+                for .iGroup from 1 to .nGroups
+                    .ghRow$ = replace$ (emlGamesHowell.groupName$[.iGroup],
+                    ... "_", " ", 0)
+                    if length (.ghRow$) > 12
+                        .ghRow$ = left$ (.ghRow$, 12)
+                    endif
+                    .ghLine$ = left$ (.ghRow$ + "              ", 14)
+                    for .jGroup from 1 to .nGroups
+                        if .iGroup = .jGroup
+                            .ghCell$ = "--"
+                        else
+                            .ghP = emlGamesHowell.pMatrix##[.iGroup, .jGroup]
+                            if .ghP = undefined
+                                .ghCell$ = "n/a"
+                            else
+                                @emlFormatP: .ghP
+                                .ghCell$ = emlFormatP.bare$
+                            endif
+                        endif
+                        .ghLine$ = .ghLine$
+                        ... + left$ (.ghCell$ + "            ", 12)
+                    endfor
+                    @emlEmit: .ghLine$, ""
+                endfor
+
+                for .iGroup from 1 to .nGroups - 1
+                    for .jGroup from .iGroup + 1 to .nGroups
+                        .ghP = emlGamesHowell.pMatrix##[.iGroup, .jGroup]
+                        if .ghP <> undefined
+                            @emlCSVSetTable: .tableName$
+                            @emlCSVTermType: "contrast"
+                            .ghContrast$ = emlGamesHowell.groupName$[.iGroup]
+                            ... + " vs " + emlGamesHowell.groupName$[.jGroup]
+                            @emlCSVAdd: "Games-Howell", .ghContrast$, "q",
+                            ... emlGamesHowell.qMatrix## [.iGroup, .jGroup]
+                            @emlCSVAdd: "Games-Howell", .ghContrast$, "df",
+                            ... emlGamesHowell.dfMatrix## [.iGroup, .jGroup]
+                            @emlCSVAdd: "Games-Howell", .ghContrast$,
+                            ... "p_adjusted", .ghP
+                            @emlCSVAdd: "Games-Howell", .ghContrast$,
+                            ... "cohens_d",
+                            ... emlGamesHowell.dMatrix## [.iGroup, .jGroup]
+                        endif
+                    endfor
+                endfor
+
+                if emlGamesHowell.nUndefined > 0
+                    @emlReportNote: string$ (emlGamesHowell.nUndefined)
+                    ... + " pair(s) could not be computed -- a group with "
+                    ... + "fewer than two values, or zero variance in both "
+                    ... + "groups of a pair, leaves the Welch denominator "
+                    ... + "undefined. Those cells read n/a rather than "
+                    ... + "carrying a number with no meaning."
+                endif
+            endif
+        endif
+    endif
+
+    @emlReportFooter
+endproc
+
+
+# ============================================================================
+# @emlReportKWComparison
+# ============================================================================
+procedure emlReportKWComparison: .tableName$, .dataCol$, .groupCol$, .tableId, .nGroups, .doDunn
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .dataCol$
+    .displayData$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .groupCol$
+    .displayGroup$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Kruskal-Wallis H Test"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Data column", .displayData$
+    @emlReportLineString: "Group column", .displayGroup$
+    @emlReportLine: "Groups", .nGroups, 0
+    @emlReportLine: "Total N", emlKruskalWallis.n, 0
+    .groupList$ = ""
+    for .iGroup from 1 to .nGroups
+        if .iGroup > 1
+            .groupList$ = .groupList$ + ", "
+        endif
+        .groupList$ = .groupList$
+            ... + replace$ (emlKruskalWallis.groupName$ [.iGroup], "_", " ", 0)
+    endfor
+    @emlReportGroupOrderLine: .groupList$
+
+    @emlReportBlank
+    @emlReportSection: "Omnibus Test"
+    if emlShowExplanations
+        ; ITEM 1.2 — EXPLANATION; never buffers.
+        @emlExplainLine: "  Why: Nonparametric comparison of three or "
+        ... + "more groups. Every observation is ranked in one pooled "
+        ... + "ranking and the groups' mean ranks are compared, so no "
+        ... + "normal distribution is assumed. Observations must still be "
+        ... + "independent, and reading the result as a difference in "
+        ... + "MEDIANS additionally requires the groups to have similar "
+        ... + "distribution shapes.", 0
+    endif
+    if emlShowExplanations
+        emlWizardExplain$ = "Test statistic: how far the groups' mean "
+        ... + "ranks sit from the overall mean rank. Its p comes from a "
+        ... + "chi-squared approximation, which improves as the groups grow"
+    endif
+    @emlReportLine: "H", emlKruskalWallis.h, 4
+    if emlShowExplanations
+        emlWizardExplain$ = "Number of groups (" + string$ (.nGroups)
+        ... + ") minus 1. Controls the chi-squared reference distribution."
+    endif
+    @emlReportLine: "df", emlKruskalWallis.df, 0
+    if emlShowExplanations
+        @emlWizardExplainP: emlKruskalWallis.p
+    endif
+    ; The omnibus p was floored to "p = .003" with the real value
+    ; Reachable only from the CSV, and the label was printed twice.
+    @emlReportPWithExact: "p", emlKruskalWallis.p
+    if emlShowExplanations
+        @emlWizardExplainEffectEpsilon2: emlKruskalWallis.epsilonSq
+    endif
+    @emlReportLine: "Epsilon-squared", emlKruskalWallis.epsilonSq, 4
+    @emlFormatEffectLabel: emlKruskalWallis.epsilonSq, "eta_squared"
+    @emlReportLineString: "Effect magnitude", emlFormatEffectLabel.labelPhrase$
+
+    @emlCSVSetTable: .tableName$
+    @emlCSVTermType: "omnibus"
+    @emlCSVAddStr: "Kruskal-Wallis", "", "data_column", .dataCol$
+    @emlCSVAddStr: "Kruskal-Wallis", "", "group_column", .groupCol$
+    @emlCSVAdd: "Kruskal-Wallis", "", "H", emlKruskalWallis.h
+    @emlCSVAdd: "Kruskal-Wallis", "", "df", emlKruskalWallis.df
+    @emlCSVAdd: "Kruskal-Wallis", "", "p", emlKruskalWallis.p
+    @emlCSVAdd: "Kruskal-Wallis", "", "epsilon_squared",
+    ... emlKruskalWallis.epsilonSq
+    @emlCSVAddStr: "Kruskal-Wallis", "", "effect_label",
+    ... emlFormatEffectLabel.label$
+
+    # Group order controlled by @emlCountGroups
+    # Group order from @emlCountGroups (no remapping needed)
+
+    # Group mean ranks
+    @emlReportBlank
+    @emlReportSection: "Group Mean Ranks"
+    @emlEmit: "", ""
+    .grpHeader$ = left$ ("Group" + "                ", 14)
+    ... + left$ ("N" + "      ", 6) + "Mean Rank"
+    @emlEmit: .grpHeader$, ""
+    for .iGroup from 1 to .nGroups
+        .gName$ = replace$ (emlKruskalWallis.groupName$ [.iGroup], "_", " ", 0)
+        if length (.gName$) > 12
+            .gName$ = left$ (.gName$, 12)
+        endif
+        @eml_fixed: emlKruskalWallis.meanRank [.iGroup], 2
+        .fx1$ = eml_fixed.result$
+        ; ITEM 1.2 — factual table row.
+        @emlEmit: left$ (.gName$ + "                ", 14)
+        ... + left$ (string$ (emlKruskalWallis.groupN [.iGroup]) + "      ", 6)
+        ... + .fx1$, ""
+    endfor
+
+    if .doDunn
+        if emlDunnTest.error$ = ""
+            .adjLabel$ = emlDunnTest.method$
+            @emlReportBlank
+            @emlReportSection: "Dunn's Post-Hoc (adjusted p, " + .adjLabel$ + ")"
+            @emlEmit: "", ""
+            .headerLine$ = left$ ("" + "                ", 14)
+            for .jGroup from 1 to .nGroups
+                .colName$ = replace$ (emlDunnTest.groupName$ [.jGroup], "_", " ", 0)
+                if length (.colName$) > 10
+                    .colName$ = left$ (.colName$, 10)
+                endif
+                .headerLine$ = .headerLine$ + left$ (.colName$ + "            ", 12)
+            endfor
+            @emlEmit: .headerLine$, ""
+            for .iGroup from 1 to .nGroups
+                .rowName$ = replace$ (emlDunnTest.groupName$ [.iGroup], "_", " ", 0)
+                if length (.rowName$) > 12
+                    .rowName$ = left$ (.rowName$, 12)
+                endif
+                .rowLine$ = left$ (.rowName$ + "                ", 14)
+                for .jGroup from 1 to .nGroups
+                    if .iGroup = .jGroup
+                        .cellText$ = "---"
+                    else
+                        ; As in the Tukey matrix above: one spelling of
+                        ; a p-value per report. @emlFormatP also covers the
+                        ; .999 ceiling and undefined, which the hand-rolled
+                        ; floor did not.
+                        .pVal = emlDunnTest.pMatrix##[.iGroup, .jGroup]
+                        @emlFormatP: .pVal
+                        .cellText$ = emlFormatP.bare$
+                    endif
+                    .rowLine$ = .rowLine$ + left$ (.cellText$ + "            ", 12)
+                endfor
+                @emlEmit: .rowLine$, ""
+            endfor
+
+            @emlReportBlank
+            @emlReportSection: "Dunn's z-statistics"
+            @emlEmit: "", ""
+            @emlEmit: .headerLine$, ""
+            for .iGroup from 1 to .nGroups
+                .rowName$ = replace$ (emlDunnTest.groupName$ [.iGroup], "_", " ", 0)
+                if length (.rowName$) > 12
+                    .rowName$ = left$ (.rowName$, 12)
+                endif
+                .rowLine$ = left$ (.rowName$ + "                ", 14)
+                for .jGroup from 1 to .nGroups
+                    if .iGroup = .jGroup
+                        .cellText$ = "---"
+                    else
+                        .zVal = emlDunnTest.zMatrix## [.iGroup, .jGroup]
+                        @eml_fixed: .zVal, 3
+                        .cellText$ = eml_fixed.result$
+                    endif
+                    .rowLine$ = .rowLine$ + left$ (.cellText$ + "            ", 12)
+                endfor
+                @emlEmit: .rowLine$, ""
+            endfor
+            ; The adjusted-p matrix above is symmetric; this one is not.
+            ; @emlDunnTest builds each z from mean rank i minus mean rank j
+            ; and fills the lower triangle with the negation, so the sign is
+            ; the direction of the rank difference. Same convention, same
+            ; wording, as the effect-size matrices in this file and in
+            ; @emlReportPairwiseComparison.
+            @emlReportNote: "Row minus column: a negative z means the ROW "
+            ... + "group's mean rank is lower than the COLUMN group's. |z| "
+            ... + "is the size of the standardised difference."
+
+            # CSV rows — per-pair descriptives + rank-biserial r
+            for .iGroup from 1 to .nGroups - 1
+                for .jGroup from .iGroup + 1 to .nGroups
+                    .pVal = emlDunnTest.pMatrix##[.iGroup, .jGroup]
+                    .zVal = emlDunnTest.zMatrix## [.iGroup, .jGroup]
+                    .rVal = emlDunnTest.rMatrix## [.iGroup, .jGroup]
+                    .g1Label$ = emlDunnTest.groupName$ [.iGroup]
+                    .g2Label$ = emlDunnTest.groupName$ [.jGroup]
+                    @eml_getGroupData: .tableId, .dataCol$, .groupCol$,
+                    ... .g1Label$
+                    if eml_getGroupData.error$ <> ""
+                        .n1 = 0
+                        .v1# = zero# (0)
+                    else
+                        .n1 = eml_getGroupData.n
+                        .v1# = eml_getGroupData.data#
+                    endif
+                    @eml_getGroupData: .tableId, .dataCol$, .groupCol$,
+                    ... .g2Label$
+                    if eml_getGroupData.error$ <> ""
+                        .n2 = 0
+                        .v2# = zero# (0)
+                    else
+                        .n2 = eml_getGroupData.n
+                        .v2# = eml_getGroupData.data#
+                    endif
+                    @emlMean: .v1#
+                    .m1 = emlMean.result
+                    @emlSD: .v1#
+                    .s1 = emlSD.result
+                    @emlMedian: .v1#
+                    .md1 = emlMedian.result
+                    @emlMean: .v2#
+                    .m2 = emlMean.result
+                    @emlSD: .v2#
+                    .s2 = emlSD.result
+                    @emlMedian: .v2#
+                    .md2 = emlMedian.result
+                    @emlFormatEffectLabel: .rVal, "r"
+                    .rLabel$ = emlFormatEffectLabel.label$
+                    # Dunn's z has no df; the zero is gone, not
+                    # replaced. The adjustment is its own field so a reader
+                    # does not have to parse it out of the test name.
+                    @emlCSVSetTable: .tableName$
+                    @emlCSVTermType: "contrast"
+                    .dunn$ = "Dunn's test"
+                    .contrast$ = .g1Label$ + " vs " + .g2Label$
+                    @emlCSVAddStr: .dunn$, .contrast$, "adjustment",
+                    ... .adjLabel$
+                    @emlCSVAdd: .dunn$, .contrast$, "z", .zVal
+                    @emlCSVAdd: .dunn$, .contrast$, "p_adjusted", .pVal
+                    @emlCSVAdd: .dunn$, .contrast$, "rank_biserial_r", .rVal
+                    @emlCSVAddStr: .dunn$, .contrast$, "effect_label", .rLabel$
+                    @emlCSVAddDescriptives: .dunn$, .g1Label$,
+                    ... .n1, .m1, .s1, .md1
+                    @emlCSVAddDescriptives: .dunn$, .g2Label$,
+                    ... .n2, .m2, .s2, .md2
+                endfor
+            endfor
+
+            ; THE POST-HOC RAN, AND THE OMNIBUS MAY NOT HAVE. Dunn's is never
+            ; gated on the Kruskal-Wallis p under the ruled policy, so this
+            ; report can carry a pairwise table under an H that did not reach
+            ; the level in force. The caveat is stated rather than enacted by
+            ; taking the table away. See @emlPostHocCaution.
+            @emlPostHocCaution: emlKruskalWallis.p
+        else
+            ; ITEM 1.2 — a DISCLOSURE: it states that the post-hoc did not
+            ; run, so it is canonical and goes through the emit helper.
+            @emlEmit: newline$ + "Dunn's test error: " + emlDunnTest.error$, ""
+        endif
+    endif
+
+    # Pairwise rank-biserial r (ALWAYS — parallel to ANOVA Cohen's d fix)
+    # When called via orchestrator, rMatrix## is pre-computed.
+    # When called directly (backward compat), compute it here.
+    if .doDunn = 0
+        emlKruskalWallis.rMatrix## = zero## (.nGroups, .nGroups)
+        for .i from 1 to .nGroups - 1
+            @eml_getGroupData: .tableId, .dataCol$, .groupCol$,
+            ... emlKruskalWallis.groupName$[.i]
+            .tmpV1Error$ = eml_getGroupData.error$
+            .tmpV1# = eml_getGroupData.data#
+            for .j from .i + 1 to .nGroups
+                @eml_getGroupData: .tableId, .dataCol$, .groupCol$,
+                ... emlKruskalWallis.groupName$[.j]
+                if .tmpV1Error$ <> "" or eml_getGroupData.error$ <> ""
+                    ; Punch list 9.1, sibling of the Cohen's d fix above.
+                    emlKruskalWallis.rMatrix## [.i, .j] = undefined
+                    emlKruskalWallis.rMatrix## [.j, .i] = undefined
+                else
+                    @emlRankBiserialR: .tmpV1#, eml_getGroupData.data#, 2
+                    if emlRankBiserialR.error$ = ""
+                        emlKruskalWallis.rMatrix## [.i, .j] = emlRankBiserialR.r
+                        emlKruskalWallis.rMatrix## [.j, .i] = -emlRankBiserialR.r
+                    else
+                        ; Punch list 9.1, sibling of the Cohen's d fix above.
+                        emlKruskalWallis.rMatrix## [.i, .j] = undefined
+                        emlKruskalWallis.rMatrix## [.j, .i] = undefined
+                    endif
+                endif
+            endfor
+        endfor
+    endif
+    @emlReportBlank
+    @emlReportSection: "Pairwise Effect Sizes (rank-biserial r)"
+    ; The twin of the caption under the Cohen's d matrix, and for its reason:
+    ; with Dunn's off this grid is the only pairwise thing in the report.
+    if .doDunn = 0
+        @emlEffectMatrixCaption
+    endif
+    @emlEmit: "", ""
+    .rHeaderLine$ = left$ ("" + "                ", 14)
+    for .jGroup from 1 to .nGroups
+        .colName$ = replace$ (emlKruskalWallis.groupName$ [.jGroup], "_", " ", 0)
+        if length (.colName$) > 10
+            .colName$ = left$ (.colName$, 10)
+        endif
+        .rHeaderLine$ = .rHeaderLine$ + left$ (.colName$ + "            ", 12)
+    endfor
+    @emlEmit: .rHeaderLine$, ""
+    for .iGroup from 1 to .nGroups
+        .rowName$ = replace$ (emlKruskalWallis.groupName$ [.iGroup], "_", " ", 0)
+        if length (.rowName$) > 12
+            .rowName$ = left$ (.rowName$, 12)
+        endif
+        .rRowLine$ = left$ (.rowName$ + "                ", 14)
+        for .jGroup from 1 to .nGroups
+            if .iGroup = .jGroup
+                .cellText$ = "---"
+            else
+                .rVal = emlKruskalWallis.rMatrix## [.iGroup, .jGroup]
+                if .rVal = undefined
+                    ; Punch list 9.1. Same convention as the Cohen's d
+                    ; matrix above: a failed pair reads "n/a", never "0.000".
+                    .cellText$ = "n/a"
+                else
+                    @eml_fixed: .rVal, 3
+                    .cellText$ = eml_fixed.result$
+                endif
+            endif
+            .rRowLine$ = .rRowLine$ + left$ (.cellText$ + "            ", 12)
+        endfor
+        @emlEmit: .rRowLine$, ""
+    endfor
+    ; Antisymmetric, for the same reason the Cohen's d matrix above is:
+    ; r[i, j] is -r[j, i], so the sign is the direction and the magnitude is
+    ; the effect. Same wording as @emlReportPairwiseComparison's r matrix.
+    @emlReportNote: "Row minus column: a negative r means the ROW group "
+    ... + "ranks lower than the COLUMN group. |r| is the effect size."
+
+    # CSV rows for rank-biserial r (when Dunn did NOT run)
+    if .doDunn = 0
+        for .iGroup from 1 to .nGroups - 1
+            for .jGroup from .iGroup + 1 to .nGroups
+                .g1Label$ = emlKruskalWallis.groupName$ [.iGroup]
+                .g2Label$ = emlKruskalWallis.groupName$ [.jGroup]
+                .rVal = emlKruskalWallis.rMatrix## [.iGroup, .jGroup]
+                @eml_getGroupData: .tableId, .dataCol$, .groupCol$, .g1Label$
+                if eml_getGroupData.error$ <> ""
+                    .n1 = 0
+                    .v1# = zero# (0)
+                else
+                    .n1 = eml_getGroupData.n
+                    .v1# = eml_getGroupData.data#
+                endif
+                @eml_getGroupData: .tableId, .dataCol$, .groupCol$, .g2Label$
+                if eml_getGroupData.error$ <> ""
+                    .n2 = 0
+                    .v2# = zero# (0)
+                else
+                    .n2 = eml_getGroupData.n
+                    .v2# = eml_getGroupData.data#
+                endif
+                @emlMean: .v1#
+                .m1 = emlMean.result
+                @emlSD: .v1#
+                .s1 = emlSD.result
+                @emlMedian: .v1#
+                .md1 = emlMedian.result
+                @emlMean: .v2#
+                .m2 = emlMean.result
+                @emlSD: .v2#
+                .s2 = emlSD.result
+                @emlMedian: .v2#
+                .md2 = emlMedian.result
+                @emlFormatEffectLabel: .rVal, "r"
+                .rLabel$ = emlFormatEffectLabel.label$
+                @emlCSVSetTable: .tableName$
+                @emlCSVTermType: "contrast"
+                .rbLab$ = "Pairwise rank-biserial r"
+                .contrast$ = .g1Label$ + " vs " + .g2Label$
+                @emlCSVAdd: .rbLab$, .contrast$, "rank_biserial_r", .rVal
+                @emlCSVAddStr: .rbLab$, .contrast$, "effect_label", .rLabel$
+                @emlCSVAddDescriptives: .rbLab$, .g1Label$,
+                ... .n1, .m1, .s1, .md1
+                @emlCSVAddDescriptives: .rbLab$, .g2Label$,
+                ... .n2, .m2, .s2, .md2
+            endfor
+        endfor
+    endif
+
+    @emlReportFooter
+endproc
+
+
+# ============================================================================
+# @emlReportCorrelationAnalysis
+# ============================================================================
+procedure emlReportCorrelationAnalysis: .tableName$, .colX$, .colY$, .n, .testType$
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .colX$
+    .displayX$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .colY$
+    .displayY$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Correlation Analysis"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Column X", .displayX$
+    @emlReportLineString: "Column Y", .displayY$
+    @emlReportLine: "N", .n, 0
+
+    if .testType$ = "pearson" or .testType$ = "both"
+        if emlPearsonCorrelation.error$ = ""
+            @emlReportBlank
+            @emlReportSection: "Pearson Correlation"
+            if emlShowExplanations
+                appendInfoLine: "  Why: Measures linear association between "
+                ... + "two continuous variables."
+            endif
+            if emlShowExplanations
+                @emlWizardExplainCorrelation: emlPearsonCorrelation.r
+            endif
+            @emlReportLine: "r", emlPearsonCorrelation.r, 4
+            ; R-squared does NOT sit inside the explanations gate. Gated,
+            ; the Info window would omit the one number most correlation
+            ; write-ups quote, while the scatter figure from the same run
+            ; annotated it. R-squared is a statistic, not an explanation —
+            ; only the prose gloss is gated.
+            .r2 = emlPearsonCorrelation.r * emlPearsonCorrelation.r
+            if emlShowExplanations
+                @emlWizardExplainR2: .r2
+            endif
+            @emlReportLine: "R-squared", .r2, 4
+            if emlShowExplanations
+                @emlWizardExplainT: emlPearsonCorrelation.t
+            endif
+            @emlReportLine: "t", emlPearsonCorrelation.t, 3
+            if emlShowExplanations
+                @emlWizardExplainDfCorrelation: emlPearsonCorrelation.df, .n
+            endif
+            @emlReportLine: "df", emlPearsonCorrelation.df, 0
+            if emlShowExplanations
+                @emlWizardExplainP: emlPearsonCorrelation.p
+            endif
+            @emlReportPWithExact: "p", emlPearsonCorrelation.p
+            ; ITEM 22 (language batch, Fable's ruling 27 August 2026):
+            ; Pearson's p is a literal -- @emlPearsonCorrelation never
+            ; branches between an exact and an approximate null, so there
+            ; is no .method$ to read and no reason to compose.
+            @emlReportLineString: "p method", "t distribution"
+            # An interval for r, from numbers already in hand, by the
+            # Fisher z transform: z = atanh(r), se = 1/sqrt(n-3), and the
+            # interval is tanh(z +/- zCrit se). It is a z interval — the
+            # transform is asymptotically normal, so the quantile is normal
+            # and not Student's — but the LEVEL is the user's, taken from
+            # annotAlpha, so this band states the same confidence as the
+            # t-based error bars and mean CIs the same figure carries. The
+            # printed label carries the level with it, so a reader never has
+            # to know which alpha was in force to read the bracket.
+            # Undefined for n <= 3 (se blows up) and for |r| = 1 (atanh is
+            # infinite), so both are guarded rather than printed as garbage.
+            .rPearson = emlPearsonCorrelation.r
+            .fisherOK = 0
+            if .n > 3 and .rPearson <> undefined
+                if abs (.rPearson) < 1
+                    .fisherOK = 1
+                endif
+            endif
+            if .fisherOK = 1
+                # The level is the user's, resolved once for the whole module
+                # by @emlCIAlphaInForce, so the stars and the interval cannot
+                # disagree about the alpha in force.
+                @emlCIAlphaInForce
+                .ciAlpha = emlCIAlphaInForce.alpha
+                .zCrit = invGaussQ (.ciAlpha / 2)
+                .fisherZ = 0.5 * ln ((1 + .rPearson) / (1 - .rPearson))
+                .fisherSE = 1 / sqrt (.n - 3)
+                .zLo = .fisherZ - .zCrit * .fisherSE
+                .zHi = .fisherZ + .zCrit * .fisherSE
+                .rLo = (exp (2 * .zLo) - 1) / (exp (2 * .zLo) + 1)
+                .rHi = (exp (2 * .zHi) - 1) / (exp (2 * .zHi) + 1)
+                @eml_fixed: .rLo, 4
+                .fx1$ = eml_fixed.result$
+                @eml_fixed: .rHi, 4
+                .fx2$ = eml_fixed.result$
+                @emlCILevelLabel: .ciAlpha
+                .ciLabel$ = emlCILevelLabel.percent$ + "% CI for r"
+                @emlReportLineString: .ciLabel$,
+                ... "[" + .fx1$ + ", " + .fx2$ + "]"
+            endif
+            # The row carried r and r_squared but left effect_label
+            # empty, so a consumer joining these exports got a column that is
+            # populated for the group comparisons and blank here.
+            @emlFormatEffectLabel: abs (.rPearson), "r"
+            .pearsonLabel$ = emlFormatEffectLabel.label$
+            @emlReportLineString: "Magnitude", .pearsonLabel$
+            # colY$ does not land in the group_col slot, which would say
+            # the Y variable was a grouping column. Both variables have
+            # their own named field. The six descriptive slots of a wide
+            # schema are not written here at all -- both columns'
+            # descriptives exist elsewhere, and the term names which pair
+            # the row is about.
+            @emlCSVSetTable: .tableName$
+            @emlCSVTermType: "variable"
+            .term$ = .colX$ + " ~ " + .colY$
+            @emlCSVAddStr: "Pearson correlation", .term$, "x_column", .colX$
+            @emlCSVAddStr: "Pearson correlation", .term$, "y_column", .colY$
+            @emlCSVAdd: "Pearson correlation", .term$, "r",
+            ... emlPearsonCorrelation.r
+            @emlCSVAdd: "Pearson correlation", .term$, "t",
+            ... emlPearsonCorrelation.t
+            @emlCSVAdd: "Pearson correlation", .term$, "df",
+            ... emlPearsonCorrelation.df
+            @emlCSVAdd: "Pearson correlation", .term$, "p",
+            ... emlPearsonCorrelation.p
+            @emlCSVAdd: "Pearson correlation", .term$, "r_squared",
+            ... emlPearsonCorrelation.r * emlPearsonCorrelation.r
+            @emlCSVAddStr: "Pearson correlation", .term$, "effect_label",
+            ... .pearsonLabel$
+            @emlCSVAdd: "Pearson correlation", .term$, "n", .n
+        else
+            appendInfoLine: newline$ + "Pearson error: " + emlPearsonCorrelation.error$
+        endif
+    endif
+
+    if .testType$ = "spearman" or .testType$ = "both"
+        if emlSpearmanCorrelation.error$ = ""
+            @emlReportBlank
+            @emlReportSection: "Spearman Correlation"
+            if emlShowExplanations
+                appendInfoLine: "  Why: Measures monotonic association — "
+                ... + "no normality assumption needed."
+            endif
+            if emlShowExplanations
+                @emlWizardExplainCorrelation: emlSpearmanCorrelation.rho
+            endif
+            @emlReportLine: "rho", emlSpearmanCorrelation.rho, 4
+            if emlShowExplanations
+                @emlWizardExplainT: emlSpearmanCorrelation.t
+            endif
+            @emlReportLine: "t", emlSpearmanCorrelation.t, 3
+            if emlShowExplanations
+                @emlWizardExplainDfCorrelation: emlSpearmanCorrelation.df, .n
+            endif
+            @emlReportLine: "df", emlSpearmanCorrelation.df, 0
+            if emlShowExplanations
+                @emlWizardExplainP: emlSpearmanCorrelation.p
+            endif
+            @emlReportPWithExact: "p", emlSpearmanCorrelation.p
+            ; ITEM 22 (language batch, Fable's ruling 27 August 2026). The
+            ; p just printed is the value @emlSpearmanCorrelationDispatch
+            ; computed (written back into emlSpearmanCorrelation.p by every
+            ; caller of the dispatch, per its own contract), but .method$
+            ; and .methodReason$ are read straight off the dispatch's own
+            ; qualified globals -- every call site that reaches this report
+            ; calls @emlSpearmanCorrelationDispatch immediately beforehand
+            ; and only restores .rho/.t/.df/.p/.error$ into
+            ; emlSpearmanCorrelation.*, so the dispatch's .method$ and
+            ; .methodReason$ are still the ones this correlation produced.
+            .pMethod$ = emlSpearmanCorrelationDispatch.method$
+            if emlSpearmanCorrelationDispatch.method$ <> "exact"
+                .pMethod$ = .pMethod$ + " (" + emlSpearmanCorrelationDispatch.methodReason$ + ")"
+            endif
+            @emlReportLineString: "p method", .pMethod$
+            # Rho is an effect size and had no magnitude gloss in the
+            # report and no effect_label in the export.
+            @emlFormatEffectLabel: abs (emlSpearmanCorrelation.rho), "r"
+            .spearmanLabel$ = emlFormatEffectLabel.label$
+            @emlReportLineString: "Magnitude", .spearmanLabel$
+            @emlCSVSetTable: .tableName$
+            @emlCSVTermType: "variable"
+            .term$ = .colX$ + " ~ " + .colY$
+            @emlCSVAddStr: "Spearman correlation", .term$, "x_column", .colX$
+            @emlCSVAddStr: "Spearman correlation", .term$, "y_column", .colY$
+            @emlCSVAdd: "Spearman correlation", .term$, "rho",
+            ... emlSpearmanCorrelation.rho
+            @emlCSVAdd: "Spearman correlation", .term$, "t",
+            ... emlSpearmanCorrelation.t
+            @emlCSVAdd: "Spearman correlation", .term$, "df",
+            ... emlSpearmanCorrelation.df
+            @emlCSVAdd: "Spearman correlation", .term$, "p",
+            ... emlSpearmanCorrelation.p
+            @emlCSVAddStr: "Spearman correlation", .term$, "effect_label",
+            ... .spearmanLabel$
+            @emlCSVAdd: "Spearman correlation", .term$, "n", .n
+        endif
+    endif
+
+    @emlReportFooter
+endproc
+
+
+# ============================================================================
+# @emlReportRegressionTheilSen
+# ============================================================================
+# Printed FIRST, ahead of @emlReportRegressionAnalysis's own OLS report,
+# when the door's .estimator$ is "theil-sen" (order section 4.3: "the
+# report leads with the requested estimator and prints the other beneath
+# it"). Reads emlRunRegressionAnalysis.ts*, set by the door immediately
+# after its own @emlTheilSen call.
+# ============================================================================
+procedure emlReportRegressionTheilSen: .predCol$, .depCol$
+    @emlUnderscoreToSpace: .predCol$
+    .displayPred$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .depCol$
+    .displayDep$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Theil-Sen Regression"
+    @emlReportLineString: "Response (Y)", .displayDep$
+    @emlReportLineString: "Predictor (X)", .displayPred$
+    if emlRunRegressionAnalysis.tsSlope = undefined
+        @emlReportNote: "Not available -- Theil-Sen needs at least two "
+        ... + "distinct predictor values."
+    else
+        @emlReportLine: "N", emlRunRegressionAnalysis.tsN, 0
+        @emlReportLine: "Slope pairs used",
+        ... emlRunRegressionAnalysis.tsNSlopes, 0
+        @eml_fixed: emlRunRegressionAnalysis.tsSlope, 4
+        .fx1$ = eml_fixed.result$
+        @eml_fixed: emlRunRegressionAnalysis.tsIntercept, 4
+        .fx2$ = eml_fixed.result$
+        @emlReportLineString: "Equation", "y = " + .fx1$ + "x + " + .fx2$
+        @emlReportLine: "Slope", emlRunRegressionAnalysis.tsSlope, 4
+        @emlReportLine: "Intercept", emlRunRegressionAnalysis.tsIntercept, 4
+    endif
+    @emlReportBlank
+    @emlReportSection: "Ordinary Least Squares (for comparison)"
+endproc
+
+
+# ============================================================================
+# @emlReportRegressionAnalysis
+# ============================================================================
+# Formatted Info window report for simple linear regression.
+# Reads globals from @emlLinearRegression.
+# ============================================================================
+
+procedure emlReportRegressionAnalysis: .tableName$, .depCol$, .predCol$,
+... .nValid, .nUndefined
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .depCol$
+    .displayDep$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .predCol$
+    .displayPred$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Simple Linear Regression"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Response (Y)", .displayDep$
+    @emlReportLineString: "Predictor (X)", .displayPred$
+    @emlReportLine: "N", .nValid, 0
+    if .nUndefined > 0
+        @emlReportLine: "Excluded (missing)", .nUndefined, 0
+    endif
+
+    @emlReportBlank
+    @emlReportSection: "Model"
+    if emlShowExplanations
+        appendInfoLine: "  Why: Tests whether the predictor linearly"
+        ... + " predicts the response."
+    endif
+    @eml_fixed: emlLinearRegression.slope, 4
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlLinearRegression.intercept, 4
+    .fx2$ = eml_fixed.result$
+    .eqn$ = "y = "
+    ... + .fx1$ + "x"
+    ... + " + " + .fx2$
+    @emlReportLineString: "Equation", .eqn$
+    if emlShowExplanations
+        @eml_fixed: emlLinearRegression.slope, 4
+        .fx1$ = eml_fixed.result$
+        @eml_fixed: emlLinearRegression.intercept, 4
+        .fx2$ = eml_fixed.result$
+        .proseEqn$ = .displayDep$ + " = "
+        ... + .fx1$ + " x " + .displayPred$
+        ... + " + " + .fx2$
+        emlWizardExplain$ = .proseEqn$
+        appendInfoLine: "  " + emlWizardExplain$
+
+        ; THE SLOPE IN WORDS, stated as a comparison BETWEEN cases rather
+        ; than as a change WITHIN one. Per unit of the predictor, the fitted
+        ; line puts predicted response this much higher or lower; it does not
+        ; forecast what moving a case along X would do to it.
+        @eml_fixed: abs (emlLinearRegression.slope), 4
+        .slopeAbs$ = eml_fixed.result$
+        if emlLinearRegression.slope >= 0
+            .slopeDir$ = "higher"
+        else
+            .slopeDir$ = "lower"
+        endif
+        appendInfoLine: "  For each 1-unit increase in " + .displayPred$
+        ... + ", predicted " + .displayDep$ + " is "
+        ... + .slopeAbs$ + " units " + .slopeDir$ + "."
+    endif
+    if emlShowExplanations
+        @emlWizardExplainCorrelation: emlLinearRegression.r
+    endif
+    @emlReportLine: "R", emlLinearRegression.r, 4
+    if emlShowExplanations
+        @emlWizardExplainR2: emlLinearRegression.rSquared
+    endif
+    @emlReportLine: "R-squared", emlLinearRegression.rSquared, 4
+    .adjR2 = 1 - (1 - emlLinearRegression.rSquared) * (.nValid - 1) / (.nValid - 2)
+    if emlShowExplanations
+        emlWizardExplain$ = "R-squared adjusted for number of predictors — penalizes model complexity"
+    endif
+    @emlReportLine: "Adj. R-squared", .adjR2, 4
+    if emlShowExplanations
+        @eml_fixed: emlLinearRegression.seResidual, 2
+        .fx1$ = eml_fixed.result$
+        emlWizardExplain$ = "Typical prediction error — points deviate from the line by +/-"
+        ... + .fx1$ + " units on average"
+    endif
+    @emlReportLine: "Residual SE", emlLinearRegression.seResidual, 4
+
+    @emlReportBlank
+    @emlReportSection: "Overall Model Test (F)"
+    .dfLabel$ = "F(" + string$ (emlLinearRegression.dfReg)
+    ... + "," + string$ (emlLinearRegression.dfRes) + ")"
+    if emlShowExplanations
+        emlWizardExplain$ = "Ratio of the mean square accounted for by the "
+        ... + "model to the mean square left over. With no real association, "
+        ... + "this ratio tends to be near 1"
+    endif
+    @emlReportLine: .dfLabel$, emlLinearRegression.fStat, 4
+    if emlShowExplanations
+        @emlWizardExplainP: emlLinearRegression.pF
+    endif
+    @emlReportPWithExact: "p", emlLinearRegression.pF
+
+    @emlReportBlank
+    @emlReportSection: "Coefficients"
+    appendInfoLine: ""
+    # The block was flush-left inside a report whose every other block is
+    # indented two spaces, the term column had no header at all, and the cells
+    # under the numeric-aligned "p" header held the string "p < .001". The
+    # block is now indented, the term column is headed, and the cells carry
+    # @emlFormatP's bare form so the column contains values, not labels.
+    # SE is printed with the interval it defines: dfRes and the two standard
+    # errors are already on screen, so the interval is one t quantile away and
+    # is printed beside each coefficient.
+    #
+    # THE LEVEL IS THE USER'S, taken from the alpha in force, and the column
+    # heading names it. A coefficient table headed "95% CI" under an alpha of
+    # .01 would contradict the p column beside it, which marks significance
+    # against that same alpha.
+    @emlCIAlphaInForce
+    .ciAlpha = emlCIAlphaInForce.alpha
+    .ciWidth = 0
+    if emlLinearRegression.dfRes <> undefined
+        if emlLinearRegression.dfRes >= 1
+            .ciWidth = invStudentQ (.ciAlpha / 2, emlLinearRegression.dfRes)
+        endif
+    endif
+    @emlCILevelLabel: .ciAlpha
+    .ciColHead$ = emlCILevelLabel.percent$ + "% CI"
+    .hdr$ = "  " + left$ ("Term" + "                    ", 20)
+    ... + left$ ("Estimate" + "              ", 14)
+    ... + left$ ("SE" + "              ", 14)
+    ... + left$ ("t" + "              ", 12)
+    ... + left$ ("p" + "            ", 12)
+    ... + .ciColHead$
+    appendInfoLine: .hdr$
+    # Intercept row
+    @emlFormatP: emlLinearRegression.pIntercept
+    if .ciWidth > 0
+        .intHalf = .ciWidth * emlLinearRegression.seIntercept
+        @eml_fixed: emlLinearRegression.intercept - .intHalf, 4
+        .fx1$ = eml_fixed.result$
+        @eml_fixed: emlLinearRegression.intercept + .intHalf, 4
+        .fx2$ = eml_fixed.result$
+        .intCI$ = "[" + .fx1$
+        ... + ", " + .fx2$ + "]"
+    else
+        .intCI$ = "not available"
+    endif
+    @eml_fixed: emlLinearRegression.intercept, 4
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlLinearRegression.seIntercept, 4
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: emlLinearRegression.tIntercept, 3
+    .fx3$ = eml_fixed.result$
+    .intRow$ = "  " + left$ ("(Intercept)" + "                    ", 20)
+    ... + left$ (.fx1$ + "              ", 14)
+    ... + left$ (.fx2$ + "              ", 14)
+    ... + left$ (.fx3$ + "              ", 12)
+    ... + left$ (emlFormatP.bare$ + "            ", 12)
+    ... + .intCI$
+    appendInfoLine: .intRow$
+    # Slope row
+    @emlFormatP: emlLinearRegression.pSlope
+    if .ciWidth > 0
+        .slopeHalf = .ciWidth * emlLinearRegression.seSlope
+        @eml_fixed: emlLinearRegression.slope - .slopeHalf, 4
+        .fx1$ = eml_fixed.result$
+        @eml_fixed: emlLinearRegression.slope + .slopeHalf, 4
+        .fx2$ = eml_fixed.result$
+        .slopeCI$ = "[" + .fx1$
+        ... + ", " + .fx2$ + "]"
+    else
+        .slopeCI$ = "not available"
+    endif
+    @eml_fixed: emlLinearRegression.slope, 4
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlLinearRegression.seSlope, 4
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: emlLinearRegression.tSlope, 3
+    .fx3$ = eml_fixed.result$
+    .slopeRow$ = "  " + left$ (.displayPred$ + "                    ", 20)
+    ... + left$ (.fx1$ + "              ", 14)
+    ... + left$ (.fx2$ + "              ", 14)
+    ... + left$ (.fx3$ + "              ", 12)
+    ... + left$ (emlFormatP.bare$ + "            ", 12)
+    ... + .slopeCI$
+    appendInfoLine: .slopeRow$
+
+    # Direction and magnitude
+    @emlReportBlank
+    ; ASSOCIATION, NOT CHANGE. A slope fitted to observational data says how
+    ; predicted Y DIFFERS between cases whose X differs; it does not say what
+    ; happens to a case when its X is changed. "Y increases as X increases"
+    ; describes a process nobody watched. "Higher X goes with higher Y"
+    ; describes what was measured, and stays true whichever way the causal
+    ; arrow points -- or if it points from somewhere else entirely.
+    if emlLinearRegression.slope > 0
+        .dir$ = "positive"
+        .verb$ = "higher"
+    else
+        .dir$ = "negative"
+        .verb$ = "lower"
+    endif
+    @emlFormatEffectLabel: emlLinearRegression.rSquared, "r_squared"
+    appendInfoLine: "  Direction: " + .dir$
+    ... + " (cases with higher " + .displayPred$
+    ... + " tend to have " + .verb$ + " " + .displayDep$ + ")"
+    # This printed as "Variance explained   large effect" in the same
+    # label/value layout as "R-squared   0.8770", so a Cohen benchmark verdict
+    # wore the visual authority of a second computed statistic — and read as a
+    # different quantity from R-squared when it is R-squared, glossed. Stated
+    # as prose naming the number it is a verdict about.
+    @eml_fixed: emlLinearRegression.rSquared, 4
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: 100 * emlLinearRegression.rSquared, 1
+    .fx2$ = eml_fixed.result$
+    appendInfoLine: "  Model fit: R-squared = "
+    ... + .fx1$
+    ... + " -- the fitted model accounts for "
+    ... + .fx2$
+    ... + "% of the variance in " + .displayDep$
+    ... + " in this sample, a " + emlFormatEffectLabel.label$
+    ... + " by Cohen's R-squared benchmarks"
+
+    # THE CLEAREST CASE OF SLOT REUSE a wide schema invites: the
+    # slope went into mean1, the slope's SE into sd1, the intercept into
+    # median1, its SE into mean2 and R into sd2. A reader taking a column
+    # mean over mean1 averages slopes with group means, and the
+    # literal "regression" was written into both group-level slots.
+    # Coefficients now have their own rows, one term each.
+    @emlCSVSetTable: .tableName$
+    @emlCSVTermType: "omnibus"
+    .regLab$ = "OLS linear regression"
+    @emlCSVAddStr: .regLab$, "", "response_column", .depCol$
+    @emlCSVAddStr: .regLab$, "", "predictor_column", .predCol$
+    @emlCSVAdd: .regLab$, "", "F", emlLinearRegression.fStat
+    @emlCSVAdd: .regLab$, "", "df1", emlLinearRegression.dfReg
+    @emlCSVAdd: .regLab$, "", "df2", emlLinearRegression.dfRes
+    @emlCSVAdd: .regLab$, "", "p", emlLinearRegression.pF
+    @emlCSVAdd: .regLab$, "", "r", emlLinearRegression.r
+    @emlCSVAdd: .regLab$, "", "r_squared", emlLinearRegression.rSquared
+    @emlCSVAdd: .regLab$, "", "adj_r_squared", .adjR2
+    @emlCSVAdd: .regLab$, "", "residual_se", emlLinearRegression.seResidual
+    @emlCSVAddStr: .regLab$, "", "effect_label", emlFormatEffectLabel.label$
+    @emlCSVAdd: .regLab$, "", "n", .nValid
+
+    @emlCSVTermType: "coefficient"
+    @emlCSVAdd: .regLab$, "(Intercept)", "estimate",
+    ... emlLinearRegression.intercept
+    @emlCSVAdd: .regLab$, "(Intercept)", "se",
+    ... emlLinearRegression.seIntercept
+    @emlCSVAdd: .regLab$, "(Intercept)", "t", emlLinearRegression.tIntercept
+    @emlCSVAdd: .regLab$, "(Intercept)", "p", emlLinearRegression.pIntercept
+    # The interval the report now prints is exported alongside it.
+    if .ciWidth > 0
+        @emlCSVAdd: .regLab$, "(Intercept)", "ci_lower",
+        ... emlLinearRegression.intercept - .intHalf
+        @emlCSVAdd: .regLab$, "(Intercept)", "ci_upper",
+        ... emlLinearRegression.intercept + .intHalf
+    endif
+
+    @emlCSVAdd: .regLab$, .predCol$, "estimate", emlLinearRegression.slope
+    @emlCSVAdd: .regLab$, .predCol$, "se", emlLinearRegression.seSlope
+    @emlCSVAdd: .regLab$, .predCol$, "t", emlLinearRegression.tSlope
+    @emlCSVAdd: .regLab$, .predCol$, "p", emlLinearRegression.pSlope
+    if .ciWidth > 0
+        @emlCSVAdd: .regLab$, .predCol$, "ci_lower",
+        ... emlLinearRegression.slope - .slopeHalf
+        @emlCSVAdd: .regLab$, .predCol$, "ci_upper",
+        ... emlLinearRegression.slope + .slopeHalf
+    endif
+
+    @emlReportFooter
+endproc
+
+
+# ============================================================================
+# @emlReportNormalityAnalysis
+# ============================================================================
+# Formatted Info window report for normality assessment.
+# Reads globals from @emlRunNormalityAnalysis.
+# ============================================================================
+
+procedure emlReportNormalityAnalysis: .tableName$, .dataCol$,
+... .nValid, .nUndefined
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .dataCol$
+    .displayCol$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Normality Assessment"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Column", .displayCol$
+    @emlReportLine: "N", .nValid, 0
+    if .nUndefined > 0
+        @emlReportLine: "Excluded (missing)", .nUndefined, 0
+    endif
+
+    @emlReportBlank
+    @emlReportSection: "Descriptive Statistics"
+    @emlReportLine: "Mean", emlRunNormalityAnalysis.mean, 4
+    @emlReportLine: "SD", emlRunNormalityAnalysis.sd, 4
+    @emlReportLine: "Median", emlRunNormalityAnalysis.median, 4
+
+    @emlReportBlank
+    @emlReportSection: "Distribution Shape"
+    if emlShowExplanations
+        appendInfoLine: "  Why: Skewness and kurtosis indicate departures"
+        ... + " from a normal (bell-shaped) distribution."
+    endif
+    if emlShowExplanations
+        @emlWizardExplainSkewness: emlRunNormalityAnalysis.skewness
+    endif
+    @emlReportLine: "Skewness", emlRunNormalityAnalysis.skewness, 4
+    if emlShowExplanations
+        @emlWizardExplainKurtosis: emlRunNormalityAnalysis.kurtosis
+    endif
+    # (excess): @emlKurtosis returns Fisher's g2, so a normal distribution
+    # reads 0, not 3. Bare "Kurtosis" invites the Pearson reading, under
+    # which -0.69 would be violently platykurtic rather than unremarkable.
+    # The other three print sites carry the same label.
+    @emlReportLine: "Kurtosis (excess)", emlRunNormalityAnalysis.kurtosis, 4
+
+    # These two verdicts must use the SAME thresholds as the recommendation
+    # gate in @emlRunNormalityAnalysis (stats/eml-analysis.praat), which reads
+    # emlSkewThreshold and emlKurtosisThreshold — set in stats/eml-output.praat
+    # to 2 and 7. A STRICTER LOCAL THRESHOLD IS NOT A SAFER ONE. Hard-code 1
+    # and 3 here, against a gate at 2 and 7, and the two contradict rather
+    # than the tighter one winning: a g2 of 4 prints "Kurtosis outside
+    # typical limits" here while the gate, for which 4 is well inside 7, goes
+    # on to recommend a parametric test — two opposite verdicts in one
+    # report. A skewness of 1.5 against a local 1 does the same.
+    # The parenthetical is worded as a stated criterion ("criterion: ...")
+    # and printed on BOTH branches, so a passing reader learns what threshold
+    # was cleared. Printed on the FAILING branch only it would assert the
+    # criterion at the moment it announces the opposite, and be invisible to
+    # the reader who passes.
+    # The same two thresholds are announced in scripts/eml-wizard.praat, in
+    # the .skKurtFail branch of its normality summary — currently :2170-2175.
+    # Not fixed here because that file is owned elsewhere. (The pointer used
+    # to read :2085, which is a "Data column:" padding line in the analysis
+    # plan; grep for skKurtFail, the line numbers move on every insertion.)
+    if abs (emlRunNormalityAnalysis.skewness) >= emlSkewThreshold
+        @eml_fixed: emlSkewThreshold, 0
+        .fx1$ = eml_fixed.result$
+        appendInfoLine: "  → Skewness outside typical limits (criterion: |skew| < ",
+        ... .fx1$, ")"
+    else
+        @eml_fixed: emlSkewThreshold, 0
+        .fx1$ = eml_fixed.result$
+        appendInfoLine: "  → Skewness within typical limits (criterion: |skew| < ",
+        ... .fx1$, ")"
+    endif
+    if abs (emlRunNormalityAnalysis.kurtosis) >= emlKurtosisThreshold
+        @eml_fixed: emlKurtosisThreshold, 0
+        .fx1$ = eml_fixed.result$
+        appendInfoLine: "  → Kurtosis outside typical limits (criterion: |excess kurt| < ",
+        ... .fx1$, ")"
+    else
+        @eml_fixed: emlKurtosisThreshold, 0
+        .fx1$ = eml_fixed.result$
+        appendInfoLine: "  → Kurtosis within typical limits (criterion: |excess kurt| < ",
+        ... .fx1$, ")"
+    endif
+
+    @emlReportBlank
+    @emlReportSection: "Shapiro-Wilk Test"
+    if emlShowExplanations
+        appendInfoLine: "  Why: Formal test of whether the data are"
+        ... + " drawn from a normal distribution."
+    endif
+    if emlRunNormalityAnalysis.swError$ = ""
+        if emlShowExplanations
+            @emlWizardExplainNormW: emlRunNormalityAnalysis.swW
+        endif
+        @emlReportLine: "W", emlRunNormalityAnalysis.swW, 4
+        if emlShowExplanations
+            @emlWizardExplainP: emlRunNormalityAnalysis.swP
+        endif
+        ; Shapiro-Wilk has no effect size, so no magnitude row
+        ; Belongs here and none is added.
+        @emlReportPWithExact: "p", emlRunNormalityAnalysis.swP
+        if emlRunNormalityAnalysis.swFail
+            appendInfoLine: "  → Rejects normality (p < 0.05)"
+        else
+            appendInfoLine: "  → Does not reject normality (p >= 0.05)"
+        endif
+    else
+        @emlReportLineString: "Error", emlRunNormalityAnalysis.swError$
+    endif
+
+    # ── Recommendation ─────────────────────────────────────────────────────
+    #
+    # THIS SECTION RECOMMENDS; IT DOES NOT CERTIFY. A recommendation can be
+    # declined, and the wording keeps that door open at every branch: a test
+    # is "recommended", never "appropriate", because appropriateness is a
+    # property of the research question and this procedure has only seen a
+    # column of numbers.
+    #
+    # Three things are printed with the recommendation, and each is there to
+    # let a reader disagree with it on the evidence:
+    #
+    #   * the reading it rests on, named -- not just the verdict it produced;
+    #   * BOTH options when the call is close, because a rule with a
+    #     threshold in it produces its least reliable answers next to the
+    #     threshold, and a reader at p = .049 and a reader at p = .051 should
+    #     not be handed opposite conclusions with equal confidence;
+    #   * what was actually examined, which is the marginal distribution of
+    #     one column. Parametric tests assume normality of the model
+    #     RESIDUALS, and that is a different distribution from this one.
+    #
+    # Praat does not short-circuit `and`, so the close-call test is nested.
+    .closeCall = 0
+    if emlRunNormalityAnalysis.swError$ = ""
+        if emlRunNormalityAnalysis.swP >= 0.01
+            if emlRunNormalityAnalysis.swP < 0.10
+                .closeCall = 1
+            endif
+        endif
+    endif
+
+    @emlReportBlank
+    @emlReportSection: "Recommendation"
+    if emlRunNormalityAnalysis.recommendation$ = "parametric"
+        if emlRunNormalityAnalysis.largeNOverride = 1
+            appendInfoLine: "  Shapiro-Wilk rejects normality (p < .05), but"
+            ... + " skewness and kurtosis are"
+            appendInfoLine: "  within the thresholds and n = "
+            ... + string$ (emlRunNormalityAnalysis.nValid)
+            ... + ". At this sample size the test"
+            appendInfoLine: "  detects departures too small to unsettle a"
+            ... + " parametric procedure."
+            appendInfoLine: "  → Parametric tests (t-test, ANOVA, Pearson r)"
+            ... + " are recommended."
+            appendInfoLine: "  → Nonparametric tests (Mann-Whitney,"
+            ... + " Kruskal-Wallis, Spearman rho) remain"
+            appendInfoLine: "     a defensible choice, since the test did"
+            ... + " reject."
+        else
+            appendInfoLine: "  Shapiro-Wilk does not reject normality"
+            ... + " (p >= .05), and skewness and"
+            appendInfoLine: "  kurtosis are within the thresholds."
+            appendInfoLine: "  → Parametric tests (t-test, ANOVA, Pearson r)"
+            ... + " are recommended."
+            if .closeCall
+                appendInfoLine: "  → The p is close to the .05 threshold."
+                ... + " Nonparametric tests"
+                appendInfoLine: "     (Mann-Whitney, Kruskal-Wallis, Spearman"
+                ... + " rho) are also defensible."
+            endif
+        endif
+    else
+        appendInfoLine: "  The evidence is against normality on the reading"
+        ... + " printed above."
+        appendInfoLine: "  → Nonparametric tests (Mann-Whitney,"
+        ... + " Kruskal-Wallis, Spearman rho) are"
+        appendInfoLine: "     recommended."
+        if .closeCall
+            appendInfoLine: "  → The p is close to the .05 threshold."
+            ... + " Parametric tests are also"
+            appendInfoLine: "     defensible, particularly at larger n."
+        endif
+    endif
+    appendInfoLine: "  What was checked: the marginal distribution of this"
+    ... + " column. Parametric"
+    appendInfoLine: "  tests assume normality of the model RESIDUALS, which"
+    ... + " is not the same"
+    appendInfoLine: "  distribution and is not examined here."
+
+    # Skewness and kurtosis were being carried in the mean2/sd2 slots
+    # while n2 and median2 were zero-as-NA. Each is now its own field.
+    @emlCSVSetTable: .tableName$
+    @emlCSVTermType: "variable"
+    @emlCSVAddStr: "Shapiro-Wilk", .dataCol$, "data_column", .dataCol$
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "W", emlRunNormalityAnalysis.swW
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "p", emlRunNormalityAnalysis.swP
+    @emlCSVAddStr: "Shapiro-Wilk", .dataCol$, "recommendation",
+    ... emlRunNormalityAnalysis.recommendation$
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "n", .nValid
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "mean", emlRunNormalityAnalysis.mean
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "sd", emlRunNormalityAnalysis.sd
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "median",
+    ... emlRunNormalityAnalysis.median
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "skewness",
+    ... emlRunNormalityAnalysis.skewness
+    @emlCSVAdd: "Shapiro-Wilk", .dataCol$, "excess_kurtosis",
+    ... emlRunNormalityAnalysis.kurtosis
+
+    @emlReportFooter
+endproc
+
+
+# ============================================================================
+# @emlReportPairedComparison
+# ============================================================================
+procedure emlReportPairedComparison: .tableName$, .col1$, .col2$, .n,
+... .mean1, .sd1, .median1, .mean2, .sd2, .median2, .testType$
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .col1$
+    .displayC1$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .col2$
+    .displayC2$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Paired Comparison"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Column 1", .displayC1$
+    @emlReportLineString: "Column 2", .displayC2$
+    @emlReportLine: "N (pairs)", .n, 0
+    @emlReportBlank
+
+    @eml_fixed: .mean1, 3
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: .sd1, 3
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: .median1, 3
+    .fx3$ = eml_fixed.result$
+    appendInfoLine: "  ", .displayC1$, ": Mean = ", .fx1$,
+    ... ", SD = ", .fx2$,
+    ... ", Median = ", .fx3$
+    @eml_fixed: .mean2, 3
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: .sd2, 3
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: .median2, 3
+    .fx3$ = eml_fixed.result$
+    appendInfoLine: "  ", .displayC2$, ": Mean = ", .fx1$,
+    ... ", SD = ", .fx2$,
+    ... ", Median = ", .fx3$
+
+    ; THE DIRECTION IS STATED ONCE, ON THE PAGE, FOR BOTH ARMS. Every signed
+    ; quantity a paired test reports -- t, Cohen's dz, r from t, the Wilcoxon
+    ; z and the matched-pairs r -- is built from the same per-pair difference,
+    ; and @emlTTestPaired and @emlWilcoxonSignedRank both take that as their
+    ; first vector minus their second, which is column 1 minus column 2 here.
+    ; A reader who has only the numbers cannot tell which way that runs, so
+    ; the report says it rather than leaving it to be inferred.
+    @emlReportNote: "Sign: every difference below is " + .displayC1$
+    ... + " minus " + .displayC2$ + ", and t, z and the effect sizes carry "
+    ... + "that direction."
+
+    if .testType$ = "parametric" or .testType$ = "both"
+        if emlTTestPaired.error$ = ""
+            @emlReportBlank
+            @emlReportSection: "Paired t-test"
+            if emlShowExplanations
+                appendInfoLine: "  Why: Tests whether the mean difference "
+                ... + "between paired observations differs from zero."
+            endif
+            if emlShowExplanations
+                @emlWizardExplainT: emlTTestPaired.t
+            endif
+            @emlReportLine: "t", emlTTestPaired.t, 3
+            if emlShowExplanations
+                @emlWizardExplainDfPaired: emlTTestPaired.df, .n
+            endif
+            @emlReportLine: "df", emlTTestPaired.df, 0
+            if emlShowExplanations
+                @emlWizardExplainP: emlTTestPaired.p
+            endif
+            @emlReportPWithExact: "p", emlTTestPaired.p
+            ; A PAIRED SIGN FOLLOWS THE TWO COLUMNS, NOT THE GROUP SORT.
+            ; @emlTTestPaired forms every pair's difference as its first
+            ; vector minus its second, and @emlRunPairedAnalysis hands it
+            ; column 1 first, so the printed difference is column 1 minus
+            ; column 2. A bare "Mean difference" would leave that to be
+            ; inferred from the two descriptive lines above, so the label
+            ; names it, in the same display names those lines print.
+            .diffLabel$ = "Mean diff (" + .displayC1$ + " − "
+            ... + .displayC2$ + ")"
+            if length (.diffLabel$) >= 20
+                ; @emlPadRight leaves an over-long label unpadded, which
+                ; would run the value straight into the ")". One space keeps
+                ; them apart.
+                .diffLabel$ = .diffLabel$ + " "
+            endif
+            @emlReportLine: .diffLabel$, emlTTestPaired.meanDiff, 4
+            @emlReportLine: "SD of differences", emlTTestPaired.sdDiff, 4
+
+            # The effect size under the t-test is the one derived from the
+            # same quantity the t is derived from. The matched-pairs rank
+            # statistic belongs to the Wilcoxon and is reported in that
+            # Section, not here.
+            # The magnitude was printed here but never reached the
+            # export, so effect_label was blank on every paired row.
+            .dzLabel$ = ""
+            if emlCohenDz.error$ = ""
+                @emlFormatEffectLabel: abs (emlCohenDz.dz), "d"
+                .dzLabel$ = emlFormatEffectLabel.label$
+                @emlReportBlank
+                @emlReportSection: "Effect Size"
+                @emlReportLine: "Cohen's dz", emlCohenDz.dz, 3
+                @emlReportLine: "r (from t)", emlCohenDz.rFromT, 3
+                @emlReportLineString: "Magnitude", .dzLabel$
+            endif
+
+            # The two column names are not packed into four level slots
+            # with n written twice, which would make a paired design
+            # indistinguishable from a two-group one in the file. A paired
+            # design has ONE n, and it is written once.
+            @emlCSVSetTable: .tableName$
+            @emlCSVTermType: "contrast"
+            .term$ = .col1$ + " vs " + .col2$
+            @emlCSVAddStr: "Paired t-test", .term$, "design", "paired"
+            @emlCSVAddStr: "Paired t-test", .term$, "column_1", .col1$
+            @emlCSVAddStr: "Paired t-test", .term$, "column_2", .col2$
+            @emlCSVAdd: "Paired t-test", .term$, "t", emlTTestPaired.t
+            @emlCSVAdd: "Paired t-test", .term$, "df", emlTTestPaired.df
+            @emlCSVAdd: "Paired t-test", .term$, "p", emlTTestPaired.p
+            @emlCSVAdd: "Paired t-test", .term$, "cohens_dz", emlCohenDz.dz
+            @emlCSVAddStr: "Paired t-test", .term$, "effect_label", .dzLabel$
+            @emlCSVAdd: "Paired t-test", .term$, "n_pairs", .n
+            @emlCSVAddDescriptives: "Paired t-test", .col1$,
+            ... undefined, .mean1, .sd1, .median1
+            @emlCSVAddDescriptives: "Paired t-test", .col2$,
+            ... undefined, .mean2, .sd2, .median2
+        else
+            appendInfoLine: newline$ + "Paired t-test error: "
+            ... + emlTTestPaired.error$
+        endif
+    endif
+
+    if .testType$ = "nonparametric" or .testType$ = "both"
+        if emlWilcoxonSignedRank.error$ = ""
+            @emlReportBlank
+            @emlReportSection: "Wilcoxon Signed-Rank Test"
+            if emlShowExplanations
+                appendInfoLine: "  Why: Nonparametric test for paired "
+                ... + "observations — no normality assumption needed."
+            endif
+            ; THIS IS NOT THE MANN-WHITNEY GLOSS ABOVE, and the difference
+            ; is not cosmetic:
+            ; @emlWilcoxonSignedRank (stats/eml-inferential.praat) ranks the
+            ; ABSOLUTE differences and then adds up the ranks belonging to
+            ; the positive ones for T+ and the negative ones for T-. The
+            ; signed-rank statistic IS a rank sum -- no n(n+1)/2 is
+            ; subtracted, as it is for U -- so "Sum of ranks for positive
+            ; differences" is the correct name for this number. Rewriting it
+            ; to match the Mann-Whitney correction would introduce a
+            ; second defect while fixing the first.
+            if emlShowExplanations
+                emlWizardExplain$ = "Sum of ranks for positive differences (subjects who increased)"
+            endif
+            @emlReportLine: "T+", emlWilcoxonSignedRank.tPlus, 1
+            if emlShowExplanations
+                emlWizardExplain$ = "Sum of ranks for negative differences (subjects who decreased)"
+            endif
+            @emlReportLine: "T-", emlWilcoxonSignedRank.tMinus, 1
+            if emlWilcoxonSignedRank.z <> undefined
+                @emlReportLine: "z", emlWilcoxonSignedRank.z, 3
+            endif
+            if emlShowExplanations
+                @emlWizardExplainP: emlWilcoxonSignedRank.p
+            endif
+            @emlReportPWithExact: "p", emlWilcoxonSignedRank.p
+            ; ITEM 22 (language batch, Fable's ruling 27 August 2026): see
+            ; the identical row on the Mann-Whitney arm above for the
+            ; disclosure rule -- always prints, "exact" bare, otherwise
+            ; every reason that ruled out the exact branch, comma-
+            ; separated, no precedence.
+            .pMethod$ = emlWilcoxonSignedRank.method$
+            if emlWilcoxonSignedRank.method$ <> "exact"
+                .pMethod$ = .pMethod$ + " (" + emlWilcoxonSignedRank.methodReason$ + ")"
+            endif
+            @emlReportLineString: "p method", .pMethod$
+
+            # The matched-pairs magnitude was printed and then dropped on
+            # the way to the export.
+            .mprLabel$ = ""
+            if emlMatchedPairsR.error$ = ""
+                @emlFormatEffectLabel: abs (emlMatchedPairsR.r), "r"
+                .mprLabel$ = emlFormatEffectLabel.label$
+                @emlReportBlank
+                @emlReportSection: "Nonparametric Effect Size"
+                if emlShowExplanations
+                    @emlWizardExplainEffectR: emlMatchedPairsR.r
+                endif
+                @emlReportLine: "Matched-pairs r", emlMatchedPairsR.r, 3
+                @emlReportLineString: "Magnitude", .mprLabel$
+            endif
+
+            if emlWilcoxonSignedRank.z <> undefined
+                .wsrDf = emlWilcoxonSignedRank.z
+            else
+                .wsrDf = 0
+            endif
+            @emlCSVSetTable: .tableName$
+            @emlCSVTermType: "contrast"
+            .wLab$ = "Wilcoxon signed-rank"
+            .term$ = .col1$ + " vs " + .col2$
+            @emlCSVAddStr: .wLab$, .term$, "design", "paired"
+            @emlCSVAddStr: .wLab$, .term$, "column_1", .col1$
+            @emlCSVAddStr: .wLab$, .term$, "column_2", .col2$
+            @emlCSVAdd: .wLab$, .term$, "T_plus",
+            ... emlWilcoxonSignedRank.tPlus
+            @emlCSVAdd: .wLab$, .term$, "p", emlWilcoxonSignedRank.p
+            @emlCSVAdd: .wLab$, .term$, "matched_pairs_r", emlMatchedPairsR.r
+            @emlCSVAddStr: .wLab$, .term$, "effect_label", .mprLabel$
+            @emlCSVAdd: .wLab$, .term$, "n_pairs", .n
+            @emlCSVAddDescriptives: .wLab$, .col1$,
+            ... undefined, .mean1, .sd1, .median1
+            @emlCSVAddDescriptives: .wLab$, .col2$,
+            ... undefined, .mean2, .sd2, .median2
+        else
+            appendInfoLine: newline$ + "Wilcoxon error: "
+            ... + emlWilcoxonSignedRank.error$
+        endif
+    endif
+
+    @emlReportFooter
+endproc
+
+
+# ============================================================================
+# @emlReportTwoWayAnova
+# ============================================================================
+# ────────────────────────────────────────────────────────────────────────────
+# @emlReportTwoWayOmega   (private to the two-way report)
+# One omega-squared row. The kernel can legitimately produce `undefined`
+# for omega squared -- it is a difference of sums of squares divided by a
+# total, and a degenerate design makes it unformable -- and @eml_fixed
+# renders undefined as Praat's own "--undefined--", which reads as a
+# malfunction rather than as a result. Written once here and called three
+# times rather than repeated per effect.
+# ────────────────────────────────────────────────────────────────────────────
+procedure emlReportTwoWayOmega: .label$, .value
+    if .value = undefined
+        @emlReportLineString: .label$, "not available for this design"
+    else
+        @emlReportLine: .label$, .value, 4
+    endif
+endproc
+
+
+procedure emlReportTwoWayAnova: .tableName$, .dataCol$, .factor1$, .factor2$
+    @emlUnderscoreToSpace: .tableName$
+    .displayTable$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .dataCol$
+    .displayData$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .factor1$
+    .displayF1$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .factor2$
+    .displayF2$ = emlUnderscoreToSpace.result$
+
+    @emlReportHeader: "Two-Way ANOVA"
+    @emlReportLineString: "Table", .displayTable$
+    @emlReportLineString: "Data column", .displayData$
+    @emlReportLineString: "Factor 1", .displayF1$
+    @emlReportLineString: "Factor 2", .displayF2$
+    # The Info block named the table, the column and the two factors and
+    # reported no N of any kind — not total, not per level, not per cell —
+    # while the two-group section appended to the same transcript reported
+    # N 24 / 24. @emlTwoWayAnova already carries all of it.
+    @emlReportLine: "Total N", emlTwoWayAnova.nRows, 0
+    @emlReportLine: "Cells", emlTwoWayAnova.nCells, 0
+    if emlTwoWayAnova.minCellN = emlTwoWayAnova.maxCellN
+        @emlReportLine: "n per cell", emlTwoWayAnova.minCellN, 0
+    else
+        @emlReportLineString: "n per cell",
+        ... string$ (emlTwoWayAnova.minCellN) + " to "
+        ... + string$ (emlTwoWayAnova.maxCellN) + " (unbalanced)"
+    endif
+    ; WHICH SS TYPE PRODUCED THE TABLE BELOW. The glance CSV frame has always
+    ; carried this (@emlDeclareTwoWayResult writes method = "Two-way ANOVA
+    ; (Type III SS)"), and the report did not, so a reader who did not export
+    ; the CSV was never told which of three possible tables they were looking
+    ; at. On an unbalanced design the three types disagree, which is the case
+    ; where knowing matters most. Printed in the header block rather than in
+    ; the table's own heading so the fixed-width block below is untouched.
+    @emlReportLineString: "Sums of squares", emlTwoWayAnova.ssTypeLabel$
+
+    @emlReportBlank
+    @emlReportSection: "ANOVA Table"
+    if emlShowExplanations
+        appendInfoLine: "  Why: Tests main effects of two factors "
+        ... + "and their interaction."
+    endif
+    appendInfoLine: ""
+    appendInfoLine: left$ ("Source" + "                    ", 20),
+    ... left$ ("SS" + "                ", 16),
+    ... left$ ("df" + "      ", 6),
+    ... left$ ("MS" + "                ", 16),
+    ... left$ ("F" + "            ", 12),
+    ... "p"
+
+    # All three rows printed @emlFormatP's "p = " form under a column
+    # already headed "p", and all three floored to
+    # "p < .001" — 5.8e-07, 2.1e-13 and 3.0e-04 reported identically, nine
+    # orders of magnitude flattened in the one table whose whole point is the
+    # relative strength of the three effects. The cells now carry the bare
+    # APA form, and .exact$ records which of them were floored so the
+    # unrounded values can be printed below the table.
+    @emlFormatP: emlTwoWayAnova.pA
+    .pCellA$ = emlFormatP.bare$
+    .exactA$ = emlFormatP.exact$
+    @emlFormatP: emlTwoWayAnova.pB
+    .pCellB$ = emlFormatP.bare$
+    .exactB$ = emlFormatP.exact$
+    @emlFormatP: emlTwoWayAnova.pAB
+    .pCellAB$ = emlFormatP.bare$
+    .exactAB$ = emlFormatP.exact$
+
+    @eml_fixed: emlTwoWayAnova.ssA, 2
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlTwoWayAnova.msA, 2
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: emlTwoWayAnova.fA, 4
+    .fx3$ = eml_fixed.result$
+    appendInfoLine: left$ (.displayF1$ + "                    ", 20),
+    ... left$ (.fx1$ + "                ", 16),
+    ... left$ (string$ (emlTwoWayAnova.dfA) + "      ", 6),
+    ... left$ (.fx2$ + "                ", 16),
+    ... left$ (.fx3$ + "            ", 12),
+    ... .pCellA$
+
+    @eml_fixed: emlTwoWayAnova.ssB, 2
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlTwoWayAnova.msB, 2
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: emlTwoWayAnova.fB, 4
+    .fx3$ = eml_fixed.result$
+    appendInfoLine: left$ (.displayF2$ + "                    ", 20),
+    ... left$ (.fx1$ + "                ", 16),
+    ... left$ (string$ (emlTwoWayAnova.dfB) + "      ", 6),
+    ... left$ (.fx2$ + "                ", 16),
+    ... left$ (.fx3$ + "            ", 12),
+    ... .pCellB$
+
+    .interLabel$ = .displayF1$ + " x " + .displayF2$
+    .rawInterLabel$ = .factor1$ + "_x_" + .factor2$
+    @eml_fixed: emlTwoWayAnova.ssAB, 2
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlTwoWayAnova.msAB, 2
+    .fx2$ = eml_fixed.result$
+    @eml_fixed: emlTwoWayAnova.fAB, 4
+    .fx3$ = eml_fixed.result$
+    appendInfoLine: left$ (.interLabel$ + "                    ", 20),
+    ... left$ (.fx1$ + "                ", 16),
+    ... left$ (string$ (emlTwoWayAnova.dfAB) + "      ", 6),
+    ... left$ (.fx2$ + "                ", 16),
+    ... left$ (.fx3$ + "            ", 12),
+    ... .pCellAB$
+
+    @eml_fixed: emlTwoWayAnova.ssError, 2
+    .fx1$ = eml_fixed.result$
+    @eml_fixed: emlTwoWayAnova.msError, 2
+    .fx2$ = eml_fixed.result$
+    appendInfoLine: left$ ("Error" + "                    ", 20),
+    ... left$ (.fx1$ + "                ", 16),
+    ... left$ (string$ (emlTwoWayAnova.dfError) + "      ", 6),
+    ... left$ (.fx2$ + "                ", 16)
+
+    @eml_fixed: emlTwoWayAnova.ssTotal, 2
+    .fx1$ = eml_fixed.result$
+    appendInfoLine: left$ ("Total" + "                    ", 20),
+    ... left$ (.fx1$ + "                ", 16),
+    ... left$ (string$ (emlTwoWayAnova.dfTotal) + "      ", 6)
+
+    # Only the floored rows need restating; at three decimals the table
+    # already shows the value exactly, so this block stays silent unless a
+    # p actually hit the .001 (or .999) floor.
+    if .exactA$ <> "" or .exactB$ <> "" or .exactAB$ <> ""
+        @emlReportBlank
+        @emlReportSection: "Exact p-values"
+        @emlReportPWithExact: .displayF1$, emlTwoWayAnova.pA
+        @emlReportPWithExact: .displayF2$, emlTwoWayAnova.pB
+        @emlReportPWithExact: .interLabel$, emlTwoWayAnova.pAB
+    endif
+
+    ; @emlTwoWayAnova sets .warning$ for conditions the user needs to know
+    ; about -- unbalanced cells, an empty cell, a design the Type of sums of
+    ; squares assumption does not fit. It was written to the glance frame in
+    ; @emlDeclareTwoWayResult (eml-analysis.praat, the @emlGlanceStr:
+    ; "warning" line) and it is printed HERE too, or a user reading the
+    ; report never sees it and only a user who exported the CSV does. Grep
+    ; the anchor rather than trusting a line number; they move.
+    ;
+    ; Placed immediately under the table it qualifies: a caveat below the
+    ; effect sizes reads as being about the effect sizes.
+    if emlTwoWayAnova.warning$ <> ""
+        @emlReportBlank
+        @emlReportNote: "Caution: " + emlTwoWayAnova.warning$
+    endif
+
+    ; A significant interaction qualifies both main effects: it says the
+    ; effect of each factor DEPENDS on the level of the other, so a single
+    ; main-effect F averaged across that dependence can be misleading on its
+    ; own. Precedent for the wording and the placement is the RM-ANOVA
+    ; caution in @emlRunRepeatedMeasuresAnalysis (eml-analysis.praat, the
+    ; `emlRMAnovaTest.warning$` block). Grep the anchor rather than trusting
+    ; a line number; they move.
+    ;
+    ; THE DIRECTION IS NOT FIXED, so the caveat does not name one. A marginal
+    ; effect is an average of the simple effects, and an average sits between
+    ; its terms: it is smaller than the largest and larger than the smallest.
+    ; Measured on evidence/csv/dump_demo_twoway.csv, voice type marginally is
+    ; 94.646 - 89.842 = 4.80 dB, while its simple effects are 8.03 dB within
+    ; Singing and 1.58 dB within Speech -- the one marginal number understates
+    ; the first and overstates the second at the same time. Naming a direction
+    ; would be a second claim about the data, and no direction is available to
+    ; claim.
+    if emlTwoWayAnova.pAB < 0.05
+        @emlReportBlank
+        @emlReportNote: "Caution: the interaction is significant, so each "
+        ... + "factor's effect depends on the level of the other. The two "
+        ... + "main-effect rows above average over simple effects that "
+        ... + "differ from one another, and such an average can obscure, "
+        ... + "understate or overstate any one of them. Read the cell means "
+        ... + "below before reading the main effects."
+    endif
+
+    # Effect sizes
+    # The three partial eta-squareds were printed bare, with no
+    # small/medium/large gloss, while the one-way and Kruskal-Wallis reports
+    # both gloss theirs. The label is computed once per effect here and the
+    # same string goes to the report and to the export.
+    @emlFormatEffectLabel: emlTwoWayAnova.partialEtaSqA, "eta_squared"
+    .etaLabelA$ = emlFormatEffectLabel.label$
+    @emlFormatEffectLabel: emlTwoWayAnova.partialEtaSqB, "eta_squared"
+    .etaLabelB$ = emlFormatEffectLabel.label$
+    @emlFormatEffectLabel: emlTwoWayAnova.partialEtaSqAB, "eta_squared"
+    .etaLabelAB$ = emlFormatEffectLabel.label$
+
+    @emlReportBlank
+    @emlReportSection: "Effect Sizes (partial eta-squared)"
+    if emlShowExplanations
+        @emlWizardExplainEffectPartialEta2: emlTwoWayAnova.partialEtaSqA
+    endif
+    @eml_fixed: emlTwoWayAnova.partialEtaSqA, 4
+    .etaTextA$ = eml_fixed.result$
+    if .etaLabelA$ <> ""
+        .etaTextA$ = .etaTextA$ + "  (" + .etaLabelA$ + ")"
+    endif
+    @emlReportLineString: .displayF1$, .etaTextA$
+    if emlShowExplanations
+        @emlWizardExplainEffectPartialEta2: emlTwoWayAnova.partialEtaSqB
+    endif
+    @eml_fixed: emlTwoWayAnova.partialEtaSqB, 4
+    .etaTextB$ = eml_fixed.result$
+    if .etaLabelB$ <> ""
+        .etaTextB$ = .etaTextB$ + "  (" + .etaLabelB$ + ")"
+    endif
+    @emlReportLineString: .displayF2$, .etaTextB$
+    if emlShowExplanations
+        @emlWizardExplainEffectPartialEta2: emlTwoWayAnova.partialEtaSqAB
+    endif
+    @eml_fixed: emlTwoWayAnova.partialEtaSqAB, 4
+    .etaTextAB$ = eml_fixed.result$
+    if .etaLabelAB$ <> ""
+        .etaTextAB$ = .etaTextAB$ + "  (" + .etaLabelAB$ + ")"
+    endif
+    @emlReportLineString: .interLabel$, .etaTextAB$
+
+    ; OMEGA SQUARED, in its own block beside partial eta-squared rather than
+    ; folded into the rows above, so neither number has to share a line and
+    ; the existing block keeps its shape. The kernel has always computed
+    ; these; nothing reached them until @emlTwoWayAnova began re-exporting
+    ; them. They read SMALLER than partial eta-squared and that is expected:
+    ; omega squared subtracts the error each effect is expected to carry by
+    ; chance, so it estimates the population effect rather than describing
+    ; the sample. Undefined is a real outcome the kernel can produce, and it
+    ; is printed as such rather than as a number.
+    @emlReportBlank
+    @emlReportSection: "Effect Sizes (omega squared)"
+    if emlShowExplanations
+        appendInfoLine: "  Why: Omega squared estimates the effect in the "
+        ... + "population. It is smaller than partial eta-squared because "
+        ... + "it removes the variance each effect picks up by chance."
+    endif
+    @emlReportTwoWayOmega: .displayF1$, emlTwoWayAnova.omegaSqA
+    @emlReportTwoWayOmega: .displayF2$, emlTwoWayAnova.omegaSqB
+    @emlReportTwoWayOmega: .interLabel$, emlTwoWayAnova.omegaSqAB
+
+    ; ASSUMPTION CHECKS. Both are computed by @emlAnovaKernelTwoWay on every
+    ; run and neither reached a user before this. Placed after the effect
+    ; sizes and before the cell means: they qualify the whole table above,
+    ; not any one row of it.
+    ;
+    ; THE NORMALITY TEST IS ON THE RESIDUALS, and the section says so. The
+    ; note in @emlReportNormality is the reason -- a parametric test assumes
+    ; normality of the model residuals, and the marginal distribution of the
+    ; data column is a different distribution. This one is the right one, and
+    ; a reader who has seen the other report should be able to tell them
+    ; apart without checking the source.
+    @emlReportBlank
+    @emlReportSection: "Assumption Checks"
+    if emlShowExplanations
+        appendInfoLine: "  Why: The F-tests above assume equal variance "
+        ... + "across cells and normally distributed residuals."
+    endif
+
+    if emlTwoWayAnova.leveneError$ <> ""
+        @emlReportLineString: "Levene's test", "not available: "
+        ... + emlTwoWayAnova.leveneError$
+    elsif emlTwoWayAnova.levenePValue = undefined
+        @emlReportLineString: "Levene's test", "not available"
+    else
+        ; LABELS STAY INSIDE @emlReportLine's 20-character pad. A longer one
+        ; is not truncated -- it runs straight into its own value with no
+        ; separating space, which is how the first draft of this section
+        ; printed. What each test examines is said on the arrow line below
+        ; it instead, where there is room.
+        @eml_fixed: emlTwoWayAnova.leveneW, 4
+        @emlReportLineString: "Levene's W",
+        ... eml_fixed.result$ + "   df "
+        ... + string$ (emlTwoWayAnova.leveneDfBetween) + ", "
+        ... + string$ (emlTwoWayAnova.leveneDfWithin)
+        @emlReportPWithExact: "  p", emlTwoWayAnova.levenePValue
+        if emlTwoWayAnova.levenePValue < 0.05
+            appendInfoLine: "  → Equal variance across cells rejected"
+            ... + " (p < .05)"
+            appendInfoLine: "    The cells differ in spread. Read the"
+            ... + " F-tests with that in mind."
+        else
+            appendInfoLine: "  → Equal variance across cells not"
+            ... + " rejected (p >= .05)"
+        endif
+    endif
+
+    if emlTwoWayAnova.shapiroError$ <> ""
+        @emlReportLineString: "Shapiro-Wilk on residuals",
+        ... "not available: " + emlTwoWayAnova.shapiroError$
+    elsif emlTwoWayAnova.shapiroP = undefined
+        @emlReportLineString: "Shapiro-Wilk on residuals", "not available"
+    else
+        @eml_fixed: emlTwoWayAnova.shapiroW, 4
+        @emlReportLineString: "Shapiro-Wilk W",
+        ... eml_fixed.result$ + "   n "
+        ... + string$ (emlTwoWayAnova.shapiroN)
+        @emlReportPWithExact: "  p", emlTwoWayAnova.shapiroP
+        if emlTwoWayAnova.shapiroP < 0.05
+            appendInfoLine: "  → Residual normality rejected (p < .05)"
+        else
+            appendInfoLine: "  → Residual normality not rejected"
+            ... + " (p >= .05)"
+        endif
+        appendInfoLine: "    Tested on the model residuals, not on the"
+        ... + " data column."
+    endif
+
+    # The block went ANOVA table → partial eta-squared → CSV → footer
+    # with no cell means and no marginal means, so a significant interaction
+    # said the factors are not additive but never in which direction. The
+    # values were already computed: @emlTwoWayAnova carries every cell's
+    # label, n and mean, and both factors' level lists.
+    if emlTwoWayAnova.nCells > 0
+        @emlReportBlank
+        @emlReportSection: "Cell Means"
+        appendInfoLine: ""
+        appendInfoLine: left$ (.displayF1$ + "                    ", 18),
+        ... left$ (.displayF2$ + "                    ", 18),
+        ... left$ ("n" + "        ", 8),
+        ... "Mean"
+        for .a from 1 to emlTwoWayAnova.nLev1
+            for .b from 1 to emlTwoWayAnova.nLev2
+                # @emlTwoWayAnova keys cells as level1 + newline$ + level2.
+                .cellKey$ = emlTwoWayAnova.lev1$[.a] + newline$
+                ... + emlTwoWayAnova.lev2$[.b]
+                .hit = 0
+                for .c from 1 to emlTwoWayAnova.nCells
+                    if emlTwoWayAnova.cellLabel$[.c] = .cellKey$
+                        .hit = .c
+                    endif
+                endfor
+                .rowA$ = replace$ (emlTwoWayAnova.lev1$[.a], "_", " ", 0)
+                if length (.rowA$) > 16
+                    .rowA$ = left$ (.rowA$, 16)
+                endif
+                .rowB$ = replace$ (emlTwoWayAnova.lev2$[.b], "_", " ", 0)
+                if length (.rowB$) > 16
+                    .rowB$ = left$ (.rowB$, 16)
+                endif
+                if .hit = 0
+                    .cellNText$ = "0"
+                    .cellMeanText$ = "empty cell"
+                else
+                    .cellNText$ = string$ (emlTwoWayAnova.cellN[.hit])
+                    @eml_fixed: emlTwoWayAnova.cellMean[.hit], 4
+                    .cellMeanText$ = eml_fixed.result$
+                endif
+                appendInfoLine: left$ (.rowA$ + "                    ", 18),
+                ... left$ (.rowB$ + "                    ", 18),
+                ... left$ (.cellNText$ + "        ", 8),
+                ... .cellMeanText$
+            endfor
+        endfor
+
+        # Marginal means, weighted by cell n so they stay correct on an
+        # unbalanced design.
+        @emlReportBlank
+        @emlReportSection: "Marginal Means"
+        appendInfoLine: ""
+        appendInfoLine: left$ ("Level" + "                            ", 30),
+        ... left$ ("n" + "        ", 8),
+        ... "Mean"
+        for .a from 1 to emlTwoWayAnova.nLev1
+            .margN = 0
+            .margSum = 0
+            .keyA$ = emlTwoWayAnova.lev1$[.a] + newline$
+            for .c from 1 to emlTwoWayAnova.nCells
+                # The newline in the key anchors the match, so a level named
+                # "a" cannot swallow the cells of a level named "ab".
+                .headA$ = left$ (emlTwoWayAnova.cellLabel$[.c],
+                ... length (.keyA$))
+                if .headA$ = .keyA$
+                    .margN = .margN + emlTwoWayAnova.cellN[.c]
+                    .margSum = .margSum
+                    ... + emlTwoWayAnova.cellN[.c] * emlTwoWayAnova.cellMean[.c]
+                endif
+            endfor
+            .margLabel$ = .displayF1$ + ": "
+            ... + replace$ (emlTwoWayAnova.lev1$[.a], "_", " ", 0)
+            if length (.margLabel$) > 28
+                .margLabel$ = left$ (.margLabel$, 28)
+            endif
+            if .margN > 0
+                @eml_fixed: .margSum / .margN, 4
+                .margText$ = eml_fixed.result$
+            else
+                .margText$ = "no data"
+            endif
+            appendInfoLine: left$ (.margLabel$ + "                            ", 30),
+            ... left$ (string$ (.margN) + "        ", 8),
+            ... .margText$
+        endfor
+        for .b from 1 to emlTwoWayAnova.nLev2
+            .margN = 0
+            .margSum = 0
+            .keyB$ = newline$ + emlTwoWayAnova.lev2$[.b]
+            for .c from 1 to emlTwoWayAnova.nCells
+                .tailB$ = right$ (emlTwoWayAnova.cellLabel$[.c],
+                ... length (.keyB$))
+                if .tailB$ = .keyB$
+                    .margN = .margN + emlTwoWayAnova.cellN[.c]
+                    .margSum = .margSum
+                    ... + emlTwoWayAnova.cellN[.c] * emlTwoWayAnova.cellMean[.c]
+                endif
+            endfor
+            .margLabel$ = .displayF2$ + ": "
+            ... + replace$ (emlTwoWayAnova.lev2$[.b], "_", " ", 0)
+            if length (.margLabel$) > 28
+                .margLabel$ = left$ (.margLabel$, 28)
+            endif
+            if .margN > 0
+                @eml_fixed: .margSum / .margN, 4
+                .margText$ = eml_fixed.result$
+            else
+                .margText$ = "no data"
+            endif
+            appendInfoLine: left$ (.margLabel$ + "                            ", 30),
+            ... left$ (string$ (.margN) + "        ", 8),
+            ... .margText$
+        endfor
+    endif
+
+    # CSV rows — one per effect
+    # EVERY TERM CARRIES BOTH df, ITS SS AND ITS MS, and the error and total
+    # rows are exported too. A single df column exports F(1,28) as df=1.00
+    # and the ANOVA table cannot be reconstructed from the file.
+    #
+    # N is stated in both places: the n/n_cells fields below carry it into
+    # the export, and the header block above prints total N, cell count and
+    # per-cell n into the Info window. Every factor row's
+    # partial_eta_squared has an effect_label beside it -- the labels are
+    # computed above and written below.
+    @emlCSVSetTable: .tableName$
+    @emlCSVTermType: "omnibus"
+    .twLab$ = "Two-way ANOVA"
+    @emlCSVAddStr: .twLab$, "", "data_column", .dataCol$
+    @emlCSVAddStr: .twLab$, "", "factor_1", .factor1$
+    @emlCSVAddStr: .twLab$, "", "factor_2", .factor2$
+    @emlCSVAdd: .twLab$, "", "n", emlTwoWayAnova.nRows
+    @emlCSVAdd: .twLab$, "", "n_cells", emlTwoWayAnova.nCells
+    ; The assumption checks and the SS type go on the TOP-LEVEL term, beside
+    ; n and n_cells, rather than under a new term type. They describe the
+    ; whole model, not any one effect, and a new term type would widen the
+    ; export vocabulary the integrity check has to know about.
+    @emlCSVAddStr: .twLab$, "", "ss_type", emlTwoWayAnova.ssTypeLabel$
+    if emlTwoWayAnova.leveneError$ = ""
+        @emlCSVAdd: .twLab$, "", "levene_w", emlTwoWayAnova.leveneW
+        @emlCSVAdd: .twLab$, "", "levene_df1", emlTwoWayAnova.leveneDfBetween
+        @emlCSVAdd: .twLab$, "", "levene_df2", emlTwoWayAnova.leveneDfWithin
+        @emlCSVAdd: .twLab$, "", "levene_p", emlTwoWayAnova.levenePValue
+    endif
+    if emlTwoWayAnova.shapiroError$ = ""
+        @emlCSVAdd: .twLab$, "", "shapiro_w", emlTwoWayAnova.shapiroW
+        @emlCSVAdd: .twLab$, "", "shapiro_n", emlTwoWayAnova.shapiroN
+        @emlCSVAdd: .twLab$, "", "shapiro_p", emlTwoWayAnova.shapiroP
+    endif
+
+    @emlCSVTermType: "factor"
+    @emlCSVAdd: .twLab$, .factor1$, "F", emlTwoWayAnova.fA
+    @emlCSVAdd: .twLab$, .factor1$, "df1", emlTwoWayAnova.dfA
+    @emlCSVAdd: .twLab$, .factor1$, "df2", emlTwoWayAnova.dfError
+    @emlCSVAdd: .twLab$, .factor1$, "p", emlTwoWayAnova.pA
+    @emlCSVAdd: .twLab$, .factor1$, "ss", emlTwoWayAnova.ssA
+    @emlCSVAdd: .twLab$, .factor1$, "ms", emlTwoWayAnova.msA
+    @emlCSVAdd: .twLab$, .factor1$, "partial_eta_squared",
+    ... emlTwoWayAnova.partialEtaSqA
+    @emlCSVAdd: .twLab$, .factor1$, "omega_squared",
+    ... emlTwoWayAnova.omegaSqA
+    @emlCSVAddStr: .twLab$, .factor1$, "effect_label", .etaLabelA$
+
+    @emlCSVAdd: .twLab$, .factor2$, "F", emlTwoWayAnova.fB
+    @emlCSVAdd: .twLab$, .factor2$, "df1", emlTwoWayAnova.dfB
+    @emlCSVAdd: .twLab$, .factor2$, "df2", emlTwoWayAnova.dfError
+    @emlCSVAdd: .twLab$, .factor2$, "p", emlTwoWayAnova.pB
+    @emlCSVAdd: .twLab$, .factor2$, "ss", emlTwoWayAnova.ssB
+    @emlCSVAdd: .twLab$, .factor2$, "ms", emlTwoWayAnova.msB
+    @emlCSVAdd: .twLab$, .factor2$, "partial_eta_squared",
+    ... emlTwoWayAnova.partialEtaSqB
+    @emlCSVAdd: .twLab$, .factor2$, "omega_squared",
+    ... emlTwoWayAnova.omegaSqB
+    @emlCSVAddStr: .twLab$, .factor2$, "effect_label", .etaLabelB$
+
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "F", emlTwoWayAnova.fAB
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "df1", emlTwoWayAnova.dfAB
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "df2", emlTwoWayAnova.dfError
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "p", emlTwoWayAnova.pAB
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "ss", emlTwoWayAnova.ssAB
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "ms", emlTwoWayAnova.msAB
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "partial_eta_squared",
+    ... emlTwoWayAnova.partialEtaSqAB
+    @emlCSVAdd: .twLab$, .rawInterLabel$, "omega_squared",
+    ... emlTwoWayAnova.omegaSqAB
+    @emlCSVAddStr: .twLab$, .rawInterLabel$, "effect_label", .etaLabelAB$
+
+    @emlCSVTermType: "error"
+    @emlCSVAdd: .twLab$, "Error", "df1", emlTwoWayAnova.dfError
+    @emlCSVAdd: .twLab$, "Error", "ss", emlTwoWayAnova.ssError
+    @emlCSVAdd: .twLab$, "Error", "ms", emlTwoWayAnova.msError
+
+    @emlCSVTermType: "total"
+    @emlCSVAdd: .twLab$, "Total", "df1", emlTwoWayAnova.dfTotal
+    @emlCSVAdd: .twLab$, "Total", "ss", emlTwoWayAnova.ssTotal
+
+    @emlReportFooter
+endproc
+
+
+# @emlReportTwoWayEMM / @emlReportTwoWaySimpleEffects / @emlReportTwoWayPostHoc
+# ============================================================================
+# The three sections API completion wave section 4.1 adds to the two-way
+# report, printed in this order right after @emlReportTwoWayAnova: estimated
+# marginal means with intervals, simple effects, post hoc per factor. Each
+# reads the matching kernel's OWN globals (emlAnovaKernelTwoWayEMM.*, etc.),
+# fresh at the moment @emlRunTwoWayAnalysis calls it -- the same pattern
+# @emlReportTwoWayAnova itself uses for emlTwoWayAnova.* -- and the door's
+# own .adjMethod$/.twAlpha/.twAlphaText$ fields for the header, since those
+# are stated once on the door and never duplicated as parameters here.
+#
+# AN OPTIONAL BRANCH THAT REFUSED PRINTS "Not available", naming the
+# kernel's own .error$ text, rather than an empty or zero-filled table --
+# the same disclosure the door folds into its own .warning$.
+# ============================================================================
+procedure emlReportTwoWayEMM: .factor1$, .factor2$
+    @emlUnderscoreToSpace: .factor1$
+    .d1$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .factor2$
+    .d2$ = emlUnderscoreToSpace.result$
+
+    @emlReportBlank
+    @emlReportSection: "Estimated Marginal Means"
+    if emlAnovaKernelTwoWayEMM.ok = 0
+        @emlReportNote: "Not available -- " + emlAnovaKernelTwoWayEMM.error$
+    else
+        @emlReportLineString: "Confidence level",
+        ... fixed$ (100 * (1 - emlRunTwoWayAnalysis.twAlpha), 1) + "%"
+        appendInfoLine: ""
+        appendInfoLine: left$ (.d1$ + "                         ", 24),
+        ... left$ ("EMM" + "            ", 12),
+        ... left$ ("SE" + "            ", 12),
+        ... "CI"
+        for .i from 1 to emlAnovaKernelTwoWayEMM.r
+            @eml_fixed: emlAnovaKernelTwoWayEMM.emmA#[.i], 4
+            .m$ = eml_fixed.result$
+            @eml_fixed: emlAnovaKernelTwoWayEMM.seA#[.i], 4
+            .s$ = eml_fixed.result$
+            @eml_fixed: emlAnovaKernelTwoWayEMM.lowA#[.i], 4
+            .lo$ = eml_fixed.result$
+            @eml_fixed: emlAnovaKernelTwoWayEMM.highA#[.i], 4
+            .hi$ = eml_fixed.result$
+            appendInfoLine: left$ (replace$ (emlAnovaKernelTwoWayEMM.lev1$[.i],
+            ... "_", " ", 0) + "                         ", 24),
+            ... left$ (.m$ + "            ", 12),
+            ... left$ (.s$ + "            ", 12),
+            ... "[" + .lo$ + ", " + .hi$ + "]"
+        endfor
+        for .j from 1 to emlAnovaKernelTwoWayEMM.s
+            @eml_fixed: emlAnovaKernelTwoWayEMM.emmB#[.j], 4
+            .m$ = eml_fixed.result$
+            @eml_fixed: emlAnovaKernelTwoWayEMM.seB#[.j], 4
+            .s$ = eml_fixed.result$
+            @eml_fixed: emlAnovaKernelTwoWayEMM.lowB#[.j], 4
+            .lo$ = eml_fixed.result$
+            @eml_fixed: emlAnovaKernelTwoWayEMM.highB#[.j], 4
+            .hi$ = eml_fixed.result$
+            appendInfoLine: left$ (replace$ (emlAnovaKernelTwoWayEMM.lev2$[.j],
+            ... "_", " ", 0) + "                         ", 24),
+            ... left$ (.m$ + "            ", 12),
+            ... left$ (.s$ + "            ", 12),
+            ... "[" + .lo$ + ", " + .hi$ + "]"
+        endfor
+        if emlAnovaKernelTwoWayEMM.warning$ <> ""
+            @emlReportNote: emlAnovaKernelTwoWayEMM.warning$
+        endif
+    endif
+endproc
+
+
+procedure emlReportTwoWaySimpleEffects: .factor1$, .factor2$
+    @emlUnderscoreToSpace: .factor1$
+    .d1$ = emlUnderscoreToSpace.result$
+    @emlUnderscoreToSpace: .factor2$
+    .d2$ = emlUnderscoreToSpace.result$
+
+    @emlReportBlank
+    @emlReportSection: "Simple Effects"
+    if emlAnovaKernelTwoWaySimpleEffects.ok = 0
+        @emlReportNote: "Not available -- "
+        ... + emlAnovaKernelTwoWaySimpleEffects.error$
+    else
+        appendInfoLine: "  " + .d1$ + " within each level of " + .d2$
+        ... + "  (df = " + string$ (emlAnovaKernelTwoWaySimpleEffects.dfAwithinB)
+        ... + ", " + string$ (emlAnovaKernelTwoWaySimpleEffects.dfError) + ")"
+        for .b from 1 to emlAnovaKernelTwoWaySimpleEffects.s
+            @eml_fixed: emlAnovaKernelTwoWaySimpleEffects.fAwithinB#[.b], 4
+            .f$ = eml_fixed.result$
+            @emlFormatP: emlAnovaKernelTwoWaySimpleEffects.pAwithinB#[.b]
+            appendInfoLine: "    "
+            ... + replace$ (emlAnovaKernelTwoWaySimpleEffects.lev2$[.b], "_",
+            ... " ", 0) + ": F = " + .f$ + ", " + emlFormatP.bare$
+        endfor
+        appendInfoLine: "  " + .d2$ + " within each level of " + .d1$
+        ... + "  (df = " + string$ (emlAnovaKernelTwoWaySimpleEffects.dfBwithinA)
+        ... + ", " + string$ (emlAnovaKernelTwoWaySimpleEffects.dfError) + ")"
+        for .a from 1 to emlAnovaKernelTwoWaySimpleEffects.r
+            @eml_fixed: emlAnovaKernelTwoWaySimpleEffects.fBwithinA#[.a], 4
+            .f$ = eml_fixed.result$
+            @emlFormatP: emlAnovaKernelTwoWaySimpleEffects.pBwithinA#[.a]
+            appendInfoLine: "    "
+            ... + replace$ (emlAnovaKernelTwoWaySimpleEffects.lev1$[.a], "_",
+            ... " ", 0) + ": F = " + .f$ + ", " + emlFormatP.bare$
+        endfor
+        if emlAnovaKernelTwoWaySimpleEffects.warning$ <> ""
+            @emlReportNote: emlAnovaKernelTwoWaySimpleEffects.warning$
+        endif
+    endif
+endproc
+
+
+procedure emlReportTwoWayPostHoc: .factorLabel$, .factorSelect
+    @emlUnderscoreToSpace: .factorLabel$
+    .d$ = emlUnderscoreToSpace.result$
+
+    @emlReportBlank
+    @emlReportSection: "Post Hoc -- " + .d$ + " ("
+    ... + emlRunTwoWayAnalysis.adjMethod$ + ", alpha = "
+    ... + emlRunTwoWayAnalysis.twAlphaText$ + ")"
+    if emlAnovaKernelTwoWayPostHoc.ok = 0
+        @emlReportNote: "Not available -- " + emlAnovaKernelTwoWayPostHoc.error$
+    else
+        if emlAnovaKernelTwoWayPostHoc.intervalMethod$ <> ""
+            @emlReportLineString: "Interval",
+            ... emlAnovaKernelTwoWayPostHoc.intervalMethod$
+        endif
+        appendInfoLine: ""
+        appendInfoLine: left$ ("Pair" + "                         ", 26),
+        ... left$ ("Diff" + "            ", 12),
+        ... left$ ("SE" + "            ", 12),
+        ... left$ ("p (adj)" + "                ", 14),
+        ... "CI"
+        for .i from 1 to emlAnovaKernelTwoWayPostHoc.k - 1
+            for .j from .i + 1 to emlAnovaKernelTwoWayPostHoc.k
+                .pairLabel$ = replace$ (emlAnovaKernelTwoWayPostHoc.levelName$[.i],
+                ... "_", " ", 0) + " - "
+                ... + replace$ (emlAnovaKernelTwoWayPostHoc.levelName$[.j],
+                ... "_", " ", 0)
+                @eml_fixed: emlAnovaKernelTwoWayPostHoc.diff##[.i, .j], 4
+                .diffText$ = eml_fixed.result$
+                @eml_fixed: emlAnovaKernelTwoWayPostHoc.se##[.i, .j], 4
+                .seText$ = eml_fixed.result$
+                @emlFormatP: emlAnovaKernelTwoWayPostHoc.pAdj##[.i, .j]
+                .pText$ = emlFormatP.bare$
+                if emlAnovaKernelTwoWayPostHoc.lowCI##[.i, .j] = undefined
+                    .ciText$ = "n/a"
+                else
+                    @eml_fixed: emlAnovaKernelTwoWayPostHoc.lowCI##[.i, .j], 4
+                    .lo$ = eml_fixed.result$
+                    @eml_fixed: emlAnovaKernelTwoWayPostHoc.highCI##[.i, .j], 4
+                    .hi$ = eml_fixed.result$
+                    .ciText$ = "[" + .lo$ + ", " + .hi$ + "]"
+                endif
+                appendInfoLine: left$ (.pairLabel$ + "                         ", 26),
+                ... left$ (.diffText$ + "            ", 12),
+                ... left$ (.seText$ + "            ", 12),
+                ... left$ (.pText$ + "                ", 14),
+                ... .ciText$
+            endfor
+        endfor
+        if emlAnovaKernelTwoWayPostHoc.nUndefined > 0
+            @emlReportNote: string$ (emlAnovaKernelTwoWayPostHoc.nUndefined)
+            ... + " of " + string$ (emlAnovaKernelTwoWayPostHoc.nPairs)
+            ... + " comparisons undefined (zero pairwise SE)."
+        endif
+        if emlAnovaKernelTwoWayPostHoc.warning$ <> ""
+            @emlReportNote: emlAnovaKernelTwoWayPostHoc.warning$
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# @emlReportAnovaHeteroscedastic
+# ============================================================================
+# The DOOR's own Brown-Forsythe / Welch / Games-Howell block (API completion
+# wave, order section 4.2) -- reads emlRunAnovaAnalysis.bf*/.welch*/.gh*,
+# computed at emlReportAlpha.value, NOT the existing figure-annotation
+# bridge's hardcoded 0.05 (@emlReportAnovaComparison, above, whose own
+# equal-spread block keeps its current behaviour until the graphs round).
+#
+# Brown-Forsythe is always printed. Welch's F and Games-Howell print beside
+# the standard result only when Brown-Forsythe rejects at the alpha in
+# force (emlRunAnovaAnalysis.bfRejects) -- never auto-switch. An omitted
+# block (the kernel refused) prints "not available", naming the kernel's
+# own error text, matching the disclosure already folded into
+# emlRunAnovaAnalysis.warning$.
+#
+# Group labels/count come from emlOneWayAnova.groupLabel$[]/.nGroups --
+# @emlReportAnovaComparison (called immediately before this, by the door)
+# re-runs @emlOneWayAnova internally, so those globals are fresh and in the
+# same group order the door's own .gh* matrices were built in.
+# ============================================================================
+procedure emlReportAnovaHeteroscedastic: .groupCol$
+    @emlReportBlank
+    @emlReportSection: "Equal-Spread Check (Brown-Forsythe)"
+    if emlRunAnovaAnalysis.bfF = undefined
+        @emlReportNote: "Not available."
+    else
+        @eml_fixed: emlRunAnovaAnalysis.bfF, 4
+        @emlReportLineString: "Brown-Forsythe F",
+        ... "F(" + string$ (emlRunAnovaAnalysis.bfDf1) + ", "
+        ... + string$ (emlRunAnovaAnalysis.bfDf2) + ") = " + eml_fixed.result$
+        @emlReportPWithExact: "Equal-spread p", emlRunAnovaAnalysis.bfP
+        if emlRunAnovaAnalysis.bfRejects = 1
+            appendInfoLine: "  → Equal spread rejected; Welch's F and "
+            ... + "Games-Howell follow, beside the standard result above."
+        else
+            appendInfoLine: "  → Equal spread not rejected; the standard "
+            ... + "result above stands."
+        endif
+    endif
+
+    if emlRunAnovaAnalysis.bfRejects = 1
+        @emlReportBlank
+        @emlReportSection: "Welch's ANOVA"
+        if emlRunAnovaAnalysis.welchF = undefined
+            @emlReportNote: "Not available."
+        else
+            @eml_fixed: emlRunAnovaAnalysis.welchF, 4
+            @eml_fixed: emlRunAnovaAnalysis.welchDf2, 2
+            @emlReportLineString: "Welch's F",
+            ... "F(" + string$ (emlRunAnovaAnalysis.welchDf1) + ", "
+            ... + eml_fixed.result$ + ") = "
+            ... + fixed$ (emlRunAnovaAnalysis.welchF, 4)
+            @emlReportPWithExact: "Welch p", emlRunAnovaAnalysis.welchP
+        endif
+
+        @emlReportBlank
+        @emlReportSection: "Games-Howell Pairwise Comparisons"
+        if numberOfRows (emlRunAnovaAnalysis.ghDiffMat##) <= 1
+            @emlReportNote: "Not available."
+        else
+            @emlReportLineString: "Confidence level",
+            ... fixed$ (100 * (1 - emlRunAnovaAnalysis.anovaAlpha), 1) + "%"
+            appendInfoLine: ""
+            appendInfoLine: left$ ("Pair" + "                         ", 26),
+            ... left$ ("Diff" + "            ", 12),
+            ... left$ ("SE" + "            ", 12),
+            ... left$ ("p (adj)" + "                ", 14),
+            ... "CI"
+            for .i from 1 to emlOneWayAnova.nGroups - 1
+                for .j from .i + 1 to emlOneWayAnova.nGroups
+                    .pairLabel$ = replace$ (emlOneWayAnova.groupLabel$[.i],
+                    ... "_", " ", 0) + " - "
+                    ... + replace$ (emlOneWayAnova.groupLabel$[.j], "_", " ", 0)
+                    @eml_fixed: emlRunAnovaAnalysis.ghDiffMat## [.i, .j], 4
+                    .diffText$ = eml_fixed.result$
+                    @eml_fixed: emlRunAnovaAnalysis.ghSeMat## [.i, .j], 4
+                    .seText$ = eml_fixed.result$
+                    @emlFormatP: emlRunAnovaAnalysis.ghPMat## [.i, .j]
+                    .pText$ = emlFormatP.bare$
+                    if emlRunAnovaAnalysis.ghLowMat## [.i, .j] = undefined
+                        .ciText$ = "n/a"
+                    else
+                        @eml_fixed: emlRunAnovaAnalysis.ghLowMat## [.i, .j], 4
+                        .lo$ = eml_fixed.result$
+                        @eml_fixed: emlRunAnovaAnalysis.ghHighMat## [.i, .j], 4
+                        .hi$ = eml_fixed.result$
+                        .ciText$ = "[" + .lo$ + ", " + .hi$ + "]"
+                    endif
+                    appendInfoLine: left$ (.pairLabel$
+                    ... + "                         ", 26),
+                    ... left$ (.diffText$ + "            ", 12),
+                    ... left$ (.seText$ + "            ", 12),
+                    ... left$ (.pText$ + "                ", 14),
+                    ... .ciText$
+                endfor
+            endfor
+        endif
+    endif
+endproc

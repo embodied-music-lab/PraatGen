@@ -229,7 +229,7 @@
   Rename column: old name$, new name$
   Rename column (by number): column number, new name$
   # Verified: Rename column (by number): 1, "eml_row"
-  # Provenance: Used in @emlTukeyHSD, 4 March 2026. Renames unnamed column 1 in Tukey output table.
+  # Provenance: 4 March 2026. Renames unnamed column 1 in a Tukey output table.
   Transpose
   # Returns: Table
   Collapse rows: columns with factors$#, columns to sum$#, columns to average$#, columns to medianize$#, columns to average logarithmically$#, columns to medianize logarithmically$#
