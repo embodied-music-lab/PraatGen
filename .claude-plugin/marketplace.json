@@ -1,0 +1,14 @@
+{
+  "name": "embodied-music-lab",
+  "description": "Expert help with study design, measurement selection, and signal analysis for voice research and clinical measures in Praat.",
+  "owner": {
+    "name": "Ian Howell, Embodied Music Lab"
+  },
+  "plugins": [
+    {
+      "name": "praatgen",
+      "source": "./plugin",
+      "description": "Expert help with study design, measurement selection, and signal analysis for voice research and clinical measures in Praat."
+    }
+  ]
+}
