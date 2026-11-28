@@ -21,7 +21,7 @@
 
 Full version history is in `pkb/PRAATGEN_CHANGELOG.md`.
 
-A version for the new Claude project format is in development. Use 2.2.7 in projects at `claude.ai/project/`.
+PraatGen 3, a plugin for the Claude app, is on the main branch. Use 2.2.7 in projects at `claude.ai/project/`.
 
 ---
 

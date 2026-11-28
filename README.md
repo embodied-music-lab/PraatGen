@@ -9,7 +9,7 @@
 
 PraatGen is a Claude AI project that writes syntactically correct Praat scripts from plain-language descriptions. You describe what you want to accomplish — extract F0 contours, batch-process a folder of recordings, build a publication figure, or generate a complex plugin — and PraatGen generates a complete, runnable script with validated commands, proper object handling, and clinical-grade parameter defaults. It can help you ideate your studies, debug its own or your existing code, and collaborate on your research and analysis projects.
 
-**Which version you need.** Release 2.2.7 is for projects in the older Claude project format, whose addresses start `claude.ai/project/`. A version for the new project format, with a project chat and threads, is in development.
+**Which version you need.** Release 2.2.7 is for projects in the older Claude project format, whose addresses start `claude.ai/project/`. PraatGen 3, a plugin for the Claude app, is on the main branch.
 
 Please send feedback to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
 
@@ -316,7 +316,7 @@ PraatGen tracks three version numbers:
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **2.2.7 (27 November 2026)** is the current stable release, for projects in the older Claude project format. It ships Master Prompt 17.1.7. Scripts write the Info window in one house style, with a bordered header, titled sections, aligned label and value lines, progress bars for batches, and marks for passes, failures and warnings. To find the EGG channel in a stereo file, PraatGen compares the HNR of each channel's derivative, names the test that way, and adds no calibration step.
+- **2.2.7 (27 November 2026)** is the final 2.x release, for projects in the older Claude project format. It ships Master Prompt 17.1.7. Scripts write the Info window in one house style, with a bordered header, titled sections, aligned label and value lines, progress bars for batches, and marks for passes, failures and warnings. To find the EGG channel in a stereo file, PraatGen compares the HNR of each channel's derivative, names the test that way, and adds no calibration step.
 - **2.2.6 (26 November 2026)** kept Master Prompt 17.1.6. The lint blocks functions Praat lists but refuses when run, such as `inner##`, and names the working alternative.
 - **2.2.5 (26 November 2026)** ships Master Prompt 17.1.6. When a question about your data has no command that answers it, PraatGen offers to find an answer from the signals, and when a file's channels carry different kinds of signal it offers to identify them from the signals. The sandbox installs the pinned Praat from GitHub and never asks you to change network settings. A requested jitter or shimmer measure is never left out because another measure determines it. Opus 5.5 is supported.
 - **2.2.4 (17 November 2026)** kept Master Prompt 17.1.4 and corrected the command reference: argument lists, object types for commands that need several objects selected, and editor command names, each run in Praat 6.6.30 and 6.4.39.
