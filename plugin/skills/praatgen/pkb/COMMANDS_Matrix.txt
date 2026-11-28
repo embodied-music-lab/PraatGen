@@ -1,0 +1,203 @@
+# PRAAT COMMANDS: Matrix
+# Source: Sandbox-verified, Praat 6.6.30 (Linux x64v3), 8 Oct 2026
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+#
+# This file holds the Matrix commands verified in the sandbox. For any other
+# Matrix command, the catalogue is the last fallback, and a command found only
+# there is verified in the sandbox before use (Rule 12). The SVD commands,
+# for the object that To SVD creates, are in their own section at the end.
+#
+# The entries from Create simple Matrix through Get value at xy were checked
+# in a Praat 6.6.30 sandbox on 23 Oct 2026, with the create and Formula
+# handlers read in the Praat source (fon/praat_Matrix.cpp).
+
+  # Creating a Matrix (New menu; nothing needs to be selected)
+
+  Create simple Matrix: name$, number of rows, number of columns, formula$
+  # Returns: Matrix
+  # Verified: Create simple Matrix: "m", 3, 4, ~ row * 10 + col
+  # Columns sit at x = 1, 2, 3 ... and rows at y = 1, 2, 3 ..., so in its
+  #   formula x equals col and y equals row.
+  # The formula is required. With three arguments Praat stops with "Command
+  #   requires more than the given 3 arguments: argument "Formula" not given."
+
+  Create Matrix: name$, xmin, xmax, number of columns, dx, x1, ymin, ymax, number of rows, dy, y1, formula$
+  # Returns: Matrix
+  # Verified: Create Matrix: "m3", 0, 1, 10, 0.1, 0.05, 1, 5, 5, 1, 1, ~ x + 100 * y
+  # x1 is the x of column 1 and y1 the y of row 1. In its formula, x and y
+  #   are these world coordinates, not column and row numbers.
+
+  # Applying a formula
+
+  Formula: formula$
+  # Verified: Formula: ~ self * 2
+  # Computes the expression for every cell, row by row, left to right, and
+  #   writes each result into its cell before moving to the next. In the
+  #   expression, self is the current cell, row and col are its numbers, x
+  #   and y are its world coordinates, and nrow and ncol are the Matrix's
+  #   size (APPENDIX_B_FUNCTIONS.txt).
+  # The formula reads cells it has already rewritten. Formula:
+  #   ~ if col > 1 then self [row, col - 1] else self fi turns a row of
+  #   1 2 3 4 into 1 1 1 1. To read the original values, Copy the Matrix
+  #   first and read the copy: object [copyId] [row, col - 1].
+  # A cell past the edge reads as 0, with no error: self [row, col + 1] in
+  #   the last column gives 0.
+  # Another Matrix's cell reads as object [id] [row, col] (preferred,
+  #   survives renaming), object ["Matrix m2", row, col] or Matrix_m2 [row, col].
+  #   These are reads only.
+  # Inside a formula, = compares. Formula: ~ self [row, col] = 2 writes 0
+  #   into every cell holding 1.
+  # To change part of a Matrix, test row and col:
+  #   Formula: ~ if row = 2 and col <= 3 then 0 else self fi. Formula (part)
+  #   does not exist for Matrix: Praat stops with "Command "Formula (part):"
+  #   not available for current selection."
+  # With several Matrix objects selected, the formula runs on each.
+  # A result that is undefined, such as 1 / 0, is stored as undefined.
+
+  # Reading and setting cells
+
+  Get number of rows
+  # Verified: Get number of rows
+
+  Get number of columns
+  # Verified: Get number of columns
+
+  Get value in cell: row number, column number
+  # Verified: Get value in cell: 2, 3
+  # A row or column outside the Matrix stops the script: "Row number should
+  #   not exceed number of rows."
+
+  Set value: row number, column number, new value
+  # Verified: Set value: 2, 2, -5
+  # Refuses undefined: "Argument "New value" has the value "undefined"." To
+  #   make one cell undefined, use
+  #   Formula: ~ if row = 2 and col = 2 then undefined else self fi.
+
+  Get all values
+  # Verified: Get all values
+  # Assign it to a matrix variable: values## = Get all values. Row r of the
+  #   variable is row r of the Matrix.
+
+  Get all values in row: row number
+  # Verified: Get all values in row: 2
+  # Assign it to a vector variable: row# = Get all values in row: 2.
+
+  Get all values in column: column number
+  # Verified: Get all values in column: 3
+
+  Get x of column: column number
+  # Verified: Get x of column: 3
+
+  Get y of row: row number
+  # Verified: Get y of row: 2
+
+  Get value at xy: x, y
+  # Verified: Get value at xy: 2, 1
+  # Takes world coordinates. In a Create simple Matrix, x is the column and y
+  #   is the row, so this returns cell (1, 2).
+
+  # Statistics over cells
+
+  Get maximum
+  # Verified: Get maximum
+
+  Get minimum
+  # Verified: Get minimum
+  # Get maximum and Get minimum skip undefined cells. If every cell is
+  #   undefined, they don't return undefined: Get maximum returns
+  #   -1.7976931348623157e+308 and Get minimum returns 1.7976931348623157e+308.
+  #   Check with Get sum first: it returns undefined when any cell is.
+
+  Get mean: xmin, xmax, ymin, ymax
+  # Verified: Get mean: 0, 0, 0, 0
+  # 0, 0, 0, 0 means the whole Matrix. Returns undefined when any cell in
+  #   range is undefined.
+
+  Get standard deviation: xmin, xmax, ymin, ymax
+  # Verified: Get standard deviation: 0, 0, 0, 0
+  # Divides by n - 1.
+
+  # Converting
+
+  To TableOfReal
+  # Returns: TableOfReal
+  # Verified: To TableOfReal
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)
+
+  # Linear algebra (hidden commands)
+  # Eigen (complex) and To SVD are registered GuiMenu_HIDDEN in
+  # dwtools/praat_David_init.cpp (Praat 6.6.30). They have no menu entry and
+  # no manual page, so Paste Commands can't record them. Their names and
+  # results below come from the source and a sandbox run in 6.6.30,
+  # 12 Oct 2026.
+
+  Eigen (complex)
+  # Returns: two Matrix objects, eigenvectors first, then eigenvalues; both
+  #   selected afterward. ev = Eigen (complex) stops with "Multiple objects
+  #   selected. Cannot assign object IDs to numeric variable". Capture both
+  #   with selected# (COMMANDS_Universal.txt).
+  # Layout, for an n x n Matrix (checked by A*v = lambda*v on a 3 x 3
+  #   non-symmetric Matrix, residual below 1e-15):
+  #   eigenvalues: n rows x 2 columns. Row k = (real part, imaginary part)
+  #     of eigenvalue k. The rotation [[0,-1],[1,0]] gives rows (0, 1)
+  #     and (0, -1).
+  #   eigenvectors: n rows x 2n columns. Row k is the eigenvector of
+  #     eigenvalue k. Its component j is at columns 2j-1 (real) and 2j
+  #     (imaginary). A column pair is one component across eigenvectors,
+  #     not one eigenvector.
+  # Before a script relies on this layout for a new case, check A*v = lambda*v
+  #   in the sandbox.
+
+  To SVD
+  # Returns: SVD. Hidden command: no menu entry or manual page, so Paste
+  #   Commands can't record it. Works on a non-square Matrix (4 x 3 tested).
+
+  Get sum
+  # Verified: Get sum
+  # It returned 5000 on a 2 x 50 Matrix of 50s, and the Matrix stays
+  #   selected. Praat 6.6.30 sandbox, 22 Oct 2026. Returns undefined when any
+  #   cell is undefined (23 Oct 2026).
+
+## Object type: SVD (the object To SVD creates)
+# Source: Praat 6.6.30 source (dwtools/praat_David_init.cpp) and a sandbox run
+#   in 6.6.30, 12 Oct 2026. These SVD commands are in the menus.
+
+  Get number of rows
+  Get number of columns
+  Get rank
+  Get condition number
+  Get singular value: index
+  # Verified: Get singular value: 1
+  Get sum of singular values: from, to
+  # Verified: Get sum of singular values: 1, 0
+  Get sum of singular values (fraction): from, to
+  # Verified: Get sum of singular values (fraction): 1, 2
+  Get minimum number of singular values: fraction of total sum
+  # Verified: Get minimum number of singular values: 0.95
+  # ERRATUM: "Get number of singular values" does not exist. Praat 6.6.30
+  #   stops with "Command "Get number of singular values" not available for
+  #   current selection". The count is min (rows, columns): Get number of
+  #   rows and Get number of columns return the original Matrix's sizes
+  #   (3 and 5 for a 3 x 5 Matrix, which has 3 singular values). Extract
+  #   singular values gives a 1 x k TableOfReal, so its Get number of
+  #   columns is the count.
+  Extract left singular vectors
+  # Returns: TableOfReal (named <name>_lsv)
+  Extract right singular vectors
+  # Returns: TableOfReal (named <name>_rsv), not a Matrix
+  Extract singular values
+  # Returns: TableOfReal (named <name>_sv)
+  To TableOfReal: first component, last component
+  # Verified: To TableOfReal: 1, 0
+  # Returns: TableOfReal
+  To Matrix: first component, last component
+  # Verified: To Matrix: 1, 0
+  # Returns: Matrix

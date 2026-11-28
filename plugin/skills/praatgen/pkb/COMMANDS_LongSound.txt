@@ -1,0 +1,60 @@
+# PRAAT COMMANDS: LongSound
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+# Sandbox arity check (29 Jul 2026 sweep): NOT PERFORMED.
+#   This file's 18 commands require a long sound file on disk, which the headless
+#   arity harness could not supply. Provenance remains as sourced above
+#   (Praat C API (praatlib.h), June 2025); nothing here has been
+#   confirmed against a running Praat 6.6.30. Treat with more caution than the
+#   files carrying a completed arity check.
+
+---
+
+  # Convert / Analyze
+  To TextGrid: tier names$, point tiers$
+  # Returns: TextGrid
+  # Extract / Combine
+  Extract part: from time, to time, preserve times?
+  # Returns: Sound
+  # Concatenate? is a hint, not an action: with LongSound objects selected it says to
+  # select them and choose Save as WAV file, which writes them one after the other.
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  # Other
+  Open long sound file: file name$
+  # Returns: LongSound
+  View
+  Play part: from time, to time
+  Save left channel as WAV file: file name$
+  Save left channel as AIFF file: file name$
+  Save left channel as AIFC file: file name$
+  Save left channel as NeXT/Sun file: file name$
+  Save left channel as NIST file: file name$
+  Save left channel as FLAC file: file name$
+  Save right channel as WAV file: file name$
+  Save right channel as AIFF file: file name$
+  Save right channel as AIFC file: file name$
+  Save right channel as NeXT/Sun file: file name$
+  Save right channel as NIST file: file name$
+  Save right channel as FLAC file: file name$
+  Save part as audio file: audio file$, type$, from time, to time
+  # Verified: Save part as audio file: "/tmp/out.wav", "WAV", 0, 0.5
+  # The earlier 5-arg signature with trailing `file name$` was wrong —
+  # Praat 6.4.65 reports "Command requires only 4 arguments". `type$` is
+  # an OPTIONMENU; canonical value "WAV". Other valid options: "AIFF",
+  # "AIFC", "NeXT/Sun", "NIST", "FLAC", "MP3".
+  # Provenance: Empirical verification, Praat 6.4.65, 17 May 2026.
+
+---
+
+*End of LongSound commands.*

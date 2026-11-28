@@ -1,0 +1,72 @@
+# PRAAT COMMANDS: Manipulation
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None
+# Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
+#   15 documented commands probed against a live Praat install by invoking each
+#   with excess arguments; Praat's "requires only N arguments" error reports the
+#   true arity, compared against what this file documents.
+#   Result: 8 exact arity match, 2 present and accepting the documented
+#   argument count, 5 requiring a co-selection or class-specific selection
+#   this harness could not supply (spot-checked, not exhaustively resolved).
+#   SCOPE — this establishes that each command EXISTS on this object type and
+#   that its documented PARAMETER COUNT is right. It does NOT verify parameter
+#   ORDER, parameter TYPES, default values, or semantic correctness. Those
+#   remain as previously sourced.
+
+---
+
+  # Query
+  Get resynthesis (overlap-add)
+  # Returns: Sound
+  Get resynthesis (LPC)
+  # Returns: Sound
+  # Modify
+## Object type: Manipulation & DurationTier
+  Replace duration tier
+  # Verified: Replace duration tier
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: Manipulation & PitchTier
+  Replace pitch tier
+  # Verified: Replace pitch tier
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: Manipulation & PointProcess
+  Replace pulses
+  # Verified: Replace pulses
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: Manipulation & Sound
+  Replace original sound
+  # Verified: Replace original sound
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+## Object type: Manipulation
+  # Convert / Analyze
+  To Manipulation
+  # Returns: Manipulation
+  # Extract / Combine
+  Extract original sound
+  # Returns: Sound
+  Extract pulses
+  # Returns: PointProcess
+  Extract pitch tier
+  # Returns: PitchTier
+  Extract duration tier
+  # Returns: DurationTier
+  # Other
+  Play (overlap-add)
+  Play (LPC)
+  Save as text file without Sound: file name$
+  Save as binary file without Sound: file name$
+
+---
+
+*End of Manipulation commands.*

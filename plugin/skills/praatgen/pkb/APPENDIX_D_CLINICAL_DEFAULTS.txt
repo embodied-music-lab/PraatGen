@@ -1,0 +1,1274 @@
+# PRAAT CLINICAL DEFAULTS REFERENCE (APPENDIX D)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Authoritative canonical parameter sets for voice analysis commands.
+# When a script performs voice analysis, use THESE values unless the user
+# explicitly specifies alternatives. If the user specifies alternatives,
+# note the deviation in the SELF-AUDIT.
+#
+# Version: 2.1
+# Date: 25 February 2026
+# Revised: 29 July 2026 (PraatGen v14.0.0) — §5B CPPS-vs-dialog-default difference corrected from three to SIX, sandbox-verified against the live dialog (a source-extraction reading had said five; it missed both enum fields); §9 dangling `HANDOFF_A2_Batch_Analyzer.md §4` pointer repointed to §10; `"Parabolic"` normalized to verified `"parabolic"`
+# Revised: 26 November 2026 (Master Prompt 17.1.6) — §3D ddp/dda are reported when the user or a protocol calls for them; no jitter or shimmer measure is left out because it can be calculated from another
+# Source: Praat GUI dialog defaults (verified via screenshots, 25 Feb 2026)
+
+# ============================================================================
+# CRITICAL PRINCIPLES
+# Sandbox-verified: Praat 6.6.30 (Linux x64v3), 29 July 2026 — §5B Praat dialog defaults for Get CPPS observed directly in the GUI
+# ============================================================================
+#
+# 1. Parameter names differ between Pitch algorithm variants.
+#    "pitch top" ≠ "pitch ceiling" — using the wrong name causes errors.
+#    See Section 1 for the distinction.
+#
+# 2. PRAAT GUI DEFAULTS vs. CLINICAL RECOMMENDATIONS:
+#    This appendix uses Praat's actual GUI dialog defaults as the canonical
+#    values. When clinical literature recommends a different value, that is
+#    noted explicitly as a CLINICAL RECOMMENDATION alongside the Praat
+#    default — never substituted silently.
+#
+#    Every parameter value in this appendix must be traceable to one of:
+#      (a) Praat GUI dialog default (verified via screenshot or Paste Commands)
+#      (b) A named citation (e.g., "Maryn et al., 2009")
+#    Values that cannot be traced to either source must be flagged and
+#    verified before use.
+#
+# 3. PITCH RANGE AWARENESS (hard):
+#    ALL scripts using any pitch extraction algorithm must solicit the
+#    expected pitch range from the user. Never assume speech-only defaults
+#    are sufficient — singing, child voice, and pathological voice may
+#    exceed standard ranges. See individual sections for algorithm-specific
+#    guidance on setting pitch floor and ceiling/top.
+# ============================================================================
+
+---
+
+## 0. CANONICAL PARAMETER DISCIPLINE (hard)
+
+All analysis commands in this appendix carry canonical parameter sets
+derived from Praat GUI defaults or published clinical norms. These
+values are the standard for all PraatGen-generated scripts.
+
+**Deviation policy:** A parameter may be changed from its canonical
+value ONLY when the canonical value would cause the algorithm to
+miss, clip, or mischaracterize signal that is demonstrably present
+in the data. The justification must identify:
+
+1. Which signal would be missed (e.g., "F0 at 65 Hz falls below
+   the 75 Hz floor — the algorithm cannot detect periods longer
+   than 1/floor")
+2. Why the canonical value fails for this specific data
+
+The following are NOT valid justifications for deviation:
+- "Provides extra headroom" / "doesn't hurt"
+- "The canonical ceiling exceeds what's needed, so I lowered it"
+- "Wider range gives better coverage"
+- "The singer might occasionally go below X"
+- "It's closer to the expected range" (without signal-loss evidence)
+
+Where the canonical value is part of a published method that users
+compare results against, such as the CPPS peak search (§5B), a deviation
+also costs comparability with published norms. Then the deviation is a
+PRE-FLIGHT question that states that cost, never a stated decision.
+
+Narrowing a range below canonical is just as much a deviation as
+widening it. A ceiling of 500 Hz when canonical is 600 Hz requires
+the same justification as a floor of 50 Hz when canonical is 75 Hz.
+
+**PRE-FLIGHT obligation:** When the task involves singing or
+non-speech phonation, ask whether the expected range extends beyond
+the canonical detection window (below floor or above ceiling/top).
+If the user does not confirm that it does, use canonical values.
+Do not preemptively adjust.
+
+**Interaction with the 2× pitch top rule (§1A):** The filtered
+autocorrelation algorithm's LPF creates a genuine signal-loss
+scenario: if the singer's highest expected F0 exceeds pitch_top / 2,
+the algorithm attenuates real pitch energy before analysis. In that
+case, raising pitch_top to 2× the highest expected F0 is a valid
+deviation because the canonical value would miss signal. If the
+highest expected F0 does NOT exceed pitch_top / 2 (i.e., canonical
+800 / 2 = 400 Hz covers the range), canonical stands.
+
+**SELF-AUDIT requirement:** Every deviation from canonical must cite
+this rule and state the signal-loss evidence:
+
+    "Deviation from canonical [parameter] = [value] because
+    [signal at X Hz would be missed by canonical Y Hz]."
+
+If no deviations exist, state: "All parameters canonical per §0."
+
+---
+
+## 1. PITCH EXTRACTION
+
+# ALGORITHM SELECTION GUIDE
+#
+# Which pitch algorithm to use depends on the PURPOSE of the analysis.
+# Source: Praat manual, "how to choose a pitch analysis method"
+# (https://www.fon.hum.uva.nl/praat/manual/how_to_choose_a_pitch_analysis_method.html)
+#
+#   PURPOSE                              ALGORITHM                    SECTION
+#   -----------------------------------  ---------------------------  -------
+#   F0 tracking, intonation, prosody,    Filtered autocorrelation     §1A
+#     melodic analysis
+#
+#   Voice quality input (jitter,         Raw cross-correlation        §1B
+#     shimmer, HNR via PointProcess)
+#     — uses shorter windows for
+#       precise period alignment
+#
+#   Raw periodicity (non-speech          Raw autocorrelation          §1C
+#     signals, missing fundamentals)
+#
+#   Filtered cross-correlation           Not recommended              —
+#     — no known preferred use case
+#     (Praat manual: experimental)
+#
+# If the task requires BOTH F0 tracking AND voice quality measures,
+# use TWO SEPARATE pitch objects — one per algorithm. Never reuse a
+# filtered autocorrelation Pitch for jitter/shimmer input, or a raw
+# cross-correlation Pitch for intonation analysis.
+#
+# If the purpose is ambiguous, ASK THE USER before selecting.
+
+### 1A. Pitch (filtered autocorrelation) — for F0 contour tracking, intonation
+
+# Use case: F0 tracking, prosody, intonation contours
+# NOTE: Parameter is "pitch top" (NOT "pitch ceiling")
+# NOTE: Requires 11 parameters — "voiced unvoiced cost" is the 11th
+
+To Pitch (filtered autocorrelation): 0.0, 50, 800, 15, "no", 0.03, 0.09, 0.5, 0.055, 0.35, 0.14
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   time step = 0.0 (auto: 0.75 / pitch floor)
+#   pitch floor = 50 Hz
+#   pitch top = 800 Hz            ← NOT "pitch ceiling"
+#   max candidates = 15
+#   very accurate = "no"
+#   attenuation at top = 0.03
+#   silence threshold = 0.09
+#   voicing threshold = 0.5
+#   octave cost = 0.055
+#   octave jump cost = 0.35
+#   voiced unvoiced cost = 0.14
+#
+# CRITICAL — 2× PITCH TOP RULE (FAC only):
+# The filtered autocorrelation algorithm applies an internal low-pass
+# filter at pitch top. Attenuation begins at pitch_top / 2. This means:
+#   - pitch top = 800 → reliable tracking degrades above ~400 Hz
+#   - To track F0 at frequency X, set pitch top ≥ 2 × X
+#
+#
+# The 2× rule applies ONLY to filtered autocorrelation because of its
+# internal LPF. Raw cross-correlation and raw autocorrelation use a hard
+# cutoff at pitch ceiling — see §1B and §1C.
+#
+# THESE PARAMETERS DIFFER SUBSTANTIALLY from raw cross-correlation and
+# raw autocorrelation defaults. Do NOT copy parameters between algorithms.
+#
+# Always solicit the expected pitch range from the user before selecting
+# pitch floor and pitch top values.
+
+### 1B. Pitch (raw cross-correlation) — for voice quality input (jitter/shimmer)
+
+# Use case: Input to PointProcess for jitter, shimmer, voice quality measures
+# NOTE: Parameter is "pitch ceiling" (NOT "pitch top")
+# NOTE: Requires 10 parameters (no "attenuation at top")
+
+To Pitch (raw cross-correlation): 0.0, 75, 600, 15, "no", 0.03, 0.45, 0.01, 0.35, 0.14
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   time step = 0.0 (auto)
+#   pitch floor = 75 Hz
+#   pitch ceiling = 600 Hz        ← NOT "pitch top"; hard cutoff
+#   max candidates = 15
+#   very accurate = "no"
+#   silence threshold = 0.03
+#   voicing threshold = 0.45
+#   octave cost = 0.01
+#   octave jump cost = 0.35
+#   voiced unvoiced cost = 0.14
+#
+# Rationale: raw cross-correlation avoids the spectral weighting that
+# filtered autocorrelation applies, giving more accurate period detection
+# for perturbation measures.
+#
+# Pitch ceiling is a HARD CUTOFF — no LPF attenuation. The ceiling is
+# 600 Hz, unless the highest expected pitch (plus vibrato, if present)
+# exceeds 600 Hz. In that case, adjust the ceiling to accommodate the
+# expected pitch range.
+#
+# Always solicit the expected pitch range from the user.
+
+### 1C. Pitch (raw autocorrelation)
+
+# Use case: Alternative to raw cross-correlation; same parameter space
+# NOTE: Parameter is "pitch ceiling" (NOT "pitch top")
+# NOTE: Requires 10 parameters (no "attenuation at top")
+
+To Pitch (raw autocorrelation): 0.0, 75, 600, 15, "no", 0.03, 0.45, 0.01, 0.35, 0.14
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   time step = 0.0 (auto)
+#   pitch floor = 75 Hz
+#   pitch ceiling = 600 Hz        ← NOT "pitch top"; hard cutoff
+#   max candidates = 15
+#   very accurate = "no"
+#   silence threshold = 0.03
+#   voicing threshold = 0.45
+#   octave cost = 0.01
+#   octave jump cost = 0.35
+#   voiced unvoiced cost = 0.14
+#
+# Identical defaults to raw cross-correlation (§1B). The algorithms
+# differ internally but share the same parameter space and defaults.
+#
+# Pitch ceiling is a HARD CUTOFF — same guidance as §1B.
+# Always solicit the expected pitch range from the user.
+
+---
+
+## 2. HARMONICITY (HNR)
+
+### 2A. Harmonicity (cc) — cross-correlation method
+
+To Harmonicity (cc): 0.01, 75, 0.1, 1.0
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   time step = 0.01 s
+#   pitch floor = 75 Hz
+#   silence threshold = 0.1
+#   periods per window = 1.0
+#
+# The pitch floor stays 75 Hz in every script. It never follows the pitch
+# floors or the expected pitch range.
+#
+# NOTE: Praat's GUI default for periods per window is 1.0.
+# Some clinical literature uses 4.5 (which is Praat's default for
+# the (ac) variant — see §2B). If a protocol specifies 4.5 for (cc),
+# note the deviation in the SELF-AUDIT.
+
+### 2B. Harmonicity (ac) — autocorrelation method
+
+To Harmonicity (ac): 0.01, 75, 0.1, 4.5
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   time step = 0.01 s
+#   pitch floor = 75 Hz
+#   silence threshold = 0.1
+#   periods per window = 4.5
+#
+# NOTE: The (ac) and (cc) variants have DIFFERENT defaults for
+# periods per window: (cc) = 1.0, (ac) = 4.5.
+
+---
+
+## 3. JITTER AND SHIMMER (via PointProcess)
+
+### 3A. PointProcess creation for voice quality
+
+# Requires Sound + Pitch selected together:
+To PointProcess (cc)
+
+# Then select PointProcess alone for jitter queries,
+# or PointProcess + Sound for shimmer queries.
+
+### 3B. Jitter (PointProcess selected)
+
+Get jitter (local): 0, 0, 0.0001, 0.02, 1.3
+
+# Parameter breakdown:
+#   from time = 0 (= start)
+#   to time = 0 (= end)
+#   shortest period = 0.0001 s  (= 10,000 Hz ceiling)
+#   longest period = 0.02 s     (= 50 Hz floor)
+#   maximum period factor = 1.3
+
+### 3C. Shimmer (PointProcess + Sound selected)
+
+Get shimmer (local): 0, 0, 0.0001, 0.02, 1.3, 1.6
+
+# Parameter breakdown:
+#   from time = 0 (= start)
+#   to time = 0 (= end)
+#   shortest period = 0.0001 s
+#   longest period = 0.02 s
+#   maximum period factor = 1.3
+#   maximum amplitude factor = 1.6
+
+### 3D. Variant selection (hard)
+
+# Jitter and shimmer each have several variants. They are NOT
+# interchangeable, and the difference is large enough to invert a
+# clinical reading. Do not pick one silently.
+#
+# CLARIFICATION (Step 1B hook) — ONE question, not two:
+#   "What is the phonation task? Sustained vowel / sustained with
+#    vibrato / pitch-varying (glide, scale, register transition) /
+#    connected speech."
+# Task type governs which variants are VALID at all (matrix below), so it
+# is the question that must be asked. Do NOT also present the variant list
+# as a menu — emit local, rap and the ratio by default (see below) and the
+# data answers the variant question. Offer a specific variant only if the
+# user asks or a protocol names one. Never explain what jitter is; anyone
+# requesting it has a working definition.
+#
+# ---------------------------------------------------------------------
+# VARIANTS  (arity verified, Praat 6.6.30, 29 Jul 2026)
+#
+# Jitter — PointProcess selected, 5 arguments:
+#   Get jitter (local):            0, 0, 0.0001, 0.02, 1.3
+#   Get jitter (local, absolute):  0, 0, 0.0001, 0.02, 1.3    [seconds]
+#   Get jitter (rap):              0, 0, 0.0001, 0.02, 1.3
+#   Get jitter (ppq5):             0, 0, 0.0001, 0.02, 1.3
+#   Get jitter (ddp):              0, 0, 0.0001, 0.02, 1.3
+#
+# Shimmer — PointProcess + Sound selected, 6 arguments:
+#   Get shimmer (local):     0, 0, 0.0001, 0.02, 1.3, 1.6
+#   Get shimmer (local_dB):  0, 0, 0.0001, 0.02, 1.3, 1.6     [dB]
+#   Get shimmer (apq3):      0, 0, 0.0001, 0.02, 1.3, 1.6
+#   Get shimmer (apq5):      0, 0, 0.0001, 0.02, 1.3, 1.6
+#   Get shimmer (apq11):     0, 0, 0.0001, 0.02, 1.3, 1.6
+#   Get shimmer (dda):       0, 0, 0.0001, 0.02, 1.3, 1.6
+#
+#   local        raw first difference between CONSECUTIVE periods or
+#                amplitudes, over the mean. Absorbs any smooth modulation
+#                of F0 or amplitude.
+#   rap / apq3   deviation from a 3-point running mean.
+#   ppq5 / apq5  deviation from a 5-point running mean.
+#   apq11        11-point; heaviest smoothing.
+#   ddp / dda    exactly 3x their base measure. Verified in Praat 6.6.30
+#                (ddp/rap = 3.000000, dda/apq3 = 3.000000, sandbox,
+#                29 Jul 2026), and the Praat manual states both identities
+#                outright ("The value is three times RAP" / "three times
+#                APQ3"). They carry no information rap and apq3 do not, so
+#                they aren't in the default output. When the user, their
+#                protocol, or a comparison with published values calls for
+#                one, report it. Never leave out a jitter or shimmer measure
+#                because it can be calculated from another.
+#
+# ---------------------------------------------------------------------
+# THE CRITICAL PROPERTY
+#
+# `local` is a first difference, so it is sensitive to smooth F0 or
+# amplitude modulation in proportion to (extent x RATE). `rap` and `ppq5`
+# are effectively second-difference measures and reject smooth modulation
+# almost entirely.
+#
+# Consequence: on a sustained tone WITH VIBRATO, `local` measures the
+# vibrato, not phonatory stability. Monte Carlo, 8000 cycles, F0 244 Hz,
+# underlying perturbation sigma 0.18%:
+#
+#   modulation             local%    rap%   local/rap
+#   none                   0.2023  0.1170     1.730
+#   2 Hz   +/-0.5 st       0.2198  0.1175     1.870
+#   5.5 Hz +/-0.25 st      0.2346  0.1179     1.990
+#   5.5 Hz +/-0.5 st       0.3157  0.1171     2.694
+#   5.5 Hz +/-1.0 st       0.5472  0.1183     4.625
+#   12 Hz  +/-0.5 st       0.5890  0.1279     4.606
+#
+# `rap` is invariant (0.117-0.128) across every condition; `local` varies
+# by ~2.9x. A SLOW glide barely moves the ratio — rate drives this, not
+# F0 excursion alone.
+#
+# ---------------------------------------------------------------------
+# DIAGNOSTIC RATIO — emit local, rap and local/rap by DEFAULT
+#
+# For purely uncorrelated cycle-to-cycle perturbation, local/rap = sqrt(3)
+# = 1.7321. Derivable analytically (local -> 2s/sqrt(pi);
+# rap -> 2s/sqrt(3pi)) and confirmed by Monte Carlo at N = 400,000 for
+# sigma = 0.2%, 0.5%, 1.0% (1.7302, 1.7314, 1.7327).
+#
+#   ratio ~1.73        clean; `local` is a valid stability measure
+#   ratio > ~2.2       smooth modulation present (vibrato, tremor).
+#                      Report rap or ppq5, and say why.
+#   ratio -> 1.5       period-alternating structure (diplophonia,
+#                      subharmonics). Investigate before reporting any
+#                      perturbation value.
+#
+# 1.5 IS A FLOOR, NOT A THRESHOLD (correction, verified). Pure period
+# alternation gives local/rap = 1.5000 EXACTLY, independent of alternation
+# depth (Monte Carlo, N = 200,000, d = 0.2% and 1.0%: both 1.5000).
+# Analytically: with e_i = -e_(i+1), the rap numerator is 4|e_i|/3 against
+# a local numerator of 2|e_i|. So mixtures of alternation and noise fall
+# BETWEEN 1.5 and 1.732, and a test written as "ratio < 1.5" can never
+# fire. Test for approach to 1.5, not for falling below it.
+#
+# THE RATIO NEEDS CYCLES. It is an asymptotic expectation and scatters on
+# short samples. Measured 95% spread on clean uncorrelated data:
+#
+#   N cycles     95% of ratios fall within
+#      100         1.64 - 1.86
+#      200         1.66 - 1.80
+#      500         1.69 - 1.78
+#     2000         1.71 - 1.76
+#     8000         1.72 - 1.75
+#
+# The >2.2 flag is safe at any of these. The approach-to-1.5 flag is NOT
+# reliable below ~500 cycles, where clean data alone reaches 1.64. State
+# the cycle count whenever the ratio is reported, and do not call
+# diplophonia on a short sample.
+#
+# ---------------------------------------------------------------------
+# TASK APPROPRIATENESS MATRIX
+#
+#   Sustained vowel, steady pitch and loudness
+#       All variants valid. `local` is the conventional clinical report.
+#
+#   Sustained vowel WITH VIBRATO  (most trained singers)
+#       `local` is inflated by the vibrato and is NOT a stability measure.
+#       Use rap/ppq5 (jitter) and apq3/apq5 (shimmer). Vibrato rate and
+#       extent are a PRE-FLIGHT discussion: whether to report them alongside
+#       (eml-vibrato-procedures.txt), and what the stability measures mean
+#       on vibrato material. Never add or drop them without that discussion.
+#
+#   Pitch-varying (glide, scale, portamento, register transition)
+#       Slow movement does not inflate `local` much, but this is not a
+#       stability paradigm. Segment into steady portions and measure per
+#       segment; a whole-file mean averages across registers. Same for
+#       shimmer under a crescendo.
+#
+#   Connected speech
+#       Perturbation measures are NOT valid. Use CPPS, or AVQI per §10.
+#       Do not report jitter/shimmer on running speech.
+#
+# ---------------------------------------------------------------------
+# RUNTIME GUARD (recommended). Both come free from the Pitch object the
+# script already builds — no extra analysis object:
+#   - F0 range in semitones over the analysis window; if > ~2 st, warn
+#     that the window is not steady-pitch.
+#   - Emit local, rap, the ratio and the cycle count; warn above ~2.2 that
+#     a smooth modulation is inflating `local`.
+#
+# ---------------------------------------------------------------------
+# CROSS-PROGRAM COMPARABILITY — PRAAT VALUES ARE NOT MDVP VALUES (hard)
+#
+# Praat manual, "Voice 5. Comparison with other programs":
+#   https://www.fon.hum.uva.nl/praat/manual/Voice_5__Comparison_with_other_programs.html
+# Variant definitions and the MDVP thresholds below:
+#   https://www.fon.hum.uva.nl/praat/manual/Voice_2__Jitter.html
+#   https://www.fon.hum.uva.nl/praat/manual/Voice_3__Shimmer.html
+#
+# Whenever a script measures jitter or shimmer, point the user to the
+# "Voice 5. Comparison with other programs" URL above: in the PRE-FLIGHT,
+# in the script header, and in the Info window summary. A summary in your
+# own words doesn't replace the URL. Most published norms come from MDVP.
+#
+# THE MEASURES ARE NOT THE SAME QUANTITY. Boersma's worked case: a
+# computer-generated glottal source with a CONSTANT period, vocal-tract
+# filtered, plus 1% additive white noise ("a quite usual amount") —
+#
+#     Praat measures jitter 0.02%      MDVP measures jitter 0.6%
+#
+# True jitter is zero. The 30x gap is method, not implementation quality:
+#   Praat  — period boundaries by waveform matching (cross-correlation),
+#            which averages the noise out
+#   MDVP   — period boundaries by peak-picking, which follows the noise
+# So MDVP's "jitter" conflates period variation with additive noise;
+# Praat's isolates period variation. On clean synthetic signals both
+# recover 1% jitter, so the divergence is a NOISE effect and grows with
+# recording quality problems.
+#
+# Voicing decisions also differ, which changes which cycles are measured
+# at all: MDVP quantizes amplitudes to -1/0/+1 before autocorrelation,
+# does not divide by the window's autocorrelation, and does not
+# sinc-interpolate the peak. Praat's voicing threshold is 0.45 against
+# MDVP's 0.29 — MDVP calls more frames voiced.
+#
+# MDVP PATHOLOGY THRESHOLDS, AND WHY THEY DO NOT TRANSFER (hard).
+# The Praat manual reproduces MDVP's thresholds:
+#
+#   Jitter (local)              1.040 %
+#   Jitter (local, absolute)   83.200 us
+#   Jitter (rap)                0.680 %
+#   Jitter (ppq5)               0.840 %
+#   Shimmer (local)             3.810 %
+#   Shimmer (local, dB)         0.350 dB
+#   Shimmer (apq11)             3.070 %
+#
+# and states that because these were derived from noise-influenced MDVP
+# measurements, "the correct threshold is probably lower" for the jitter
+# measures. That asymmetry has a clinical direction: applying an MDVP
+# threshold to a Praat value UNDER-CALLS pathology, because the Praat
+# number is systematically smaller on any recording with noise in it.
+# Never present a Praat jitter value against an MDVP cutoff without
+# saying so. This is a silent failure — the number is plausible, in
+# range, and wrong for the comparison being made.
+#
+# COROLLARY. Do not compare a jitter or shimmer value to a published norm,
+# or to a measurement from other software, without naming the program the
+# norm came from. Report the variant, the program, and the recording SNR.
+#
+# ---------------------------------------------------------------------
+# THE §7 PLAUSIBILITY BAND DOES NOT CATCH THIS. Jitter 0-5% passed a
+# 0.4431% reading that was roughly 60% vibrato.
+#
+# Provenance: EML PraatGen sandbox, 29 July 2026, Praat 6.6.30
+# (linux-x64v3). Real recording: stereo audio+EGG, 7.95 s, two-register
+# task spanning 9.84 st, mean F0 244 Hz — local 0.4431%, rap 0.1148%,
+# ppq5 0.1432%, ddp 0.3443%, ratio 3.860, implying ~+/-0.8 st vibrato at
+# ~5.5 Hz over an underlying rap of 0.115%. Ratio baselines, the 1.5
+# alternation floor, the N-dependence table and both x3 identities
+# re-verified independently before adoption (Rule 32; Praat execution for
+# the identities, fixed-seed Monte Carlo for the rest).
+
+---
+
+## 4. FORMANT ANALYSIS
+
+# ALGORITHM ROUTING (hard):
+#
+# Choose the formant analysis algorithm based on whether the formant
+# ceiling is known:
+#
+#   CONDITION                             ALGORITHM            SECTION
+#   ------------------------------------  -------------------  -------
+#   Ceiling uncertain, gender unknown,    FormantPath (burg)   §4A
+#     no protocol requirement                                  [DEFAULT]
+#
+#   Specific ceiling required             Formant (burg)       §4B
+#     (replication, protocol, user
+#     request)
+#
+# DEFAULT: FormantPath (burg). This algorithm searches across a range
+# of formant ceilings and selects the optimal one per frame. No user
+# decision about vocal tract size or gender is needed. This is the
+# correct default for any script where the formant ceiling is not
+# predetermined by a specific protocol.
+#
+# OVERRIDE: Formant (burg) with explicit ceiling. Use only when:
+#   1. Replicating a published study that used a specific ceiling
+#   2. Protocol requires identical ceiling across all participants
+#      for between-subject comparability
+#   3. User explicitly requests a fixed ceiling
+#
+# RATIONALE: The previous version of §4 mandated manual ceiling
+# selection ("Smaller / Larger" optionmenu) as the universal pattern.
+# This forced a Tier 3 decision (estimate a physiological parameter)
+# into every formant analysis script, even when the user had no basis
+# for making the choice. FormantPath eliminates this friction by
+# automating the ceiling search — which is exactly the problem it was
+# designed to solve. Per Appendix F's progressive disclosure philosophy,
+# parameters that an algorithm can optimize should not be presented to
+# the user as mandatory choices.
+
+### 4A. FormantPath (burg) — DEFAULT (automated ceiling optimization)
+
+# Use case: Any formant analysis where the ceiling is not protocol-specified.
+# The algorithm evaluates multiple ceilings and selects the optimal one
+# per analysis frame based on formant track smoothness.
+
+To FormantPath (burg): 0.005, 5.0, 5500, 0.025, 50, 0.05, 4
+
+# Parameter breakdown (Praat GUI defaults, verified 21 Mar 2026):
+#   time step = 0.005 s
+#   max number of formants = 5.0
+#   middle formant ceiling = 5500 Hz    (center of ceiling search range)
+#   window length = 0.025 s
+#   pre-emphasis from = 50 Hz
+#   ceiling step size = 0.05            (exponential step between candidates)
+#   number of steps up/down = 4         (4 steps above and below middle)
+#
+# CEILING SEARCH RANGE:
+#   The algorithm evaluates 2 * nSteps + 1 = 9 candidate ceilings:
+#     min ceiling = 5500 * exp(-0.05 * 4) ≈ 4503.0 Hz
+#     max ceiling = 5500 * exp(+0.05 * 4) ≈ 6717.7 Hz
+#
+#   This range covers the typical adult male vocal tract (5000 Hz)
+#   through adult female (5500 Hz) and somewhat beyond. For children
+#   or very small vocal tracts, increase middle ceiling to 6500–8000 Hz
+#   or increase nSteps.
+#
+# QUERY WORKFLOW:
+#   Extract Formant on a FormantPath returns the analysis at the
+#   MIDDLE ceiling, not the optimal one. A FormantPath stores its path
+#   as an interval tier whose interval text holds a candidate index,
+#   and that index starts at 5 — the middle of the nine candidates —
+#   when the FormantPath is created. Extract Formant takes no
+#   arguments, so the stored path is the only thing it can read.
+#   Query the optimal ceiling, then run a plain Formant (burg)
+#   analysis at that ceiling:
+#
+#     selectObject: soundId
+#     fpId = noprogress To FormantPath (burg): 0.005, 5.0, 5500,
+#         ... 0.025, 50, 0.05, 4
+#     selectObject: fpId
+#     optCeiling = Get optimal ceiling: 0.0, 0.0, "3 3 3", 1.25
+#     removeObject: fpId
+#     selectObject: soundId
+#     formantId = noprogress To Formant (burg): 0.005, 5, optCeiling,
+#         ... 0.025, 50
+#     selectObject: formantId
+#     meanF1 = Get mean: 1, 0, 0, "Hertz"
+#     meanF2 = Get mean: 2, 0, 0, "Hertz"
+#
+# ⚠️ BUG (reproduced on 6.4.30, 6.6.30 and 7.0.02; no upper bound
+#   established):
+#   Extract Formant segfaults after Set path: or Set optimal path:.
+#   See COMMANDS_Formant.txt for the root cause.
+#
+# PLAUSIBILITY (§7 applies here as it does to any measure):
+#   The selected ceiling is a search result and can land on a value
+#   that breaks formant tracking.
+#
+#   Fixture, analyzed in memory — do not round-trip it through a
+#   16-bit WAV, which shifts the eighth candidate by 0.04 Hz:
+#     Create KlattGrid from vowel: "v", 0.5, 210, 300, 50, 2300,
+#         ... 100, 2900, 120, 3500, 0.1, 1000
+#     To Sound
+#   On 6.6.30 and 7.0.02, FormantPath at the §4A defaults selects
+#   6717.7 Hz — the top candidate, where tracking has broken. The
+#   selection is build-dependent: 6.4.30 picks 6078.4 Hz on the same
+#   fixture and returns F1 315.5, inside the §7 band. Only 6.6.30 and
+#   7.0.02 were tested above the 6.4.39 floor, so treat the failure as
+#   possible on any build and keep the check. Each row below
+#   is Get mean: 1, 0, 0, "Hertz" on
+#   To Formant (burg): 0.005, 5, <ceiling>, 0.025, 50.
+#   Mean F1 in Hz at each of the nine candidate ceilings:
+#     1  4503.0   346.1
+#     2  4733.9   341.6
+#     3  4976.6   338.1
+#     4  5231.8   338.4
+#     5  5500.0   339.3
+#     6  5782.0   335.8
+#     7  6078.4   315.5
+#     8  6390.1   220.7
+#     9  6717.7  2371.4   <- selected
+#   Identical on 6.6.30 and 7.0.02.
+#
+#   The tracking degrades over the top three candidates and breaks at
+#   the ninth, which is the one the stress metric selects. This is one
+#   token; do not read the shape as general.
+#
+#   Check the result against the §7 formant bands and warn. Do not
+#   substitute another value and do not exitScript:
+#
+#     if meanF1 < 150 or meanF1 > 1200
+#         appendInfoLine: "F1 outside typical range (",
+#             ... fixed$ (meanF1, 0), " Hz) at the selected ceiling of ",
+#             ... fixed$ (optCeiling, 0), " Hz -- check the analysis"
+#     endif
+#
+#   The §7 bands catch this case: F1 2371 Hz is outside 150-1200 Hz.
+
+# OPTIMAL CEILING QUERY (optional, for reporting):
+#   optCeiling was already computed above; to report which ceiling
+#   was selected:
+#     appendInfoLine: "Optimal formant ceiling: ",
+#         ... fixed$ (optCeiling, 0), " Hz"
+
+### 4B. Formant (burg) — OVERRIDE (explicit ceiling, protocol-specified)
+
+# Use case: Replication of published studies, protocol-mandated ceiling,
+# or user-requested fixed ceiling.
+# NOTE: Use this ONLY when FormantPath is inappropriate. See routing
+# decision above.
+
+To Formant (burg): 0.0, 5, 5500, 0.025, 50
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   time step = 0.0 (auto: 0.25 * window length)
+#   max number of formants = 5
+#   formant ceiling = 5500 Hz    ← Praat default (labeled "= adult female")
+#   window length = 0.025 s
+#   pre-emphasis from = 50 Hz
+#
+# FORMANT CEILING SELECTION:
+# When using Formant (burg), the ceiling must be user-accessible via
+# a form or beginPause field. Never hardcode a single ceiling value
+# when using this algorithm.
+#
+# Recommended GUI pattern:
+#
+#   optionmenu: "Vocal tract size", 1
+#       option: "Smaller (5500 Hz)"
+#       option: "Larger (5000 Hz)"
+#
+#   # Derive ceiling from selection:
+#   if vocal_tract_size = 1
+#       formantCeiling = 5500
+#   else
+#       formantCeiling = 5000
+#   endif
+#
+# The labels "Smaller" and "Larger" refer to vocal tract dimensions
+# and avoid gender assumptions. Smaller tracts (typically higher-voiced
+# speakers) produce higher formant frequencies.
+#
+# If the user's protocol specifies a different ceiling, they can
+# override via a raw numeric field instead of the optionmenu.
+
+### 4C. Formant analysis — voice quality / clinical context
+
+# Same algorithms, but ceiling choice matters for clinical accuracy.
+# When formants feed into clinical measures (e.g., formant-based
+# vowel space area), document the algorithm and ceiling choice in the
+# script header and SELF-AUDIT.
+#
+# For FormantPath: report the optimal ceiling that was selected.
+# For Formant (burg): report the fixed ceiling that was used.
+
+### 4D. FormantModeler — formant tracking quality assessment
+
+# FormantModeler fits polynomial curves to formant tracks and provides
+# goodness-of-fit metrics: R-squared, residual standard deviation,
+# outlier detection, track separation. These quantify how reliable the
+# formant tracking is — a crucial confidence indicator when reporting
+# formant means.
+#
+# CREATION:
+#   selectObject: formantId
+#   fmId = To FormantModeler: startTime, endTime, 3, 3
+#   # 3 formants, 3rd-order polynomial
+#
+# KEY METRICS:
+#   R-squared (Get coefficient of determination):
+#     High (>0.8) = stable, trustworthy tracking
+#     Low (<0.5) = unstable — either tracking errors or the polynomial
+#     model is wrong for this data (see limitation below)
+#
+#   Track standard deviation (Get formant standard deviation):
+#     Scatter of raw data around the polynomial, in Hz.
+#     Large SD = noisy tracking or formant movement.
+#
+#   Track separation (Get average distance between tracks):
+#     Average Hz between adjacent formant tracks. Low separation
+#     suggests tracks are merging — a signature of unreliable tracking.
+#
+#   Invalid data points (Get number of invalid data points):
+#     Frames flagged as outliers (>3 SD from polynomial). High counts
+#     indicate tracking problems OR a wrong model (see below).
+#
+# SCOPE LIMITATION (hard):
+#
+# FormantModeler assumes formants vary smoothly within the analysis
+# window. It is VALID for:
+#   - Sustained vowels
+#   - Single extracted vowel tokens
+#   - Sustained singing tones
+#
+# It is INVALID for:
+#   - Connected speech spanning multiple vowels
+#   - Vowel sequences with large transitions (e.g., /u i u/)
+#   - Any signal where formants change rapidly by design
+#
+# On connected speech, the polynomial smooths away real formant
+# transitions and flags real vowel targets as outliers. Low R-squared
+# in this context does NOT mean tracking failed — it means the model
+# is wrong for the data. If FormantModeler is needed on connected
+# speech, segment by vowel first and apply per segment.
+#
+# REPORTING:
+# When FormantModeler metrics are included in script output, report
+# them alongside the formant means as confidence indicators:
+#
+#   appendInfoLine: "F1 mean: ", fixed$ (meanF1, 0), " Hz",
+#       ... " (R-sq = ", fixed$ (rSqF1, 2), ")"
+#
+# Provenance: Empirical testing on sustained vowels (R-sq > 0.9) and
+# connected speech /u i u/ sequence (R-sq < 0.3, all transitions
+# flagged as outliers). 21 April 2026.
+---
+
+## 5. CEPSTRAL ANALYSIS (CPPS)
+
+### 5A. PowerCepstrogram creation
+
+To PowerCepstrogram: 60, 0.002, 5000, 50
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   pitch floor = 60 Hz
+#   time step = 0.002 s
+#   maximum frequency = 5000 Hz
+#   pre-emphasis frequency = 50 Hz
+
+### 5B. CPPS query (Maryn et al. parameters)
+
+Get CPPS: "no", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0, "Straight", "Robust"
+
+# Parameter breakdown (per Maryn & Weenink, 2015; confirmed by
+# Phonanium Cepstrography v01.02 script, Watts, Awan & Maryn 2017,
+# Vojtech et al. 2020, Heller Murray et al. 2022):
+#   subtract tilt before smoothing = "no"
+#   time averaging window = 0.01 s
+#   quefrency averaging window = 0.001 s
+#   peak search pitch floor = 60 Hz
+#   peak search pitch ceiling = 330 Hz
+#   tolerance = 0.05
+#   interpolation = "parabolic"
+#   tilt line quefrency floor = 0.001 s
+#   tilt line quefrency ceiling = 0 s (= no upper bound)
+#   line type = "Straight"
+#   fit method = "Robust"
+#
+# NOTE: These parameters differ from the Praat dialog defaults on
+# SIX values. Praat dialog defaults, SANDBOX-VERIFIED against the actual
+# "PowerCepstrogram: Get CPPS" dialog, Praat 6.6.30 (Linux x64v3),
+# 29 July 2026:
+#
+#   field                            Praat default      Maryn
+#   -------------------------------  -----------------  --------------
+#   subtract trend before smoothing  yes (checked)      no
+#   time averaging window (s)        0.02               0.01
+#   quefrency averaging window (s)   0.0005             0.001
+#   peak search pitch floor (Hz)     60.0               60      (same)
+#   peak search pitch ceiling (Hz)   330.0              330     (same)
+#   tolerance (0-1)                  0.05               0.05    (same)
+#   interpolation                    parabolic          parabolic (same)
+#   trend line quefrency floor (s)   0.001              0.001   (same)
+#   trend line quefrency ceiling (s) 0.05               0 (= no upper bound)
+#   trend type                       Exponential decay  Straight
+#   fit method                       Robust slow        Robust
+#
+# As a Praat-default call that would be (do NOT use for clinical work):
+#   Get CPPS: "yes", 0.02, 0.0005, 60, 330, 0.05, "parabolic",
+#       ... 0.001, 0.05, "Exponential decay", "Robust slow"
+#
+# History of this note: it originally said "three values", was corrected
+# to five during the v14.0.0 audit from a source-extraction reading, and
+# is now six on direct observation of the dialog. The two the extraction
+# missed were the enum fields (trend type, fit method) — the catalogue
+# exposes those fields but not their default values. Treat catalogue enum
+# defaults as unknown, not absent.
+#
+# The Maryn values above are what the clinical CPPS literature
+# consistently uses.
+#
+# PEAK-SEARCH RANGE AND PUBLISHED NORMS (hard)
+# The 60-330 Hz peak search is part of the published method. CPPS values
+# compare with published norms and thresholds only when it is unchanged.
+# When the highest expected F0 is above 330 Hz, the canonical ceiling misses
+# signal (§0), and raising it makes the CPPS incomparable with published
+# values. Never raise it as a stated default. Ask in PRE-FLIGHT, and tell
+# the user both consequences:
+#   - Keep 60-330 Hz: CPPS stays comparable with published norms, but the
+#     peak search can't reach F0 above 330 Hz. The script warns, and the
+#     value is reported as censored for that material.
+#   - Raise the ceiling: the peak search covers the sung F0, but the CPPS
+#     can't be compared with published norms or thresholds.
+# Without an answer, keep 60-330 Hz and warn. Report the ceiling used in
+# every output row. When it was raised, say in the Info window and the CSV
+# that the CPPS isn't comparable with published values.
+#
+# ERRATUM (21 April 2026): Prior version of this section had the
+# Praat dialog defaults labeled as "Maryn et al." parameters. Corrected
+# after comparison with Phonanium Cepstrography v01.02 source script.
+#
+## When computing BOTH AVQI and per-token clinical measures in the same
+# script, maintain TWO SEPARATE analysis pipelines. Never substitute
+# one parameter set for the other. See Section 9 (isolation warning).
+
+---
+
+## 6. INTENSITY
+
+To Intensity: 100, 0.0, "yes"
+
+# Parameter breakdown (Praat GUI defaults, verified 25 Feb 2026):
+#   pitch floor = 100 Hz
+#   time step = 0.0 (auto)
+#   subtract mean = "yes"
+
+---
+
+## 7. PLAUSIBILITY RANGES
+
+# After querying any acoustic measure, check that the result falls within
+# plausible bounds. If outside these ranges, emit a non-blocking warning
+# via appendInfoLine. Do NOT exitScript — the user may have valid reasons.
+
+# Measure               Plausible range         Warning if outside
+# -----------           ---------------         ------------------
+# F0 (Hz)               50 – 1000                "F0 value outside typical speech or singing range"
+# Jitter (local, %)     0 – 5                   "Jitter unusually high; check voicing"
+# Shimmer (local, %)    0 – 15                  "Shimmer unusually high; check voicing"
+#   ⚠️ These bands do NOT detect a WRONG-VARIANT reading. A `local` jitter of
+#   0.4431% that was roughly 60% vibrato passed this band cleanly. The
+#   local/rap ratio is the check that catches it — see §3D.
+# HNR (dB)              -20 – 40                "HNR outside expected range"
+# Intensity (dB SPL)    20 – 120                "Intensity outside typical recording range"
+# CPPS (dB)             0 – 25                  "CPPS outside expected range"
+# Formant F1 (Hz)       150 – 1200              "F1 outside typical range"
+# Formant F2 (Hz)       500 – 3500              "F2 outside typical range"
+# Formant F3 (Hz)       1500 – 4500             "F3 outside typical range"
+
+# GUARD BOTH ENDS OF EVERY BOUNDED RANGE (hard)
+#
+# A floor-only guard is half a guard. Warn when a measurement approaches
+# EITHER limit of any bounded analysis range — pitch floor and ceiling, the
+# cepstral peak search range, the derivative low-pass, formant ceiling.
+#
+# Observed failure: a script warned when minimum F0 came within 10% of the
+# pitch floor and had no equivalent at the top. On a real recording the
+# measured maximum F0 was 322.87 Hz against a cepstral search ceiling of
+# 330 Hz — 98% of the ceiling — and nothing said so. Slightly higher material
+# and the measurement degrades with no signal at all.
+#
+#   if maxF0 > 0.9 * ceiling
+#       appendInfoLine: "WARNING: max F0 ", fixed$(maxF0,2),
+#           ... " Hz is within 10% of the ", fixed$(ceiling,0),
+#           ... " Hz ceiling. Widen the range or treat the result as censored."
+#   endif
+#
+# WHICH LIMITS A SCRIPT USES (hard)
+#
+# Every limit is canonical: both pitch floors, the filtered-autocorrelation
+# pitch top, the raw cross-correlation ceiling, the jitter and shimmer period
+# arguments and the CPPS peak search. A limit changes only under §0, when the
+# expected pitch range shows signal the canonical value would miss:
+#   - The filtered-autocorrelation pitch top becomes exactly 2 x the highest
+#     expected F0, and only when that F0 is above 400 Hz (§1A).
+#   - The raw cross-correlation ceiling is 600 Hz, unless the highest
+#     expected pitch (plus vibrato, if present) exceeds 600 Hz. In that case,
+#     adjust the ceiling to accommodate the expected pitch range (§1B).
+# The Harmonicity pitch floor is always 75 Hz (§2A). No limit gets a margin
+# or multiplier beyond what these rules state.
+#
+# A limit may be set in the plan from the PRE-FLIGHT answer, or computed in
+# the script from the range the user enters in the dialog. Either way it
+# follows these rules exactly: canonical unless the range would lose signal,
+# changed only by the rule stated for that limit, with no added margin. The
+# SELF-AUDIT states each limit used and whether it stayed canonical.
+#
+# Warn when a measurement comes within 10% of any limit the script uses, as
+# above. For the filtered-autocorrelation pitch top, the limit is half the
+# pitch top, where attenuation begins. The two pitch algorithms fail
+# differently past their limits:
+#   - Filtered autocorrelation degrades gracefully. Its internal low-pass
+#     starts attenuating at half the pitch top.
+#   - Raw cross-correlation stops at its ceiling. Periods above it are lost
+#     outright (§1B).
+#
+# CHECK THE USER'S STATED RANGE AGAINST THE MEASUREMENT (hard)
+#
+# When the user supplies an expected range, compare it to what was measured
+# and warn on disagreement. The limits were chosen from that statement, so a
+# wrong statement leads to wrong limits without any error.
+#
+# Observed: user stated F0 stayed below 300 Hz; measurement returned 322.87 Hz;
+# nothing flagged it. Report the discrepancy, name each limit the measured F0
+# crossed or came within 10% of, the raw cross-correlation ceiling first
+# because it is a hard cutoff, and let the user decide whether to re-run.
+#
+# Pattern for plausibility check:
+#
+#   if hnr <> undefined
+#       if hnr < -20 or hnr > 40
+#           appendInfoLine: "WARNING: HNR = ", fixed$ (hnr, 2),
+#           ... " dB — outside expected range (-20 to 40 dB)."
+#       endif
+#   endif
+
+---
+
+## 8. SELF-AUDIT REQUIREMENTS
+
+# When a script uses any command from this appendix, the SELF-AUDIT must:
+#
+# 1. List EACH analysis command used with its FULL parameter set
+#    (both field names AND values)
+#
+# 2. If a command is used for two different purposes (e.g., pitch for
+#    F0 tracking AND pitch for jitter input), report each use separately
+#    with its purpose stated
+#
+# 3. If ANY parameter deviates from the canonical values in this appendix,
+#    state the deviation and the rationale (Praat default override, or
+#    named citation)
+#
+# 4. State whether plausibility checks are included (and which measures)
+
+# Example SELF-AUDIT entry:
+#
+#   ✓ **Clinical parameters (Appendix D):**
+#     - To Pitch (filtered autocorrelation): 0.0, 50, 800, 15, "no", 0.03,
+#       0.09, 0.5, 0.055, 0.35, 0.14 — for F0 contour tracking [canonical]
+#     - To Pitch (raw cross-correlation): 0.0, 75, 600, 15, "no", 0.03,
+#       0.45, 0.01, 0.35, 0.14 — for jitter/shimmer input [canonical]
+#     - To Harmonicity (cc): 0.01, 75, 0.1, 1.0 [canonical]
+#     - Plausibility checks: F0, jitter, shimmer, HNR
+
+---
+
+## 9. AVQI PARAMETER ISOLATION WARNING
+
+# The Acoustic Voice Quality Index (AVQI) uses a SEPARATE set of analysis
+# parameters calibrated together with its regression equation. These
+# parameters DIFFER from the clinical defaults in this appendix.
+#
+# Key differences:
+#
+#   Parameter          AVQI (Phonanium v02.06)    Clinical (this appendix)
+#   ---------------    -----------------------    -----------------------
+#   HNR method         Voice report               To Harmonicity (cc)
+#   Shimmer units      × 100 (percentage)         Raw proportion (0–1) or offer as percentage (x 100)
+#   High-pass filter   34 Hz stop Hann band       Not applied
+#
+# NOTE: The CPPS parameters (subtract tilt, quefrency ceiling, fit
+# method) are IDENTICAL between AVQI and clinical defaults. Prior
+# versions of this section incorrectly listed three CPPS differences;
+# those were Praat dialog defaults, not Maryn's clinical parameters.
+# Corrected 21 April 2026.
+#
+# For the complete AVQI parameter specification, see Section 10 below
+# (AVQI COMPLETE SPECIFICATION), extracted directly from the canonical
+# Phonanium script.
+
+---
+
+# ============================================================================
+# APPENDIX D — SECTION 10: AVQI COMPLETE SPECIFICATION
+# ============================================================================
+#
+# Source: Acoustic Voice Quality Index v.02.06 (Phonanium)
+# Script credits: Youri Maryn & Paul Corthals
+# Last script update: 27/01/2019
+# Extracted: 5 April 2026 from Acoustic_Voice_Quality_Index_v_02_06.praat
+#
+# This section replaces the dangling reference to "HANDOFF_A2_Batch_Analyzer.md §4"
+# that previously appeared in Section 9. All parameters are extracted directly
+# from the canonical Phonanium script.
+#
+# CRITICAL: These parameters are calibrated together with the AVQI regression
+# equation. Substituting Appendix D clinical defaults for any individual
+# parameter INVALIDATES the AVQI score. See Section 9 for the isolation warning.
+#
+# ============================================================================
+
+## 10. AVQI PARAMETER SPECIFICATION (Phonanium v02.06)
+
+# ----------------------------------------------------------------------------
+# 10A. INPUT REQUIREMENTS
+# ----------------------------------------------------------------------------
+#
+# AVQI requires TWO recordings per speaker:
+#   1. Sustained vowel (named "sv") — /a/ phonation
+#   2. Continuous speech (named "cs") — connected speech sample
+#
+# The script concatenates voiced portions of both into a single analysis
+# signal ("avqi") before computing acoustic measures.
+#
+# Sustained vowel handling:
+#   - If duration > 3 seconds, extracts the LAST 3 seconds
+#   - If duration <= 3 seconds, uses the entire recording
+#
+# Continuous speech handling:
+#   - Silence detection: To TextGrid (silences): 50, 0.003, -25, 0.1, 0.1,
+#     "silence", "sounding"
+#   - Voiced segment extraction via power thresholding (30% of global power)
+#     and zero-crossing rate filtering (< 3000 crossings/s)
+#   - 30 ms sliding window for voiced/unvoiced classification
+#   - Voiced segments concatenated into a single signal
+
+# ----------------------------------------------------------------------------
+# 10B. HIGH-PASS FILTER (applied to BOTH recordings before analysis)
+# ----------------------------------------------------------------------------
+
+# Filter (stop Hann band): 0, 34, 0.1
+#
+#   from frequency = 0 Hz
+#   to frequency = 34 Hz
+#   smoothing = 0.1 Hz
+#
+# This removes subsonic noise and DC offset. Applied to BOTH cs and sv
+# BEFORE any analysis. This filter is NOT used in standard clinical
+# analysis (Appendix D §§1–6) — it is AVQI-specific.
+
+# ----------------------------------------------------------------------------
+# 10C. CPPS (Smoothed Cepstral Peak Prominence)
+# ----------------------------------------------------------------------------
+
+# To PowerCepstrogram: 60, 0.002, 5000, 50
+#
+#   pitch floor = 60 Hz        (same as clinical)
+#   time step = 0.002 s        (same as clinical)
+#   maximum frequency = 5000 Hz (same as clinical)
+#   pre-emphasis from = 50 Hz  (same as clinical)
+
+# Get CPPS: "no", 0.01, 0.001, 60, 330, 0.05, "parabolic", 0.001, 0, "Straight", "Robust"
+#
+#   subtract tilt before smoothing = "no"
+#   time averaging window = 0.01 s
+#   quefrency averaging window = 0.001 s
+#   pitch floor = 60 Hz
+#   pitch ceiling = 330 Hz
+#   tolerance = 0.05
+#   interpolation = "parabolic"
+#   tilt line quefrency range floor = 0.001
+#   tilt line quefrency range ceiling = 0
+#   line type = "Straight"
+#   fit method = "Robust"
+#
+# All CPPS parameters are IDENTICAL to the clinical defaults in §5B.
+# No AVQI-specific CPPS deviations exist. (Corrected 21 April 2026.)
+
+# ----------------------------------------------------------------------------
+# 10D. LTAS SLOPE
+# ----------------------------------------------------------------------------
+
+# To Ltas: 1
+#
+#   bandwidth = 1 Hz
+
+# Get slope: 0, 1000, 1000, 10000, "energy"
+#
+#   from frequency = 0 Hz
+#   to frequency = 1000 Hz
+#   from frequency 2 = 1000 Hz
+#   to frequency 2 = 10000 Hz
+#   averaging method = "energy"
+#
+# Measures the slope between the 0–1000 Hz and 1000–10000 Hz bands.
+
+# ----------------------------------------------------------------------------
+# 10E. LTAS TILT (trendline)
+# ----------------------------------------------------------------------------
+
+# Compute trend line: 1, 10000
+#
+#   from frequency = 1 Hz
+#   to frequency = 10000 Hz
+
+# Get slope: 0, 1000, 1000, 10000, "energy"
+#
+# Same query as 10D but applied to the trend line Ltas object.
+
+# ----------------------------------------------------------------------------
+# 10F. SHIMMER
+# ----------------------------------------------------------------------------
+
+# To PointProcess (periodic, cc): 50, 400
+#
+#   pitch floor = 50 Hz
+#   pitch ceiling = 400 Hz
+
+# Sound + PointProcess selected together:
+
+# Get shimmer (local): 0, 0, 0.0001, 0.02, 1.3, 1.6
+#
+#   from time = 0 (all)
+#   to time = 0 (all)
+#   shortest period = 0.0001 s
+#   longest period = 0.02 s
+#   maximum period factor = 1.3
+#   maximum amplitude factor = 1.6
+#
+# UNIT CONVERSION: The raw return value is a proportion (0–1).
+# AVQI multiplies by 100 to get percentage:
+#   shim = percentShimmer * 100
+
+# Get shimmer (local_dB): 0, 0, 0.0001, 0.02, 1.3, 1.6
+#
+# Same parameters as shimmer (local). Returns dB directly.
+
+# ----------------------------------------------------------------------------
+# 10G. HNR (Harmonics-to-Noise Ratio)
+# ----------------------------------------------------------------------------
+
+# AVQI uses Voice report to extract HNR, NOT To Harmonicity (cc) directly.
+# This is a KEY DIFFERENCE from the clinical approach in Appendix D §4.
+
+# To Pitch (cc): 0, 75, 15, "no", 0.03, 0.45, 0.01, 0.35, 0.14, 600
+#
+# NOTE: This is the old-syntax equivalent of:
+# To Pitch (raw cross-correlation): 0, 75, 600, 15, "no", 0.03, 0.45, 0.01, 0.35, 0.14
+#
+#   time step = 0 (auto)
+#   pitch floor = 75 Hz
+#   pitch ceiling = 600 Hz
+#   max candidates = 15
+#   very accurate = "no"
+#   silence threshold = 0.03
+#   voicing threshold = 0.45
+#   octave cost = 0.01
+#   octave jump cost = 0.35
+#   voiced unvoiced cost = 0.14
+
+# Sound + Pitch → To PointProcess (cc)
+# Sound + Pitch + PointProcess → Voice report: 0, 0, 75, 600, 1.3, 1.6, 0.03, 0.45
+#
+#   from time = 0 (all)
+#   to time = 0 (all)
+#   pitch floor = 75 Hz
+#   pitch ceiling = 600 Hz
+#   maximum period factor = 1.3
+#   maximum amplitude factor = 1.6
+#   silence threshold = 0.03
+#   voicing threshold = 0.45
+#
+# HNR extracted by string parsing:
+#   hnr = extractNumber (voiceReport$, "Mean harmonics-to-noise ratio: ")
+
+# ----------------------------------------------------------------------------
+# 10H. AVQI REGRESSION FORMULA (v02.06)
+# ----------------------------------------------------------------------------
+
+# avqi = ((3.295 - (0.111 * cpps) - (0.073 * hnr) - (0.213 * shim)
+#          + (2.789 * shdb) - (0.032 * slope) + (0.077 * tilt)) * 2.208) + 1.797
+#
+# Where:
+#   cpps  = Smoothed Cepstral Peak Prominence (dB) — Section 10C
+#   hnr   = Mean Harmonics-to-Noise Ratio (dB) — Section 10G
+#   shim  = Shimmer local (%) — Section 10F (raw × 100)
+#   shdb  = Shimmer local dB (dB) — Section 10F
+#   slope = LTAS slope (dB) — Section 10D
+#   tilt  = LTAS trendline tilt (dB) — Section 10E
+#
+# AVQI score range: approximately 0–10
+# Higher = more dysphonic
+# Threshold for dysphonia: user-configurable (stored in thresholdAVQI.Table)
+#
+# Citation:
+#   Maryn, Y., De Bodt, M., Barsties, B., & Roy, N. (2014).
+#   The value of the Acoustic Voice Quality Index as a measure of
+#   dysphonia severity in subjects speaking different languages.
+#   European Archives of Oto-Rhino-Laryngology, 271, 1609–1619.
+
+# ----------------------------------------------------------------------------
+# 10I. PARAMETER DIFFERENCE SUMMARY (AVQI vs. Clinical Defaults)
+# ----------------------------------------------------------------------------
+#
+#   Parameter                    AVQI (Phonanium v02.06)    Clinical (Appendix D)
+#   -------------------------    -----------------------    ----------------------
+#   High-pass filter             34 Hz stop Hann band       Not applied
+#   Shimmer units                × 100 (percentage)         Raw proportion (0–1)
+#   HNR method                   Voice report parsing       To Harmonicity (cc)
+#   PointProcess pitch range     50–400 Hz                  Varies by speaker
+#   Pitch (for HNR)              raw cross-correlation      raw cross-correlation
+#
+# NOTE: CPPS parameters are identical between AVQI and clinical.
+# Three former rows (subtract tilt, quefrency ceiling, fit method)
+# were removed — they reflected Praat dialog defaults, not Maryn's
+# clinical parameters. Corrected 21 April 2026.
+#
+# When computing BOTH AVQI and per-token clinical measures in the same
+# script, maintain TWO SEPARATE analysis pipelines. Never substitute
+# one parameter set for the other. See Section 9 (isolation warning).
+
+# ----------------------------------------------------------------------------
+# 10J. SILENCE DETECTION PARAMETERS (for continuous speech voiced extraction)
+# ----------------------------------------------------------------------------
+#
+# To TextGrid (silences): 50, 0.003, -25, 0.1, 0.1, "silence", "sounding"
+#
+#   pitch floor = 50 Hz
+#   time step = 0.003 s
+#   silence threshold = -25 dB
+#   minimum silent interval = 0.1 s
+#   minimum sounding interval = 0.1 s
+#   silent interval label = "silence"
+#   sounding interval label = "sounding"
+#
+# NOTE: The pitch floor of 50 Hz here differs from the clinical default
+# of 100 Hz. The lower value produces a longer smoothing window
+# (6.4/50 = 128 ms) which may fill short gaps between voiced segments.
+# This is INTENTIONAL for AVQI — the goal is to extract all voiced
+# material, not to detect individual silences.
+
+# ============================================================================
+# END OF SECTION 10
+# ============================================================================
+
+
+*End of Appendix D. This appendix is authoritative for clinical parameter defaults.*

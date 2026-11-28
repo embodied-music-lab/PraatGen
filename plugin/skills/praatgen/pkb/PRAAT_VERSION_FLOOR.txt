@@ -1,0 +1,257 @@
+# PRAAT VERSION FLOOR AND POST-FLOOR FEATURES
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Version: 2.0
+# Date: 3 August 2026
+# Sources: MEASURED. Seven Praat builds — 6.4.14, 6.4.20, 6.4.24, 6.4.30,
+#          6.4.39, 6.4.46, 6.6.30 — downloaded and run against identical
+#          fixtures, 3 August 2026. Praat's release notes were the starting
+#          list; every entry below was then confirmed or corrected by
+#          execution. Where the notes and the builds disagree, the builds win
+#          and the disagreement is recorded.
+#
+# ============================================================================
+# THE FLOOR: PRAAT 6.4.39
+# ============================================================================
+#
+# Generated scripts target Praat 6.4.39 or newer.
+#
+# The floor is set by the cepstral measures. 6.4.39 is the FIRST build whose
+# CPPS values match current ones. Measured, Maryn/AVQI parameter set:
+#
+#       6.4.14  18.615235
+#       6.4.20  18.615235
+#       6.4.24  17.244598      revision 1 of the tilt-line fit
+#       6.4.30  17.244598
+#   ->  6.4.39  18.994932      revision 2 — from here, current
+#       6.4.46  18.994932
+#       6.6.30  19.037906      +0.043 dB from the floor: negligible
+#
+# Below 6.4.39 a user is 1.75 dB away from what a current Praat reports on the
+# same recording with the same settings. At or above it, they are within
+# 0.05 dB. That is the boundary worth defending.
+#
+# NOT 6.4.24, which is where the FIRST of the two revisions landed. A script
+# run on 6.4.24 still disagrees with current by 1.75 dB, so a floor there
+# would declare "supported" a build whose numbers do not compare.
+#
+# NOT 6.4.15, the floor through v1.1, which was set on the belief that
+# `To Pitch (filtered autocorrelation)` took a different parameter set below
+# it. Measured, that is not so:
+#
+#     6.4.14   To Pitch (filtered autocorrelation): 1,2,...,15
+#              -> "Command requires only 11 arguments, not the 15 given."
+#     6.6.30   same call, same message
+#
+# Identical arity. The canonical 11-argument call runs on 6.4.14 and returns
+# 149.999960 Hz where 6.6.30 returns 150.000009 Hz — the eighth significant
+# figure, on a fixture chosen to be hostile (pitch top 350, where "top"
+# low-passes from 175 Hz up and a flat "ceiling" would not). 6.4.15 renamed
+# the concept and changed what the third argument means internally; it did not
+# change the call or, measurably, the answer.
+#
+# WHAT TO DO: see APPENDIX_F_UX_STANDARDS.txt §S15. EVERY script emits a
+# version check before doing any work, listing the specific things THAT script
+# uses that the running Praat is below. It WARNS and offers to continue. It
+# never refuses.
+#
+# ============================================================================
+# 1. SILENT NUMERICAL CHANGES — THE DANGEROUS CLASS
+# ============================================================================
+#
+# These commands exist on both sides of the boundary and RETURN DIFFERENT
+# NUMBERS. No error, nothing missing. All figures below are measured on one
+# fixture: 150 Hz + 450 Hz + 1750 Hz, 1 s, 44.1 kHz, every argument explicit.
+#
+#   CEPSTRAL MEASURES — TWO SEPARATE REVISIONS, AND THE EFFECT DEPENDS ON THE
+#   TILT-LINE SETTINGS, NOT ON THE COMMAND.
+#
+#   `Get CPPS` with the Maryn/AVQI parameter set (APPENDIX_D §5B — straight
+#   tilt line, robust fit, subtract tilt "no"):
+#
+#       6.4.14  18.615235
+#       6.4.20  18.615235
+#       6.4.24  17.244598      <- -1.371 dB
+#       6.4.30  17.244598
+#       6.4.39  18.994932      <- +1.750 dB
+#       6.4.46  18.994932
+#       6.6.30  19.037906
+#
+#   Same call with Praat's own dialog defaults (exponential-decay tilt line,
+#   Robust slow, subtract tilt "yes"):
+#
+#       6.4.14  15.722079
+#       6.4.24  12.474814      <- -3.247 dB
+#       6.4.39  ERROR — see §3, "Robust slow"
+#       6.6.30  14.035679
+#
+#   The mechanism is the tilt-line fit, not the cepstrum. At the 6.4.24
+#   boundary, straight-line fits move by -0.01 to +0.41 dB while both
+#   exponential-decay fits move by more than 3 dB. The raw cepstrum peak moves
+#   0.04 dB across the same boundary; peak prominence moves 3.91 dB.
+#
+#   Both revisions are BELOW the floor, so a script running at or above 6.4.39
+#   is clear of them. They stay documented because inherited scripts, archived
+#   data and cross-lab comparisons all reach back past the floor.
+#
+#   CONSEQUENCE FOR THE VERSION CHECK: a CPPS entry must be conditioned on the
+#   tilt line and fit method the script actually emits. A script using a
+#   straight tilt line has different exposure from one using exponential decay,
+#   and warning both identically is wrong in one direction or the other.
+#
+#   PRAAT'S RELEASE NOTES NAME ONLY 6.4.39 ("Calibrated cepstral peak
+#   prominence measurement"). The 6.4.24 revision was announced as formant
+#   fixes, with no mention of cepstral measures. It was found by running the
+#   builds, not by reading. Treat the notes as a starting list, never as the
+#   coverage claim.
+#
+#   6.4.24   To Pitch (filtered autocorrelation)
+#            Mean F0 moves from 149.999960 to 150.000009 Hz on the fixture.
+#            Real, and below any threshold that matters. Recorded so a later
+#            pass does not rediscover it and over-react.
+#
+#   6.4.47   Sound: To LPC
+#            "now defaults to channel averaging" — announced, NOT YET MEASURED.
+#            Needs a multi-channel fixture and an LPC-native query.
+#
+# 2. WILL NOT RUN — the script stops at that line
+# ============================================================================
+#
+# Missing scripting functions raise «Unknown function» and halt execution.
+# MEASURED across the seven builds; "first seen" is the earliest build tested
+# that has it, so the true introduction may be one release earlier.
+#
+#   min. version   feature                              evidence
+#   -------------  -----------------------------------  ---------------------
+#   > 6.4.39       lowerCase$  upperCase$               absent 6.4.39,
+#                  lowerCamelCase$  upperCamelCase$     present 6.4.46 [M]
+#                  lowerSnakeCase$  upperSnakeCase$
+#                  appDay appMonth$ appVersion$ appYear
+#                  runNotebook  runScriptWithForm
+#                  sort_removeUndefined#
+#   > 6.4.46       randomImax                           absent 6.4.46,
+#                  runSubprocess/runSystem async        present 6.6.30 [M]
+#                  (release notes say 6.4.58)
+#
+#   BELOW THE FLOOR — no longer triggers, kept for inherited scripts:
+#     6.4.18  padLeft$ padRight$ truncateLeft$ truncateRight$
+#             padOrTruncate*$        absent 6.4.14, present 6.4.20 [M]
+#     6.4.24  tensor subtraction and unary minus
+#     6.4.34  clock()                absent 6.4.30, present 6.4.39 [M]
+#     6.4.36  moveAndOrRenameFile()
+#
+#   sendsocket was REMOVED at 6.4.24. Do not emit it at any version.
+#
+# ============================================================================
+# 3. WILL NOT RUN — commands and option values
+# ============================================================================
+#
+#   > 6.4.46   `Get CPPS` fit method "Robust slow"
+#              MEASURED [M]: accepted on 6.4.14, 6.4.24 and 6.6.30; REJECTED
+#              on 6.4.39 and 6.4.46. The option vocabulary is not monotonic —
+#              a value can be valid, then invalid, then valid again. This is
+#              inside the supported range and no release note predicts it.
+#              A script emitting "Robust slow" stops on 6.4.39 and 6.4.46.
+#              Prefer "Robust", which was accepted on every build tested.
+#
+#   6.4.50     Transcribe interval          — speech recognition, Whisper.cpp
+#   6.4.62     Sound: To TextGrid (speech activity, Silero)
+#   6.4.63     speaker diarization in Transcribe interval
+#   6.4.66     standalone diarization
+#
+#   BELOW THE FLOOR — no longer triggers:
+#     6.4.26  Rectangle text (maximal fit); OTGrammar tabulate commands
+#     6.4.28  Read TextGrid from ESPS label file; Insert picture from file
+#     6.4.29  TIMIT and Buckeye adjacent-annotation readers
+#     6.4.38  PairDistribution: Set weight...
+#
+# ============================================================================
+# 4. BEHAVIOURAL AND ENVIRONMENT CHANGES
+# ============================================================================
+#
+#   6.4.45   Picture window expanded from 12x12 to 60x60 inches.
+#            NOT a hard failure: `Select outer viewport: 0, 40, 0, 40` is
+#            accepted without error well below this. Do not gate drawing on it.
+#   6.4.59   nested scripts with pause windows and/or the Demo window
+#   6.4.60   pause window / exitScript interaction
+#
+#   BELOW THE FLOOR — no longer triggers:
+#     6.4.20  Pause forms accept "yes"/"off" as boolean defaults
+#     6.4.28  demoKey$() recognises Escape
+#     6.4.34  demoShow() on GTK 3 (Linux)
+#     6.4.36  demoKey$ Command-key combinations
+#     6.4.43  --send-or-form command-line switch
+#
+# ============================================================================
+# 4B. PRAAT 7.0 — WHAT CHANGES ABOVE THE FLOOR
+# ============================================================================
+#
+# Measured 17 August 2026, Praat 7.0 (4 August 2026) against 6.6.30.
+# The floor does NOT move. Nothing here stops a script or changes a number;
+# these are environment facts, recorded so they are not rediscovered.
+#
+# NO NUMERICAL CHANGE. The floor probe returns identical values on both:
+#   CPPS 12.114037 dB, Formant F1 161.676520 / F2 456.216348, LPC 191 frames.
+#   Matrix operators, elementwise idioms and form-widget marshalling likewise
+#   identical. Only praatVersion differs (6630 -> 7000).
+#
+# WRITING A FILE NOW REQUIRES THE USER'S PERMISSION. From 7.0, a script that
+# writes a file or runs a system command raises a modal dialog in the GUI, or
+# fails outright under --run unless Praat was started with --FULL-TRUST.
+# This is a prompt, not a defect: the user answers it and the script proceeds.
+# It is deliberately NOT in the §S15 version check, which reports only things
+# that halt a script or change a number.
+#   Gated:     writeFile, writeFileLine, appendFile, appendFileLine,
+#              deleteFile, createFolder, Save as WAV file:,
+#              Save as comma-separated file:, Save as tab-separated file:,
+#              Save as chronological text file:, runSystem:
+#   Not gated: picture saves (PNG/PDF/EPS), Save as text file: on an object,
+#              the bare `system` statement, and all reading.
+#              Treat the ungated set as an oversight, not a guarantee.
+#   In the script editor, Run > "Run with FULL TRUST" runs once without the
+#   dialog. The grant is per run: it does not persist across a restart, and a
+#   second script in the same session is asked again.
+#
+# --FULL-TRUST IS NOT BACKWARD COMPATIBLE. 6.4.62 and earlier reject it,
+#   print usage, run nothing, and exit 0 — a rejected flag reads as a clean
+#   pass. Never add it unconditionally to a harness.
+#
+# THE SETTINGS FOLDER MOVED on all three platforms; see
+#   BEST_PRACTICES_PLUGIN_ARCHITECTURE.txt §1 for the paths, the plugin
+#   fallback, and the --pref-dir caveat. preferencesDirectory$ resolves
+#   correctly on both major versions, so scripts need no change. A user's
+#   stored script preferences do not carry across the upgrade.
+#
+# ============================================================================
+# 5. SUSPECTED AND CLEARED — do not gate on these
+# ============================================================================
+#
+#   Sound: To PowerCepstrogram — the command is old and stable. Only the tilt
+#       fit downstream of it changed; see §1.
+#   To Pitch (filtered autocorrelation), 11 arguments — same arity and
+#       effectively the same answer from 6.4.14 up. See THE FLOOR above.
+#   To FormantPath (burg), Pitch: List values in all frames,
+#       Select outer viewport beyond 12 inches.
+#
+# ============================================================================
+# COVERAGE — read this before trusting an absence
+# ============================================================================
+#
+# [M] = measured by execution on the seven builds. Everything else is read
+# from Praat's release notes and NOT yet executed.
+#
+# The release notes are a starting list, not a coverage claim. Demonstrated:
+# the 6.4.24 revision to the cepstral tilt fit moved CPPS by up to 3.2 dB and
+# was announced as a set of *formant* fixes, with no mention of cepstral
+# measures. And "Robust slow" (§3) breaks inside the supported range with no
+# note at all. Both were found by running builds.
+#
+# NOT YET MEASURED, listed so the gap is visible:
+#   Sound: To LPC multi-channel averaging (announced 6.4.47)
+#   Rectangle text (maximal fit), Transcribe interval, Silero speech activity
+#   pause-form boolean defaults
+#   anything below 6.4.14 — no barren Linux build available on the release page
+#   6.4.38 — binary needs a shared library the test container lacks, so the
+#   6.4.30 -> 6.4.39 boundary is bracketed but not pinned
+#
+# A command absent from this file has an UNKNOWN minimum, not a safe one.

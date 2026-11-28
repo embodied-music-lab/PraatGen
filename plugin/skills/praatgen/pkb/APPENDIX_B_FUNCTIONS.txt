@@ -1,0 +1,978 @@
+# PRAAT FUNCTIONS REFERENCE (APPENDIX B)
+# Source: Official Praat Functions manual (https://www.fon.hum.uva.nl/praat/manual/Functions.html)
+# Supplemented by: sys/Formula.cpp NAME_WITH_TENSORS macros analysis (Praat 6.4.62)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Authoritative list of all Praat scripting functions.
+# Rebuilt: 22 April 2026
+#
+# REBUILD METHODOLOGY:
+# 1. Primary source: Official Praat Functions manual page (Paul Boersma, © 2022-2026)
+# 2. Secondary source: Formula.cpp analysis from Praat 6.4.62 source code
+# 3. Errata/session notes from prior APPENDIX_B preserved where still valid
+# 4. Every function from the official page is included verbatim
+# 5. Formula.cpp-only functions are marked [Formula.cpp] — real functions
+#    not yet listed on Boersma's manual page
+# 6. Predefined variables and object attributes are in a separate section
+#    at the end — they are NOT functions but are used in scripting/formulas
+
+# ============================================================================
+# ERRATA AND SESSION-VERIFIED NOTES
+# ============================================================================
+#
+# number (string$)
+# Converts a numeric string to a number value
+# Returns undefined if string cannot be parsed as number
+# Example: x = number ("123.45")
+# Note: Listed on official page. Fundamental function.
+# Provenance: Praat manual + successful execution 17 Feb 2026
+#
+# info$ ( )
+# Returns the current contents of the Info window as a string, including the
+# newline that ends its last line. APPENDIX_F_UX_STANDARDS.txt §S8C uses it
+# to copy the Info window to a log file.
+# Example: log$ = info$ ( )
+# Provenance: sandbox-verified 6.6.30, 8 Oct 2026: after writeInfoLine: "abc",
+# info$ () returned "abc" plus a newline (length 4).
+#
+# index_caseInsensitive (string$, part$) — USAGE NOTE
+# Confirmed working in procedure context.
+# Used extensively in EML Graphs column auto-detection.
+# Provenance: Confirmed working in procedural code 18 Feb 2026
+#
+# lowerCase$ (string$) / upperCase$ (string$) — ABSENT BELOW 6.4.46
+# Not available on Praat 6.4.39 and earlier («Unknown function»).
+# Once present, both work in every calling context: procedure body,
+# main script body, and object Formula:.
+# Refer to PRAAT_VERSION_FLOOR.txt §2 for version boundaries.
+# Provenance: procedure-context use reported by Eric Armstrong
+# (https://voiceguy.ca/about), 22 Sep 2026. Verified absent on 6.4.30
+# and working in all three contexts on 6.6.30 and 7.0.02, 23 Sep 2026.
+#
+# chooseFolder$ vs chooseDirectory$
+# The official Functions page lists chooseFolder$ (title$).
+# Formula.cpp also defines chooseDirectory$ (title$) as an alias.
+# Both work. Prefer chooseFolder$ (official name).
+# Provenance: Official page + Formula.cpp, April 2026
+#
+# createFolder vs createDirectory
+# The official Functions page lists createFolder (folderPath$).
+# Formula.cpp also defines createDirectory (path$) as an alias.
+# Both work. Prefer createFolder (official name).
+# Provenance: Official page + Formula.cpp + confirmed working Feb 2026
+#
+# RESERVED IDENTIFIERS (not functions — language constants)
+# The following cannot be used as variable names, procedure parameters,
+# or loop counters:
+#   e         — Euler's number (2.71828...)
+#   pi        — Pi (3.14159...)
+#   undefined — The undefined value
+# Error: "You cannot use 'e' as the name of a variable."
+# Common collision: loop counters (for e from 1 to n), procedure
+# parameters (.e), single-letter nested loop iterators.
+# Provenance: Empirical testing, 3 April 2026.
+#
+# ============================================================================
+# CATALOGUE GHOSTS (verified non-functional in Praat 6.4.65)
+# ============================================================================
+# These names appear in the Praat source code's function tables and/or in
+# the official Functions manual page, but throw "Unknown function" or
+# "Symbol without action" when invoked at runtime. Empirically tested in
+# Praat 6.4.65 sandbox on 17 May 2026 across 75+ function probes.
+# DO NOT USE. Workarounds noted where they exist.
+#
+#   inner## (a##, b##) — "Unknown function". For matrix product use
+#     mul## (a##, b##). For matrix inner product use
+#     sum (a## * b##) (elementwise * then sum).
+#
+#   object# (id), object## (id), object$# (id) — "Unknown function".
+#     Scalar object (id) and object$ (id) DO work for cell access.
+#     For bulk extraction, use class-specific Get commands in a loop or
+#     To Matrix / To TableOfReal to convert object → matrix variable.
+#
+#   linear## (...) — "Symbol without action" (parser recognizes the name
+#     but no implementation is registered). Manual page documents it as
+#     "matrix filled by a supplier function" but the supplier syntax
+#     cannot be expressed. Use zero## (nrow, ncol) then fill via a
+#     for-loop, or use a Formula: ~expression on a Matrix object.
+#
+#   linear$# (a#, precision), linear$## (a##, precision) — "Unknown
+#     function". Use fixed$ (a#, precision) or fixed$ (a##, precision);
+#     fixed$ is the actual implementation and accepts both scalar and
+#     vector/matrix arguments.
+#
+#   number# (a$#) — "Unknown function". The official manual page
+#     documents this name, but the actual implementation is numbers#
+#     (see SECTION 1). Use numbers# (a$#) instead.
+#
+#   randomPoisson# (n, mean), randomPoisson## (nrow, ncol, mean) —
+#     "Unknown function". Both forms are documented on the official
+#     manual page but neither exists at runtime in 6.4.65. Only the
+#     scalar randomPoisson (mean) works. Workaround: scalar form in
+#     a for-loop populating a zero# / zero## vector/matrix.
+#
+#   repeat## (m##, n) — "Unknown function". Only repeat# (v#, n) is
+#     implemented. For matrix tiling, use mul## or construct via
+#     element loops over zero## buffer.
+#
+#   softmax## (m##) — "Unknown function". Use softmaxPerRow## (m##),
+#     which is the actual matrix-valued softmax implementation
+#     (normalizes each row independently).
+#
+#   rowInner# (a##, b##) [singular] — "Unknown function". Use the
+#     plural rowInners# (a##, b##).
+#
+#   between# (low, high, n) — "Unknown function". The official names
+#     are between_by# (low, high, step) for step-spaced and
+#     between_count# (low, high, n) for n-spaced.
+#
+#   center# (v#) — "Unknown function". The scalar center (v#) returns
+#     the center of gravity as a scalar; there is no vector-returning
+#     center variant.
+#
+#   demoExtraControlKeyPressed ( ) — "Unknown function". Use the
+#     documented variants: demoCommandKeyPressed, demoOptionKeyPressed,
+#     demoShiftKeyPressed.
+#
+# Cross-reference: catalogue ghosts are flagged in SECTION 1 entries
+# with the marker "[CATALOGUE GHOST]" so a reader scanning Section 1
+# sees the warning inline with the entry.
+#
+# ============================================================================
+# VERSION-CONDITIONAL ERRATA
+# ============================================================================
+#
+#   empty$# (numberOfStrings)
+#     Praat 6.4.63: SEGFAULT (NULL pointer in str32cmp; do not use)
+#     Praat 6.4.65 (current): FIXED. Returns a string vector with the
+#       requested number of empty strings, as documented.
+#     RULES_CODE.md Rule 5C carries a stale warning that applies only
+#       to 6.4.63 — update Rule 5C to make the warning version-specific.
+#     Provenance: Empirical sandbox test, Praat 6.4.65, 17 May 2026.
+#
+# ============================================================================
+# IMPLEMENTATION NAME / MANUAL NAME DISCREPANCIES
+# ============================================================================
+#
+# A small number of functions are documented in the official manual page
+# under one name but implemented under another. Where this happens, use
+# the IMPLEMENTATION name (what Praat actually accepts) and treat the
+# manual page as informational.
+#
+#   Manual page name        Implementation name    Behavior
+#   ─────────────────       ──────────────────     ────────
+#   number# (a$#)           numbers# (a$#)         string-array → numeric vector
+#   randomPoisson# (...)    (no implementation)    use scalar randomPoisson + loop
+#   randomPoisson## (...)   (no implementation)    use scalar randomPoisson + loop
+#
+# Provenance: Empirical sandbox 17 May 2026 vs. official manual fetched
+# same day from https://www.fon.hum.uva.nl/praat/manual/Functions.html.
+#
+# ============================================================================
+
+---
+
+# ============================================================================
+# SECTION 1: FUNCTIONS (from official Praat Functions page + Formula.cpp)
+# ============================================================================
+# Notation:
+#   (no mark) = on official Praat Functions page
+#   [F.cpp]   = from Formula.cpp only — verified in source, not yet on manual page
+#   [alias]   = alias for another function
+
+ abs (x) – absolute value
+ abs# (vector#) – absolute value of each element of vector#
+ abs## (matrix##) – absolute value of each cell of matrix##
+ appDay ( ) – the month day at which the present version of Praat was built
+ appendFile (filePath$, ...) – write texts, numbers, vectors and so on at the end of an existing file (create such a file if it does not exist yet)
+ appendFileLine (filePath$, ...) – write texts, numbers, vectors and so on, followed by a newline, at the end of an existing file (create such a file if it does not exist yet)
+ appendInfo (...) – write texts, numbers, vectors and so on, to the Info window
+ appendInfoLine (...) – write texts, numbers, vectors and so on, followed by a newline, to the Info window
+ appMonth ( ) – the month in which the present version of Praat was built (between 1 and 12)
+ appMonth$ ( ) – the name of the month (in English) in which the present version of Praat was built
+ appVersion ( ) – the number of the present version of Praat
+ # Returns an integer encoding: e.g., 6462 for Praat 6.4.62.
+ # Use for version guards in distributable scripts:
+ #   if appVersion () >= 6460
+ #       # Use feature introduced in 6.4.60
+ #   endif
+ appVersion$ ( ) – the present version of Praat, as text
+ appYear ( ) – the year in which the present version of Praat was built
+ arccos (x) – inverse cosine
+ arccos# (vector#) – inverse cosine of each element of vector#
+ arccos## (matrix##) – inverse cosine of each cell of matrix##
+ arccosh (x) – inverse hyperbolic cosine
+ arccosh# (vector#) – inverse hyperbolic cosine of each element of vector#
+ arccosh## (matrix##) – inverse hyperbolic cosine of each cell of matrix##
+ arcsin (x) – inverse sine
+ arcsin# (vector#) – inverse sine of each element of vector#
+ arcsin## (matrix##) – inverse sine of each cell of matrix##
+ arcsinh (x) – inverse hyperbolic sine
+ arcsinh# (vector#) – inverse hyperbolic sine of each element of vector#
+ arcsinh## (matrix##) – inverse hyperbolic sine of each cell of matrix##
+ arctan (x) – inverse tangent
+ arctan# (vector#) – inverse tangent of each element of vector#
+ arctan## (matrix##) – inverse tangent of each cell of matrix##
+ arctan2 (y, x) – argument angle
+ arctanh (x) – inverse hyperbolic tangent
+ arctanh# (vector#) – inverse hyperbolic tangent of each element of vector#
+ arctanh## (matrix##) – inverse hyperbolic tangent of each cell of matrix##
+ assert condition – condition checking
+ asserterror message$ – testing that a certain error occurs
+ asynchronous – let the script continue while the sound is playing or a subprocess is running
+ backslashTrigraphsToUnicode$ (string$) – convert e.g. \ct to ɔ
+ barkToHertz (x) – from Bark-rate to acoustic frequency
+ besselI (n, x) – modified Bessel function of the first kind, In
+ besselK (n, x) – modified Bessel function of the second kind, Kn
+ beta (x, y) – β function
+ beta2 (a, b) – incomplete beta function [F.cpp]
+ between_by# (low, high, step) – symmetrically dispersed numbers between low and high, in steps of step
+ between_count# (low, high, n) – n symmetrically dispersed numbers between low and high (bin centres)
+ binomialP (p, k, n) – probability of Bernoulli event occurring at most k in n times
+ binomialQ (p, k, n) – probability of Bernoulli event occurring at least k in n times
+ ceiling (x) – round up to integer
+ ceiling# (vector#) – round up each element of vector#
+ ceiling## (matrix##) – round up each cell of matrix##
+ center (v#) – center (or centre) of gravity
+ chiSquareP (chiSquare, df) – area under the χ² curve up to chiSquare
+ chiSquareQ (chiSquare, df) – area under the χ² curve after chiSquare
+ chooseFolder$ (title$) – pops up a folder selection window
+ chooseDirectory$ (title$) – pops up a directory selection window [alias for chooseFolder$] [F.cpp]
+ chooseReadFile$ (title$) – pops up a file selection window for opening an existing file
+ # Returns the selected file path as a string. Returns "" if the
+ # user cancels. Callable anywhere in a script — not limited to
+ # form or beginPause contexts. Related: chooseWriteFile$, chooseFolder$
+ chooseWriteFile$ (title$, defaultFilename$) – pops up a file selection window for saving to a new file
+ clearinfo – clear the Info window (no parentheses, no arguments)
+ clock ( ) – typically the number of seconds since system start-up
+ col – the column number (of the current cell) in a Formula command
+ col$ [i] – the name of column i of an object
+ col# (matrix##, columnNumber) – extract one column from a matrix
+ columnSums# (matrix##) [see §4.1, §4.4]
+ combine# (...) – combine numbers, vectors and matrices into a new vector
+ correlation (u#, v#) – correlation (between −1 and +1) of two vectors
+ cos (x) – cosine
+ cos# (vector#) – cosine of each element of vector#
+ cos## (matrix##) – cosine of each cell of matrix##
+ cosh (x) – hyperbolic cosine
+ cosh# (vector#) – hyperbolic cosine of each element of vector#
+ cosh## (matrix##) – hyperbolic cosine of each cell of matrix##
+ createFolder (folderPath$) – create a new folder, or do nothing if it already exists
+ createDirectory (path$) – create a new directory [alias for createFolder] [F.cpp]
+ date$ ( ) – current local date and time in the form "Mon Nov 8 16:32:42 2021"
+ date_iso$ ( ) – current local date and time in the form "2021-11-08T16:32:42+01:00"
+ date# ( ) – current local date and time in the form { 2021, 11, 8, 16, 32, 42 }
+ date_utc$ ( ) – current standard date and time in the form "Mon Nov 8 15:32:42 2021"
+ date_utc_iso$ ( ) – current standard date and time in the form "2021-11-08T15:32:42Z"
+ date_utc# ( ) – current standard date and time in the form { 2021, 11, 8, 15, 32, 42 }
+ defaultDirectory$ – the default directory for file operations [F.cpp]
+ deleteFile (filePath$) – delete a file, or do nothing if it does not exist
+ demo – execute a graphics command in the Demo window (keyword prefix, not a function; see COMMANDS_DemoWindow.txt)
+ demoClicked ( ) – determine whether the user clicked in the Demo window
+ demoClickedIn (xmin, xmax, ymin, ymax) – determine whether the user clicked in a rectangular region in the Demo window
+ demoCommandKeyPressed ( ) – determine whether the user pressed the Command key when they typed into the Demo window
+ demoInput (characters$) – determine whether the user typed (or clicked) the specified characters into the Demo window
+ demoKey$ ( ) – determine the key that the user typed into the Demo window
+ demoKeyPressed ( ) – determine whether the user typed anything into the Demo window
+ demoOptionKeyPressed ( ) – determine whether the user pressed the Option key when they typed into the Demo window
+ demoPeekInput ( ) – see whether a user event (click or key press) is available in the Demo window
+ demoShiftKeyPressed ( ) – determine whether the user pressed the Shift key when they typed into the Demo window
+ demoShow ( ) – make all deferred drawing commands immediately visible
+ demoWaitForInput ( ) – wait for a user event (click or key press) in the Demo window
+ demoWindowTitle (newTitle$) – change the title of the Demo window
+ demoX ( ) – the horizontal position of a mouse click in the Demo window
+ demoY ( ) – the vertical position of a mouse click in the Demo window
+ differenceLimensToPhon (x) – from jnd-scale to perceptual loudness
+ do (command$, ...) – execute a menu command with arguments [F.cpp]
+ do$ (command$, ...) – execute a menu command with arguments, capturing string return value [F.cpp]
+ editor (editor($)) – enter the environment of an editor (by number or by name)
+ empty$# (numberOfStrings) – create an array of empty strings
+ endeditor – leave the environment of an editor
+ endproc – end a procedure definition
+ endsWith (string$, part$) – determine whether string$ ends in part$
+ endsWith_caseInsensitive (string$, part$) – determine whether string$ ends in part$
+ environment$ (string$) – look up a system environment string
+ erb (f) – equivalent rectangular bandwidth for frequency f
+ erbToHertz (x) – from ERB-rate to acoustic frequency
+ erf (x) – error function, the integral of the Gaussian
+ erfc (x) – complement of the error function, i.e. 1 − erf (x)
+ evaluate (...) – evaluate an expression string at runtime and return its numeric result [F.cpp]
+ evaluate$ (...) – evaluate an expression string at runtime and return its string result [F.cpp]
+ evaluate_nocheck (...) – evaluate an expression string; suppress errors, return undefined on failure [F.cpp]
+ evaluate_nocheck$ (...) – evaluate an expression string; suppress errors, return empty string on failure [F.cpp]
+ exitScript (...) – show a message that tells the user why the script will be interrupted
+ exp (x) – exponentiation, i.e. e^x
+ exp# (vector#) – exponentiate each element of vector#
+ exp## (matrix##) – exponentiate each cell of matrix##
+ extractLine$ (string$, part$) – everything that comes after the first occurrence of part$ in string$
+ extractNumber (string$, part$) – the first number after the first occurrence of part$ in string$
+ extractWord$ (string$, part$) – the first "word" after the first occurrence of part$ in string$
+ fileNames$# (folderNameOrPattern$) – get the names (not the whole paths) of the files in a folder or that match a pattern with an asterisk
+ fileNames_caseInsensitive$# (folderNameOrPattern$) – get the names (not the whole paths) of the files in a folder or that match a pattern with an asterisk
+ fileReadable (filePath$) – 1 if the file exists and can be read, 0 otherwise
+ fisherP (f, df1, df2) – area under the Fisher F curve up to f
+ fisherQ (f, df1, df2) – area under the Fisher F curve after f
+ fixed$ (number, precision) – format a number as a string, with precision digits after the decimal point
+ fixed$ (vector#, precision) – format a vector as a string, with all elements expressed in precision digits after the decimal point
+ fixed$ (matrix##, precision) – format a matrix as a string, with all cells expressed in precision digits after the decimal point
+ floor (x) – round down to integer
+ floor# (vector#) – round down each element of vector#
+ floor## (matrix##) – round down each cell of matrix##
+ folderExists (folderPath$) – 1 if the folder exists and can be read, 0 otherwise
+ folderNames$# (folderNameOrPattern$) – get the names (not the whole paths) of the subfolders in a folder or that match a pattern with an asterisk
+ folderNames_caseInsensitive$# (folderNameOrPattern$) – get the names (not the whole paths) of the subfolders in a folder or that match a pattern with an asterisk
+ from_to# (m, n) – the integers from m through n
+ from_to_by# (m, n, step) – numbers from m through n, in steps of step
+ from_to_count# (start, end, n) – n numbers from start through end
+ gaussP (z) – area under the normal curve up to z
+ gaussQ (z) – area under the normal curve after z
+ goto – place in a script to jump from
+ hash (string$) – return a numeric hash code for a string [F.cpp]
+ hertzToBark (x) – from acoustic frequency to Bark-rate
+ hertzToErb (x) – from acoustic frequency to ERB-rate
+ hertzToMel (x) – from acoustic frequency to mel
+ hertzToSemitones (x) – from acoustic frequency to logarithmic scale re 100 Hz
+ hex$ (integer) – convert an integer to a hexadecimal string [F.cpp]
+ hexadecimal$ (integer) – convert an integer to a hexadecimal string [alias for hex$] [F.cpp]
+ homeDirectory$ – the home directory of the current user [F.cpp]
+ imax (x, ...) – location of the maximum
+ imax_e (v#) – index of the maximum element, error if vector is empty [F.cpp]
+ imax_removeUndefined (v#) – index of the maximum element, ignoring undefined values [F.cpp]
+ imin (x, ...) – location of the minimum
+ imin_e (v#) – index of the minimum element, error if vector is empty [F.cpp]
+ imin_removeUndefined (v#) – index of the minimum element, ignoring undefined values [F.cpp]
+ incompleteBeta (a, b, x) – regularized incomplete beta function I_x(a, b) [F.cpp]
+ incompleteGammaP (a, x) – regularized lower incomplete gamma function P(a, x) [F.cpp]
+ index (string$, part$) – look up a substring, or 0 if not found
+ index (strings$#, s$) – look up whether and where s$ first occurs in strings$#
+ index_caseInsensitive (string$, part$) – look up a substring, or 0 if not found
+ index_caseInsensitive (strings$#, s$) – look up whether and where s$ first occurs in strings$#
+ index_regex (string$, regex$) – determine whether and where string$ first matches regex$
+ info$ ( ) – the text in the Info window (see the note at the top of this file)
+ inner (a#, b#) – inner product (returns scalar)
+ inner## (a##, b##) – inner product of matrices [F.cpp] [CATALOGUE GHOST — see top of file; use sum (a## * b##) or mul## (a##, b##)]
+ invBinomialP (P, k, n) – inverse of binomialP
+ invBinomialQ (Q, k, n) – inverse of binomialQ
+ invChiSquareQ (q, df) – inverse of chiSquareQ
+ invFisherQ (q, df1, df2) – inverse of fisherQ
+ invGaussQ (z) – inverse of gaussQ
+ invSigmoid (x) – inverse sigmoid
+ invSigmoid# (vector#) – inverse sigmoid of each element of vector#
+ invSigmoid## (matrix##) – inverse sigmoid of each cell of matrix##
+ invStudentQ (q, df) – inverse studentQ
+ label – place in a script to jump to
+ left$ (string$, n) – the n first characters in string$
+ length (string$) – number of Unicode characters in string$
+ linear$ (number, precision) – format a number as a string [F.cpp]
+ linear# (xmin, xmax, n) – vector of n equally spaced values from xmin to xmax [F.cpp]
+ linear## (nrow, ncol, supplier) – matrix filled by a supplier function [F.cpp] [CATALOGUE GHOST — see top of file; use zero## + for-loop or Matrix Formula]
+ linear$# (a#, precision) – format a vector as a string [F.cpp] [CATALOGUE GHOST — use fixed$ (v#, precision)]
+ linear$## (a##, precision) – format a matrix as a string [F.cpp] [CATALOGUE GHOST — use fixed$ (m##, precision)]
+ ln (x) – natural logarithm, base e
+ ln# (vector#) – natural logarithm of each element of vector#
+ ln## (matrix##) – natural logarithm of each cell of matrix##
+ lnBeta (a, b) – logarithm of the beta function [F.cpp]
+ lnGamma (x) – logarithm of the Γ function
+ log2 (x) – logarithm, base 2
+ log2# (vector#) – base-2 logarithm of each element of vector#
+ log2## (matrix##) – base-2 logarithm of each cell of matrix##
+ log10 (x) – logarithm, base 10
+ log10# (vector#) – base-10 logarithm of each element of vector#
+ log10## (matrix##) – base-10 logarithm of each cell of matrix##
+ lowerCase$ (string$) – turns all capitals into lower case
+ lowerCamelCase$ (string$) – convert string to lowerCamelCase [F.cpp]
+ lowerCaseAppName$ ( ) – the name of the app in lower snake case, e.g. praat
+ lowerSnakeCase$ (string$) – convert string to lower_snake_case [F.cpp]
+ macintosh – 1 if running on macOS, else 0 (predefined variable) [F.cpp]
+ max (x, ...) – maximum of a series of numbers
+ max (v#) – maximum of elements of a vector [F.cpp]
+ max_e (v#) – maximum element, error if vector is empty [F.cpp]
+ max_removeUndefined (v#) – maximum element, ignoring undefined values [F.cpp]
+ mean (v#) – average of the elements of a vector
+ melToHertz (x) – from mel to acoustic frequency
+ mid$ (string$, from, n) – the n characters in string$ starting at position from
+ min (x, ...) – minimum of a series of numbers
+ min (v#) – minimum of elements of a vector [F.cpp]
+ min_e (v#) – minimum element, error if vector is empty [F.cpp]
+ min_removeUndefined (v#) – minimum element, ignoring undefined values [F.cpp]
+ minusObject (...) – shrink the selection of objects in the list
+ moveAndOrRenameFile (fromFilePath$, toFilePath$) – move and/or rename a file (note: supply two paths)
+ mul# (matrix##, vector#) – matrix-vector multiplication [F.cpp] [see §4.2]
+ mul## (a##, b##) – matrix multiplication [see §4.2]
+ mul_fast## (a##, b##) – fast matrix-matrix multiplication [F.cpp] [see §4.2]
+ mul_metal## (a##, b##) – Metal-accelerated matrix-matrix multiplication (macOS) [F.cpp]
+ ncol – the number of columns of an object (Formula context)
+ newline$ – the newline symbol (predefined string variable) [F.cpp]
+ norm (v#, power) – p-norm (Minkowski norm) [F.cpp]
+ nrow – the number of rows of an object (Formula context)
+ number (a$) – interpret a string as a number
+ number# (a$#) – interpret strings as numbers [MANUAL-LISTED, IMPLEMENTATION ABSENT — use numbers# instead]
+ numberOfColumns (matrix##) – number of columns of a matrix
+ numberOfRows (matrix##) – number of rows of a matrix
+ numberOfSelected ( ) – the number of selected objects [F.cpp]
+ numberOfSelected (type$) – the number of selected objects of type type$ [F.cpp]
+ numbers# (a$#) – interpret each string in a string vector as a number, returning a numeric vector [F.cpp] [IMPLEMENTATION of the manual's number#; preferred name]
+ nx – the number of cells horizontally (i.e. the number of columns) of an object (Formula context)
+ ny – the number of cells vertically (i.e. the number of rows) of an object (Formula context)
+ object (id) – the object with the given ID, as a matrix, vector, string [F.cpp]
+ object$ (id) – the name of the object with the given ID [F.cpp]
+ object# (id) – the object with the given ID, as a vector [F.cpp] [CATALOGUE GHOST — use class-specific Get commands in a loop, or To Matrix conversion]
+ object## (id) – the object with the given ID, as a matrix [F.cpp] [CATALOGUE GHOST — same workaround as object#]
+ object$# (id) – the object with the given ID, as a string array [F.cpp] [CATALOGUE GHOST — same workaround as object#]
+ objectsAreIdentical (id1, id2) – 1 if the two objects are identical, else 0 [F.cpp]
+ outer## (a#, b#) – outer product, i.e. result_ij = a_i * b_j [see §4.5]
+ padLeft$ (string$, minimumNewWidth [, pad$]) – left padding
+ padOrTruncateLeft$ (string$, newWidth [, pad$]) – left padding or truncation
+ padOrTruncateRight$ (string$, newWidth [, pad$]) – right padding or truncation
+ padRight$ (string$, minimumNewWidth [, pad$]) – right padding
+ part# (v#, i1, i2) – extract elements i1..i2 (inclusive) of v# as a new vector [F.cpp] [see §4.1]
+ part## (m##, r1, r2, c1, c2) – extract the submatrix of rows r1..r2 and columns c1..c2 of m## as a new matrix [F.cpp] [see §4.1]
+ pauseScript (...) – show a message in a simple pause window
+ peaks## (vector#, includeEdges, interpolation, sortByHeight) [F.cpp]
+ percent$ (number, precision) – format a number as a string, with a trailing percent sign and precision digits after the decimal point
+ phonToDifferenceLimens (x) – from perceptual loudness to jnd-scale
+ plusObject (...) – extend the selection of objects in the list
+ preferencesDirectory$ – the Praat preferences directory [F.cpp]
+ procedure: procedureName, ... – start a procedure definition
+ procedure – start a procedure definition (form without colon also valid)
+ random_initializeSafelyAndUnpredictably ( ) – undoes the effects of the following function
+ random_initializeWithSeedUnsafelyButPredictably (seed) – reproducible sequence of random numbers
+ randomBernoulli (p) – Bernoulli-distributed random deviate (0 or 1)
+ randomBernoulli# (n, p) – n independent Bernoulli-distributed zeroes and ones
+ randomBinomial (numberOfTrials, probability) – binomial-distributed random number [F.cpp]
+ randomGamma (shape, rate) – gamma-distributed random deviate
+ randomGamma# (n, shape, rate) – n independent gamma-distributed random numbers
+ randomGamma# (vector#, shape, rate) – duplicate vector#, and replace all elements with independent gamma-distributed random numbers
+ randomGamma## (nrow, ncol, shape, rate) – nrow × ncol independent gamma-distributed random numbers
+ randomGamma## (matrix##, shape, rate) – duplicate matrix##, and replace all cells with independent gamma-distributed random numbers
+ randomGauss (mu, sigma) – normally distributed random deviate
+ randomGauss# (n, mu, sigma) – n independent normally distributed random numbers
+ randomGauss# (vector#, mu, sigma) – duplicate vector#, and replace all elements with independent normally distributed random numbers
+ randomGauss## (nrow, ncol, mu, sigma) – nrow × ncol independent normally distributed random numbers
+ randomGauss## (matrix##, mu, sigma) – duplicate matrix##, and replace all cells with independent normally distributed random numbers
+ randomImax (vector#) – sample from an array of relative probabilities
+ randomInteger (min, max) – uniformly distributed integer random deviate
+ randomInteger# (n, min, max) – n independent uniformly distributed random integers
+ randomInteger# (vector#, min, max) – duplicate vector#, and replace all elements with independent uniformly distributed random integers
+ randomInteger## (nrow, ncol, min, max) – nrow × ncol independent uniformly distributed random integers
+ randomInteger## (matrix##, min, max) – duplicate matrix##, and replace all cells with independent uniformly distributed random integers
+ randomPoisson (mean) – Poisson-distributed random deviate
+ randomPoisson# (n, mean) – n independent Poisson-distributed random numbers [MANUAL-LISTED, IMPLEMENTATION ABSENT in 6.4.65 — use scalar randomPoisson in a loop]
+ randomPoisson# (vector#, mean) – duplicate vector#, and replace all elements with independent Poisson-distributed random numbers [MANUAL-LISTED, IMPLEMENTATION ABSENT in 6.4.65]
+ randomPoisson## (nrow, ncol, mean) – nrow × ncol independent Poisson-distributed random numbers [MANUAL-LISTED, IMPLEMENTATION ABSENT in 6.4.65]
+ randomPoisson## (matrix##, mean) – duplicate matrix##, and replace all cells with independent Poisson-distributed random numbers [MANUAL-LISTED, IMPLEMENTATION ABSENT in 6.4.65]
+ randomUniform (min, max) – uniformly distributed random deviate
+ randomUniform# (n, min, max) – n independent uniformly distributed random numbers
+ randomUniform# (vector#, min, max) – duplicate vector#, and replace all elements with independent uniformly distributed random numbers
+ randomUniform## (nrow, ncol, min, max) – nrow × ncol independent uniformly distributed random numbers
+ randomUniform## (matrix##, min, max) – duplicate matrix##, and replace all cells with independent uniformly distributed random numbers
+ readFile (filePath$) – read a number from a text file
+ readFile$ (filePath$) – read a whole text file into a string
+ readFile# (filePath$) – read a vector from a text file
+ readFile## (filePath$) – read a matrix from a text file
+ readLinesFromFile$# (filePath$) – read all lines from a text file
+ rectify (x) – set to zero if negative (no change if positive)
+ rectify# (vector#) – rectify each element of vector#
+ rectify## (matrix##) – rectify each cell of matrix##
+ removeObject (...) – remove objects from the list, by ID and/or name
+ repeat# (v#, n) – repeat the whole sequence of elements of v# n times
+ replace$ (a$, b$, c$, n) – within a$, replace the first n occurrences of b$ with c$, or all if n = 0
+ replace_regex$ (a$, b$, c$, n) – within a$, replace the first n matches of regular expression b$ with the regular expression c$, or all if n = 0
+ right$ (string$, n) – the n last characters in string$
+ rindex (string$, part$) – look up a substring from the end, or 0 if not found
+ rindex (strings$#, s$) – look up whether and where s$ last occurs in strings$#
+ rindex_caseInsensitive (string$, part$) – look up a substring from the end, or 0 if not found
+ rindex_caseInsensitive (strings$#, s$) – look up whether and where s$ last occurs in strings$#
+ rindex_regex (string$, regex$) – determine whether and where string$ last matches regex$
+ round (x) – nearest integer
+ round# (vector#) – nearest integer of each element of vector#
+ round## (matrix##) – nearest integer of each cell of matrix##
+ row – the row number (of the current cell) in a Formula command
+ row$ [i] – the name of row i of an object
+ row# (matrix##, rowNumber) – extract one row from a matrix
+ rowInners# (a##, b##) – row-wise inner products of two matrices [F.cpp] [see §4.4]
+ rowSums# (matrix##) [see §4.1, §4.4]
+ runNotebook (filePath$) – run a Praat notebook [F.cpp]
+ runScript (filePath$, ...) – run a script with the given arguments
+ runScriptWithForm (filePath$, ...) – run a script, showing its form dialog [F.cpp]
+ runSubprocess (executableFilePath$, ...) – run an external program with the given arguments
+ runSubprocess$ (executableFilePath$, ...) – run an external program with the given arguments, and return its output
+ runSystem (...) – run a system command line with the given arguments concatenated
+ runSystem$ (...) – run a system command line with the given arguments concatenated, and return its output
+ runSystem_nocheck (...) – run a system command; suppress errors [F.cpp]
+ selected ( ) – the ID of the topmost selected object
+ selected (i) – the ID of the ith selected object (counted from top, or from bottom if negative)
+ selected (type$) – the ID of the topmost selected object of type type$
+ selected (type$, i) – the ID of the ith selected object of type type$ (counted from top, or from bottom if negative)
+ selected$ ( ) – the full name (type + given name) of the topmost selected object
+ selected$ (i) – the full name (type + given name) of the ith selected object
+ selected$ (type$) – the given name of the topmost selected object of type type$
+ selected$ (type$, i) – the given name of the ith selected object of type type$
+ selected# ( ) – the IDs of all selected objects
+ selected# (type$) – the IDs of all selected objects of type type$
+ selected$# ( ) – the full names of all selected objects
+ selected$# (type$) – the given names of all selected objects of type type$
+ selectObject (...) – select object(s) in the list by ID and/or full name
+ semitonesToHertz (x) – from logarithmic scale re 100 Hz to acoustic frequency
+ setWorkingDirectory (folderPath$) – set the working directory for subsequent file operations [F.cpp]
+ shuffle# (vector#) – randomize order
+ shuffle$# (stringVector$#) – randomize order
+ sigmoid (x) – 1 / (1 + e^-x)
+ sigmoid# (vector#) – sigmoid of each element of vector#
+ sigmoid## (matrix##) – sigmoid of each cell of matrix##
+ sin (x) – sine
+ sin# (vector#) – sine of each element of vector#
+ sin## (matrix##) – sine of each cell of matrix##
+ sinc (x) – sinus cardinalis: sin (x) / x
+ sincpi (x) – sin (π*x) / (π*x)
+ sinh (x) – hyperbolic sine
+ sinh# (vector#) – hyperbolic sine of each element of vector#
+ sinh## (matrix##) – hyperbolic sine of each cell of matrix##
+ size (v#) – number of elements
+ sleep (duration) – pause script for duration seconds
+ softmax# (vector#)
+ softmaxPerRow## (matrix##)
+ solve# (a##, y#) – find x for which A · x = y [see §4.3]
+ solve## (a##, y##) – find X for which A · X = Y [see §4.3]
+ solveNonnegative# (a##, y# [, x], maximumNumberOfIterations, tolerance, infoLevel)
+ solveSparse# (a##, y# [, x], maximumNumberOfNonzeros, maximumNumberOfIterations, tolerance, infoLevel)
+ solveWeaklyConstrained# (a##, y#, alpha, delta)
+ sort# (vector#) – reshuffle in increasing order
+ sort$# (stringVector$#) – reshuffle in Unicode-alphabetical order
+ sort_numberAware$# (stringVector$#) – reshuffle in Unicode-alphabetical order, with special attention to numbers
+ sort_removeUndefined# (v#) – sort in increasing order, removing undefined values [F.cpp]
+ soundPressureToPhon (frequency, soundPressure) – convert sound pressure level to phon [F.cpp]
+ splitBy$# (string$, separator$) – split a string into a string array by separator [F.cpp]
+ splitByWhitespace$# (string$) – split a string into inks
+ sqrt (x) – square root
+ sqrt# (vector#) – square root of each element of vector#
+ sqrt## (matrix##) – square root of each cell of matrix##
+ startsWith (string$, part$) – determine whether string$ starts with part$
+ startsWith_caseInsensitive (string$, part$) – determine whether string$ starts with part$
+ stdev (v#) – standard deviation of the elements of a vector
+ stopwatch – give the current value of the timer, which is then immediately reset to zero (note: no parentheses)
+ string$ (number) – format a number as a string
+ studentP (t, df) – area under the Student T curve up to t
+ studentQ (t, df) – area under the Student T curve after t
+ sum (v#) – sum the elements
+ sumOver (loopVariable to n, numericExpressionOptionallyUsingLoopVariable) – Σ
+ tab$ – the tab character (predefined string variable) [F.cpp]
+ tan (x) – tangent
+ tan# (vector#) – tangent of each element of vector#
+ tan## (matrix##) – tangent of each cell of matrix##
+ tanh (x) – hyperbolic tangent
+ tanh# (vector#) – hyperbolic tangent of each element of vector#
+ tanh## (matrix##) – hyperbolic tangent of each cell of matrix##
+ temporaryDirectory$ – the temporary directory [F.cpp]
+ to# (n) – the integers 1 through n
+ transpose## (matrix##) – flip matrix along its diagonal [see §4.2]
+ truncateLeft$ (string$, newMaximumWidth [, pad$]) – left truncation of string$
+ truncateRight$ (string$, newMaximumWidth [, pad$]) – right truncation of string$
+ tryToAppendFile (filePath$) – check whether a file can be appended to
+ tryToWriteFile (filePath$) – check whether a file can be written (destructive!)
+ unhex$ (hexString$) – convert a hexadecimal string back to characters [F.cpp]
+ unicode (c$) – the Unicode codepoint number that corresponds to character c$
+ # For special keys returned by demoKey$():
+ #   Left arrow  = 8592    Right arrow = 8594
+ #   Up arrow    = 8593    Down arrow  = 8595
+ #   Space       = 32
+ #   Enter/Return = 10 or 13
+ #   Escape      = 27     Backspace   = 8      Tab = 9
+ # Usage: if unicode (demoKey$()) = 8592
+ #            # left arrow pressed
+ #        endif
+ # Source: COMMANDS_DemoWindow.txt §2 (arrows, space, Enter, Escape)
+ # Backspace (8), Tab (9) are standard ASCII — not independently
+ # verified in Praat Demo window context.
+ unicode$ (n) – the character that corresponds to Unicode codepoint n
+ unicodeToBackslashTrigraphs$ (string$) – convert e.g. ɔ to \ct
+ upperCamelCase$ (string$) – convert string to UpperCamelCase [F.cpp]
+ upperCase$ (string$) – turns all lower-case characters into capitals
+ upperCaseAppName$ ( ) – the name of the app in upper camel case, e.g. Praat or PraatForHospitals
+ upperSnakeCase$ (string$) – convert string to UPPER_SNAKE_CASE [F.cpp]
+ variableExists (variableName$) – does the variable variableName$ exist?
+ vertical$ (stringArray$#) – format a string array vertically
+ windows – 1 if running on Windows, else 0 (predefined variable) [F.cpp]
+ writeFile (filePath$, ...) – create a new text file, and write texts, numbers, vectors and so on into it
+ writeFileLine (filePath$, ...) – create a new text file, write texts, numbers, vectors and so on into it, followed by a newline
+ writeInfo (...) – write texts, numbers, vectors and so on, to a clear Info window
+ writeInfoLine (...) – write texts, numbers, vectors and so on, followed by a newline, to a clear Info window
+ x – the horizontal place (in world coordinates) of the current cell in a Formula command
+ xmax – the top of the horizontal domain of an object
+ xmin – the bottom of the horizontal domain of an object
+ y – the vertical place (in world coordinates) of the current cell in a Formula command
+ ymax – the top of the vertical domain of an object
+ ymin – the bottom of the vertical domain of an object
+ zero# (n) – vector with n elements that are all 0
+ zero## (nrow, ncol) – matrix with nrow × ncol elements that are all 0
+
+
+# ============================================================================
+# SECTION 2: FORMULA-CONTEXT OBJECT ATTRIBUTES
+# ============================================================================
+# These are NOT functions — they are attribute names available inside
+# Formula: ~expression contexts. They refer to the object being modified.
+# See RULES_CODE.md Rule 9 (Formula context exception).
+#
+# Attributes:
+#   x       — the horizontal place (in world coordinates) of the current cell
+#   xmin    — the bottom of the horizontal domain of an object
+#   xmax    — the top of the horizontal domain of an object
+#   y       — the vertical place (in world coordinates) of the current cell
+#   ymin    — the bottom of the vertical domain of an object
+#   ymax    — the top of the vertical domain of an object
+#   nx      — number of cells horizontally (columns)
+#   dx      — horizontal distance between cells (step size)
+#   ny      — number of cells vertically (rows)
+#   dy      — vertical distance between cells (band spacing)
+#   ncol    — number of columns (Matrix, TableOfReal, Table)
+#   nrow    — number of rows (Matrix, TableOfReal, Table)
+#   col     — current column number in a Formula command
+#   row     — current row number in a Formula command
+#   col$[i] — column name (TableOfReal, Table)
+#   row$[i] — row name (TableOfReal)
+#   self    — current cell value (lowercase, no dot)
+#   self$   — current cell value as string (Table)
+#   Self.xmin — disambiguates from script variable of same name (capital S, dot)
+#
+# Cross-object reference syntax:
+#   object[id].xmin          — attribute of object by numeric ID
+#   object["Sound name"].nx  — attribute of object by type + name
+#
+# Note: Some of these (x, xmin, xmax, ncol, nrow, etc.) also appear in
+# the function list above because they serve dual roles: as Formula-context
+# attributes AND as zero-argument "functions" in some contexts. The canonical
+# usage is as attributes inside Formula: expressions.
+
+# ============================================================================
+# SECTION 3: PREDEFINED VARIABLES
+# ============================================================================
+# These are predefined numeric or string variables, not functions.
+# They are listed here for completeness and syntax highlighter support.
+#
+#   e                      — Euler's number (2.71828...) — RESERVED, cannot be reassigned
+#   pi                     — Pi (3.14159...) — RESERVED, cannot be reassigned
+#   undefined              — The undefined value — RESERVED, cannot be reassigned
+#   macintosh              — 1 if running on macOS, else 0
+#   windows                — 1 if running on Windows, else 0
+#   unix                   — 1 if running on Unix/Linux, else 0
+#   praat_64bit            — 1 if 64-bit build, else 0
+#   praat_32bit            — 1 if 32-bit build, else 0
+#   praat_intel64          — 1 if Intel 64-bit (AMD64) build
+#   praat_arm64            — 1 if ARM64 (Apple Silicon) build
+#   praatVersion           — current version number (numeric)
+#   praatVersion$          — current version string
+#   homeDirectory$         — user's home folder
+#   preferencesDirectory$  — Praat preferences folder
+#   temporaryDirectory$    — temporary files folder
+#   defaultDirectory$      — default directory for file operations
+#   shellDirectory$        — folder that was default when Praat started
+#   newline$               — the newline character
+#   tab$                   — the tab character
+
+---
+
+# ============================================================================
+# SECTION 4: VECTOR AND MATRIX OPERATIONS — IDIOMS AND ERRATA
+# ============================================================================
+# Cross-reference companion to Section 1's alphabetical entries.
+# Section 1 documents what each function does in isolation.
+# Section 4 documents the idiomatic patterns these functions compose into,
+# negative results (operations that look like they should work but don't),
+# and empirically verified speedups for replacing interpreted loops with
+# native C-speed equivalents.
+#
+# Provenance: EML LMM vectorization audit, 15 May 2026, Praat 6.4.65
+# sandbox (Linux x86_64). Speedup factors are at typical LMM scale
+# (N=600 observations, q=30 random-effect levels, p=5 fixed effects).
+# Smaller problems show smaller speedups, but the qualitative ordering
+# of patterns is consistent.
+#
+# Conceptual orientation (vector vs. matrix variables vs. Matrix objects)
+# is in RULES_CODE.md Rule 5C. This section assumes that orientation.
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# §4.1  SLICE AND EXTRACT — IDIOMS AND NEGATIVE RESULTS
+# ----------------------------------------------------------------------------
+#
+# Praat has NO slice syntax. Both of the following fail:
+#     bad# = M## [1, *]      ✗ "Symbol misplaced"
+#     bad# = M## [*, 1]      ✗ "Symbol misplaced"
+#
+# Use these patterns instead:
+#
+# Column j of M (n×p) as a vector:
+#     v# = col# (M##, j)
+# One native call. See Section 1 for the entry.
+#
+# Row i of M (n×p) as a vector:
+#     v# = row# (M##, i)
+# One native call. See Section 1 for the entry.
+#
+# Both verified on Praat 6.6.30, 21 September 2026.
+# Do not name the receiving variable row# or col#; that shadows the
+# function you are calling.
+#
+# The older composed forms below also work and appear in existing scripts.
+# They are two calls where one does the job, so prefer the native form:
+#     col# = rowSums# (part## (M##, 1, n, j, j))       68× vs a loop at N=600
+#     row# = columnSums# (part## (M##, i, i, 1, p))    16× vs a loop at N=600
+#
+# Submatrix (rows r1..r2 inclusive, cols c1..c2 inclusive):
+#     sub## = part## (M##, r1, r2, c1, c2)
+# Native C-speed. Returns a fresh matrix.
+#
+# Vector subrange (elements i1..i2 inclusive):
+#     sub# = part# (v#, i1, i2)
+# Native C-speed. Returns a fresh vector.
+#
+# Note: there is no native column assignment to a matrix. To overwrite
+# column j with vector v#, loop:
+#     for .i from 1 to n
+#         M## [.i, j] = v# [.i]
+#     endfor
+# Or build the new matrix from parts via mul## / concatenation.
+
+# ----------------------------------------------------------------------------
+# §4.2  MULTIPLICATION AND TRANSPOSE
+# ----------------------------------------------------------------------------
+#
+# CAUTION: the * operator between two matrices is ELEMENTWISE, not matrix
+# multiplication. Use mul## (A##, B##) for the standard matrix product.
+#
+#     C## = A## * B##             # elementwise (Hadamard product)
+#     C## = mul## (A##, B##)      # matrix multiplication (A·B)
+#
+# mul_fast## (A##, B##) is ~20% faster than mul## on the same inputs;
+# numerical results are identical to working precision. mul_metal##
+# (macOS only) uses Apple's Metal Performance Shaders.
+#
+# Cross-product idiom (X'X):
+#     XtX## = mul## (transpose## (X##), X##)
+# Empirical speedup vs interpreted loop: 2419× at N=600, p=5.
+#
+# SigmaG = ZZ' for random-effects covariance:
+#     SigmaG## = mul## (Z##, transpose## (Z##))
+# Replaces a triple-nested N²×nLev loop. Empirical speedup: 1995× at
+# N=600, q=30.
+#
+# Quadratic form v'Av (returns scalar):
+#     val = inner (v#, mul# (A##, v#))
+# Two-step: A·v as vector, then inner product with v. Faster than
+# expanding the full matrix product.
+
+# ----------------------------------------------------------------------------
+# §4.3  SOLVE AND INVERSE
+# ----------------------------------------------------------------------------
+#
+# Linear solve A·x = y (vector RHS):
+#     x# = solve# (A##, y#)
+#
+# Linear solve A·X = Y (matrix RHS):
+#     X## = solve## (A##, Y##)
+#
+# solve# and solve## never stop on a singular or non-square A. They return
+# the least-squares solution with the smallest norm (Praat 6.6.30,
+# 22 Oct 2026: solve# ({{1, 2}, {2, 4}}, {3, 6}) returns 0.6 1.2, and a
+# 3 x 2 system returns its least-squares fit). So a
+# solve is not a singularity check. When a singular A would make the result
+# meaningless, test it first: put A in a Matrix object, To SVD, Get rank, and
+# compare the rank with n (COMMANDS_Matrix.txt).
+#
+# Matrix inverse — DO NOT compute explicitly. Use solve with identity:
+#     I## = zero## (n, n)
+#     for .i from 1 to n
+#         I## [.i, .i] = 1
+#     endfor
+#     invA## = solve## (A##, I##)
+# On a singular A this returns the pseudo-inverse, with no error.
+# Empirical speedup vs interpreted Cholesky inverse: 221× at n=30.
+#
+# Solve on a triangular factor:
+#     # L is lower-triangular Cholesky factor
+#     z# = solve# (L##, y#)              # forward solve
+#     x# = solve# (transpose## (L##), z#) # back solve
+# Empirical speedup vs interpreted substitution: 47× at n=30.
+#
+# Specialized solvers (all native, all C-speed):
+#     solveNonnegative# (A##, y#, maxIter, tolerance, infoLevel)
+#         — non-negative least squares
+#     solveSparse# (A##, y#, maxNonzeros, maxIter, tolerance, infoLevel)
+#         — sparse solution; requires more columns than rows
+#         (underdetermined system)
+#     solveWeaklyConstrained# (A##, y#, alpha, delta)
+#         — regularized solution with weight alpha and tolerance delta
+
+# ----------------------------------------------------------------------------
+# §4.4  REDUCTION IDIOMS — TRACE, ROW/COLUMN SUMS, HAT DIAGONAL
+# ----------------------------------------------------------------------------
+#
+# trace(A·B) without forming the full product:
+#     val = sum (A## * transpose## (B##))
+# (elementwise product summed). Avoids the O(n³) full multiplication
+# when only the trace is needed.
+#
+# Hat matrix diagonal diag(AB'):
+#     h# = rowInners# (A##, B##)
+# Row-wise inner products. Empirical speedup vs interpreted loop: 715×
+# at N=600, p=5 (used in influence diagnostics — Cook's D, hat values).
+#
+# Reductions are native C-speed:
+#     rs# = rowSums# (M##)        # n-vector of row sums
+#     cs# = columnSums# (M##)     # p-vector of column sums
+#     s   = sum (M##)             # scalar sum of all cells
+#     m   = mean (M##)            # scalar mean of all cells
+#
+# Vector reductions (size scalar):
+#     n   = size (v#)             # vector length
+#     s   = sum (v#)              # sum of elements
+#     m   = mean (v#)             # mean of elements
+#     sd  = stdev (v#)            # standard deviation
+#     mn  = min (v#) / max (v#)   # extrema (may include undefined)
+#     mn  = min_e (v#) / max_e (v#)
+#         — error if vector is empty; use when emptiness is a bug
+#     mn  = min_removeUndefined (v#) / max_removeUndefined (v#)
+#         — ignore undefined values; use when data has missing entries
+#     i   = imin (v#) / imax (v#) / imin_e (v#) / imax_e (v#)
+#         — index of the extremum, with same _e / _removeUndefined variants
+
+# ----------------------------------------------------------------------------
+# §4.5  CONSTRUCTION IDIOMS
+# ----------------------------------------------------------------------------
+#
+# Allocation:
+#     z#  = zero# (n)                     # n-vector of zeros
+#     z## = zero## (nrow, ncol)           # zero matrix
+#     v#  = randomGauss# (n, mu, sigma)
+#     m## = randomGauss## (nrow, ncol, mu, sigma)
+#     m## = randomUniform## (nrow, ncol, lo, hi)
+#
+# Sequences:
+#     v# = to# (n)                        # {1, 2, ..., n}
+#     v# = from_to# (m, n)                # {m, m+1, ..., n}
+#     v# = from_to_by# (m, n, step)       # arbitrary step
+#     v# = from_to_count# (start, end, n) # n equally spaced
+#     v# = between_by# (lo, hi, step)     # symmetric placement, step-sized
+#     v# = between_count# (lo, hi, n)     # symmetric placement, n bins
+#
+# Outer product of two vectors (builds rank-1 matrix):
+#     m## = outer## (a#, b#)              # m##[i,j] = a#[i] * b#[j]
+#
+# Repeat / tile a vector:
+#     r# = repeat# (v#, n)                # vector concatenated n times
+#
+# Combine numbers, vectors, and matrices into a single vector:
+#     v# = combine# (a, b#, m##)          # flattens and concatenates
+#
+# Literal matrices use nested braces:
+#     m## = {{ 1, 2, 3 }, { 4, 5, 6 }}    # 2×3 matrix literal
+
+# ----------------------------------------------------------------------------
+# §4.6  CATALOGUE GHOSTS — SUMMARY WITH ALTERNATIVES
+# ----------------------------------------------------------------------------
+#
+# Full detail at the top of this appendix (CATALOGUE GHOSTS section).
+# Section 1 entries carry inline [CATALOGUE GHOST] flags. Quick lookup:
+#
+#     Ghost                         Use instead
+#     ─────                         ───────────
+#     inner## (a##, b##)            sum (a## * b##) or mul## (a##, b##)
+#     object# / object## / object$# class-specific Get loop / To Matrix
+#     linear## (supplier)           zero## + for-loop or Matrix Formula
+#     linear$# / linear$##          fixed$ (v#, prec) / fixed$ (m##, prec)
+#     number# (a$#)                 numbers# (a$#)
+#     randomPoisson# / randomPoisson##  scalar randomPoisson in a loop
+#     repeat## (m##, n)             for-loop over zero## buffer
+#     softmax## (m##)               softmaxPerRow## (m##)
+#     rowInner# (singular)          rowInners# (plural)
+#     between# (low, high, n)       between_count# (low, high, n)
+#     center# (v#)                  center (v#)  [returns scalar]
+#     demoExtraControlKeyPressed    demoCommandKeyPressed (or Option, Shift)
+
+# ----------------------------------------------------------------------------
+# §4.7  ONE-SHOT vs HOT-LOOP DIAGNOSTIC
+# ----------------------------------------------------------------------------
+#
+# The vectorized speedups documented in §§4.1–4.4 apply to operations
+# called once on a large array OR called inside a hot loop. The
+# overhead of calling a native function from the interpreter is
+# nonzero. Indicative cost: ~5 µs per call at typical sizes.
+#
+# Heuristics:
+#
+# 1. ONE-SHOT, large array (n ≥ ~100): use vectorized op every time.
+#    The native op runs at C-speed; the call overhead is amortized
+#    across the array. Speedups in §§4.1–4.4 are at n=600 and apply
+#    directly.
+#
+# 2. HOT LOOP, large array per iteration (loop body operates on
+#    n ≥ ~100 elements): still use vectorized op inside the loop.
+#    Per-iteration savings dwarf per-call overhead.
+#
+# 3. HOT LOOP, scalar work per iteration: interpreter loop is fine.
+#    Wrapping each scalar op in a vector function adds call overhead
+#    without algorithmic savings. Example: per-frame Pitch query
+#    accumulation does not benefit from vectorization.
+#
+# ----------------------------------------------------------------------------
+# §4.8  DIVISION AND COMPARISON — NEGATIVE RESULTS AND COMPOSED FORMS
+# ----------------------------------------------------------------------------
+#
+# Verified on Praat 6.6.30, 21 September 2026. Error text quoted as Praat
+# prints it.
+#
+# The / operator refuses matrix operands. Both of these fail:
+#     m## / x       ✗ "Cannot divide (/) a numeric matrix by a number"
+#     a## / b##     ✗ "Cannot divide (/) a numeric matrix by a numeric matrix"
+#
+# Division is available by composition. Elementwise power composes with
+# elementwise multiplication, and that is what unlocks the reciprocal:
+#     m## * (1 / x)        scalar division
+#     a## * (b## ^ -1)     elementwise division
+# Checked numerically: {{2,4},{8,16}} over {{1,2},{3,4}} gives
+# {{2,2},{2.667,4}}.
+#
+# Vectors are unaffected. v# / w# and v# / x are true elementwise division.
+#
+# Two capabilities are absent as operators and present through an object.
+# The distinction matters: script-level operators and object Formula/query
+# commands are separate surfaces, and absence on one is not absence of the
+# capability.
+#     min (m##), max (m##)   ✗ "Cannot compute the minimum of a numeric matrix"
+#     v# < 5, m## < 5        ✗ "Cannot compare (<) a numeric vector to a number"
+#
+# The object route covers both:
+#     obj = Create simple Matrix from values: "t", m##
+#     Formula: ~ self < 5
+#     n = Get sum                  # elementwise comparison, then count
+#     m = Get minimum              # min/max reduction
+#     removeObject: obj
+# Cost: object creation and removal plus selection churn. For a one-shot
+# reduction that is cheap. Inside a hot loop, weigh it against a small
+# row loop, since row# (m##, i) plus min () over the vector composes without
+# touching any object.
+#
+# Real and confirmed on 6.6.30: abs##, sqrt##, outer##, row#, col#,
+# m## ^ p, and Create simple Matrix from values. None of these is a
+# catalogue ghost.
+#
+# 4. MIXED: if a loop has both scalar bookkeeping and a per-iteration
+#    bulk operation, the bulk operation gets vectorized; the
+#    bookkeeping stays in the interpreter.
+#
+# If unsure, time it. Praat exposes `stopwatch` for empirical
+# comparison: set it before the candidate block, read it after,
+# compare against the alternative.
+#
+# Provenance: §§4.1–4.7 derived from EML LMM Phase 3D vectorization
+# audit (15 May 2026) plus targeted empirical re-verification in
+# Praat 6.4.65 sandbox (17 May 2026, 75 function probes).
+
+---
+
+*End of Appendix B. This appendix is authoritative for function verification.*
+*Functions marked [F.cpp] are verified in Praat 6.4.62 source code but not*
+*yet listed on the official Praat Functions manual page.*
+*Functions marked [CATALOGUE GHOST] appear in source/manual but throw an*
+*error at runtime in Praat 6.4.65 — see top of file and §4.6 for alternatives.*

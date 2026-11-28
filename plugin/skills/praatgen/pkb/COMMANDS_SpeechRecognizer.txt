@@ -1,0 +1,121 @@
+# PRAAT COMMANDS: SpeechRecognizer
+# Source: PRAAT_DEFINITIVE_CATALOGUE.txt (v6.4.62) + session-verified
+# Part of EML PraatGen (CC BY-NC-SA 4.0) — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Version: 1.0
+# Date: 5 April 2026
+#
+# Whisper.cpp integration in Praat. Requires model files installed in:
+#   [preferencesDirectory$]/models/whispercpp/
+#
+# Download models from: https://huggingface.co/ggerganov/whisper.cpp/tree/main
+# Recommended: ggml-base.en.bin (English, good speed/accuracy balance)
+#
+# IMPORTANT NOTES:
+#
+# 1. CREATION REQUIRES ARGUMENTS
+#    Despite the catalogue listing it without parameter expansion,
+#    Create SpeechRecognizer takes two string arguments: model filename
+#    and language. Calling without arguments produces:
+#      "Command not available for current selection"
+#    Provenance: Paste Commands, 25 March 2026.
+#
+# Sandbox arity check (29 Jul 2026 sweep): NOT PERFORMED.
+#   This file's 5 commands require a downloaded ASR model, which the headless
+#   arity harness could not supply. Provenance remains as sourced above
+#   (PRAAT_DEFINITIVE_CATALOGUE.txt (v6.4.62) + session verification); nothing here has been
+#   confirmed against a running Praat 6.6.30. Treat with more caution than the
+#   files carrying a completed arity check.
+# 2. SELECTION STATE FOR CREATION
+#    Create SpeechRecognizer may fail if other objects are selected.
+#    Clear selection before calling:
+#      selectObject: soundId
+#      minusObject: soundId
+#      recognizerId = Create SpeechRecognizer: "ggml-base.en.bin", "English"
+#    Provenance: Empirical debugging, 25 March 2026.
+#
+# 3. nocheck MUST NOT BE USED ON CREATION
+#    nocheck on Create SpeechRecognizer causes silent failure — no object
+#    created, no error raised, interpreter variable state may be corrupted.
+#    Use fileReadable() to check model path before calling:
+#      modelPath$ = preferencesDirectory$ + "/models/whispercpp/" + model$
+#      if not fileReadable (modelPath$)
+#          # fall back to manual pathway
+#      endif
+#    Provenance: Empirical debugging, 25 March 2026. See also master prompt
+#    memory entry on nocheck interpreter corruption.
+#
+# 4. Recognize sound WRITES TO INFO WINDOW
+#    Every call to Recognize sound clears and overwrites the Info window.
+#    Capture the transcript immediately after each call:
+#      selectObject: recognizerId, segSoundId
+#      Recognize sound
+#      transcript$ = info$ ()
+#    When processing multiple segments, store transcripts in an array
+#    and rebuild any Info window log after the recognition loop.
+#    Provenance: Empirical observation, 25 March 2026.
+#
+# 5. SUSTAINED VOWELS PRODUCE [BLANK_AUDIO]
+#    Whisper returns "[BLANK_AUDIO]" for non-speech segments such as
+#    sustained vowel phonation (/a/). Filter these before any text
+#    matching or sentence merging stage.
+#    Provenance: CAPE-V auto-segmenter testing, 25 March 2026.
+#
+# 6. CREATE ONCE, REUSE
+#    The model loads on creation. Pair the recognizer with different
+#    Sound objects for each segment rather than creating/destroying
+#    repeatedly. This is a significant performance optimization.
+
+---
+
+  # Create
+  Create SpeechRecognizer: model filename$, language$
+  # Returns: SpeechRecognizer
+  # Verified: Create SpeechRecognizer: "ggml-base.en.bin", "English"
+  # Provenance: Paste Commands, 25 March 2026.
+  # Arguments:
+  #   model filename$ — name of the .bin file in the whispercpp models folder
+  #                     (NOT a full path — just the filename)
+  #   language$       — language name (e.g., "English")
+  # The model file must exist at:
+  #   [preferencesDirectory$]/models/whispercpp/[model filename$]
+
+  # Query
+  Get Whisper model name
+  # Returns: the model filename string
+  # Not executable in the sandbox: Create SpeechRecognizer: needs a
+  #   Whisper model file that is not shipped.
+  # Provenance: Catalogue + session use, 25 March 2026.
+
+  Get language name
+  # Returns: the language string
+  # Not executable in the sandbox, as above.
+  # Provenance: Catalogue, 25 March 2026.
+
+  # Help
+  SpeechRecognizer help
+
+---
+
+  # Cross-type: SpeechRecognizer & Sound (1 command)
+
+  Recognize sound
+  # Verified: Recognize sound
+  #   No colon, no arguments.
+  # Provenance: Paste Commands, 25 March 2026.
+  # CRITICAL: The catalogue lists this as "Transcribe" — that is WRONG.
+  #   The actual command name is "Recognize sound".
+  # Requires: both SpeechRecognizer and Sound selected
+  # Output: writes transcript text to Info window (capture via info$())
+  # Side effect: clears Info window before writing
+  # Does NOT create any new objects
+  # Does NOT support nocheck (untested, avoid per Note 3)
+
+---
+
+*End of SpeechRecognizer commands.*

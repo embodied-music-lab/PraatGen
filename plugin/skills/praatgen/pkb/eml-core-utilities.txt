@@ -1,0 +1,1108 @@
+# ============================================================================
+# EML Stats : Core Utility Procedures
+# ============================================================================
+# Module: eml-core-utilities.praat
+# Version: 1.0
+# Date: 20 February 2026
+#
+# Part of the EML Stats library (EML Stats & Graphs).
+# License: GPL-3.0-or-later
+#
+# Provides: @emlRankVector, @emlCountIf, @emlSubset, @emlUniqueValues,
+#   @emlFrequency, @emlCumulativeSum, @emlDiff, @emlLag, @emlBinData,
+#   @emlZScore, @emlRemoveUndefined, @emlSortWithIndex,
+#   @emlConcatenateVectors, @emlRepeatVector, @emlCommaListToVector
+#
+# Internal helpers: @eml_sortPairsByValue
+#
+# All procedures use the "eml" prefix (EML Stats) to avoid
+# namespace collisions with user scripts.
+#
+# ATTRIBUTION
+# Framework: EML PraatGen by Ian Howell
+#            Embodied Music Lab — www.embodiedmusiclab.com
+#            https://github.com/embodied-music-lab/PraatGen
+# Code generation: Claude (Anthropic)
+# Script author: Ian Howell — created and verified by this individual
+#
+# RESEARCH USE DISCLOSURE
+# If this script is used in research or publication, disclose AI use
+# per your target journal's policy. Suggested language:
+#
+#   "Praat analysis scripts were developed using the EML PraatGen
+#    Scripting Assistant (Howell, Embodied Music Lab) with code
+#    generation by Claude (Anthropic). All scripts were reviewed,
+#    tested, and validated by Ian Howell."
+#
+# The script author assumes responsibility for the correctness and
+# appropriate application of this code.
+# ============================================================================
+# PKB copy: flattened from plugin_EML_StatsGraphs/stats/eml-core-utilities.praat
+#   Content is verbatim from plugin source; only the License line is
+#   normalized to the repo's GPL-3.0-or-later. Version above is the
+#   PLUGIN's version and must match it exactly - a mismatch means the
+#   PKB has drifted. PKB sync: 28 November 2026 (PraatGen 3.0.0).
+
+
+# ============================================================================
+# INTERNAL HELPER: Shell Sort with Index Tracking
+# ============================================================================
+# Sorts values in ascending order while tracking original indices.
+# Uses Shell sort with Knuth gap sequence for O(n^1.5) performance.
+# Efficient for n up to 10,000+.
+#
+# Input:
+#   .inputValues# — vector of values to sort
+#   .inputIndices# — vector of corresponding indices
+#
+# Output:
+#   .sortedValues# — sorted values (ascending)
+#   .sortedIndices# — indices permuted to match sorted order
+# ============================================================================
+
+procedure eml_sortPairsByValue: .inputValues#, .inputIndices#
+    .n = size (.inputValues#)
+    
+    # Handle trivial cases
+    if .n <= 1
+        .sortedValues# = .inputValues#
+        .sortedIndices# = .inputIndices#
+    else
+        # Copy input to working arrays
+        .sortedValues# = .inputValues#
+        .sortedIndices# = .inputIndices#
+        
+        # Compute Knuth gap sequence starting point
+        # Gap sequence: 1, 4, 13, 40, 121, 364, 1093, 3280, ...
+        .gap = 1
+        while .gap < .n / 3
+            .gap = .gap * 3 + 1
+        endwhile
+        
+        # Shell sort with decreasing gaps
+        while .gap >= 1
+            # Insertion sort with gap
+            for .i from .gap + 1 to .n
+                .tempVal = .sortedValues#[.i]
+                .tempIdx = .sortedIndices#[.i]
+                .j = .i
+                
+                # Shift elements that are greater than tempVal
+                .done = 0
+                while .j > .gap and .done = 0
+                    .jMinusGap = .j - .gap
+                    if .sortedValues#[.jMinusGap] > .tempVal
+                        .sortedValues#[.j] = .sortedValues#[.jMinusGap]
+                        .sortedIndices#[.j] = .sortedIndices#[.jMinusGap]
+                        .j = .jMinusGap
+                    else
+                        .done = 1
+                    endif
+                endwhile
+                
+                # Place the element at final position
+                .sortedValues#[.j] = .tempVal
+                .sortedIndices#[.j] = .tempIdx
+            endfor
+            
+            # Reduce gap
+            .gap = floor (.gap / 3)
+        endwhile
+    endif
+endproc
+
+
+# ============================================================================
+# @emlRankVector
+# ============================================================================
+# Assigns statistical ranks to data values with average tie handling.
+# Foundation for nonparametric tests (Spearman, Mann-Whitney, Wilcoxon, etc.)
+#
+# Input:
+#   .data# — vector of numeric values
+#
+# Output:
+#   .ranks# — vector of ranks (same length as input)
+#             tied values receive the average of their ranks
+#   .hasTies — 1 if any ties exist, 0 otherwise
+#   .nTieGroups — number of distinct groups of tied values
+#   .tieCorrectionSum — sum of (t^3 - t) for each tie group of size t
+#                       Used by KW tie correction and Dunn's variance.
+#                       Zero when no ties.
+# ============================================================================
+
+procedure emlRankVector: .data#
+    .n = size (.data#)
+    
+    # Handle trivial cases
+    if .n = 0
+        .ranks# = zero# (0)
+        .hasTies = 0
+        .nTieGroups = 0
+        .tieCorrectionSum = 0
+    elsif .n = 1
+        .ranks# = {1}
+        .hasTies = 0
+        .nTieGroups = 0
+        .tieCorrectionSum = 0
+    else
+        # Create parallel arrays: values and original indices
+        .values# = .data#
+        .indices# = from_to# (1, .n)
+        
+        # Sort by value, tracking original positions
+        @eml_sortPairsByValue: .values#, .indices#
+        .sortedValues# = eml_sortPairsByValue.sortedValues#
+        .sortedIndices# = eml_sortPairsByValue.sortedIndices#
+        
+        # Assign ranks with tie averaging
+        # First pass: assign sequential ranks and identify tie groups
+        .assignedRanks# = zero# (.n)
+        .hasTies = 0
+        .nTieGroups = 0
+        .tieCorrectionSum = 0
+        
+        .i = 1
+        while .i <= .n
+            # Find the extent of this tie group
+            .tieStart = .i
+            .tieEnd = .i
+            .currentValue = .sortedValues#[.i]
+            
+            # Scan forward for equal values
+            .j = .i + 1
+            while .j <= .n
+                if .sortedValues#[.j] = .currentValue
+                    .tieEnd = .j
+                    .j = .j + 1
+                else
+                    .j = .n + 1
+                endif
+            endwhile
+            
+            # Calculate average rank for this group
+            # Ranks would be tieStart, tieStart+1, ..., tieEnd
+            # Average = (tieStart + tieEnd) / 2
+            .avgRank = (.tieStart + .tieEnd) / 2
+            
+            # Check if this is actually a tie group
+            if .tieEnd > .tieStart
+                .hasTies = 1
+                .nTieGroups = .nTieGroups + 1
+                .tieSize = .tieEnd - .tieStart + 1
+                .tieCorrectionSum = .tieCorrectionSum
+                ... + (.tieSize ^ 3 - .tieSize)
+            endif
+            
+            # Assign average rank to all elements in this group
+            for .k from .tieStart to .tieEnd
+                .assignedRanks#[.k] = .avgRank
+            endfor
+            
+            # Move to next group
+            .i = .tieEnd + 1
+        endwhile
+        
+        # Map ranks back to original positions
+        .ranks# = zero# (.n)
+        for .i from 1 to .n
+            .origPos = .sortedIndices#[.i]
+            .ranks#[.origPos] = .assignedRanks#[.i]
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlCountIf
+# ============================================================================
+# Counts elements satisfying a comparison condition.
+#
+# Input:
+#   .data# — vector of numeric values
+#   .operator$ — comparison operator: "=", "<>", "<", ">", "<=", ">="
+#   .value — comparison threshold
+#
+# Output:
+#   .count — number of elements satisfying the condition
+#   .error$ — empty if valid, error message if invalid operator
+# ============================================================================
+
+procedure emlCountIf: .data#, .operator$, .value
+    .n = size (.data#)
+    .count = 0
+    .error$ = ""
+    
+    # Validate operator
+    .validOp = 0
+    if .operator$ = "="
+        .validOp = 1
+    elsif .operator$ = "<>"
+        .validOp = 1
+    elsif .operator$ = "<"
+        .validOp = 1
+    elsif .operator$ = ">"
+        .validOp = 1
+    elsif .operator$ = "<="
+        .validOp = 1
+    elsif .operator$ = ">="
+        .validOp = 1
+    endif
+    
+    if .validOp = 0
+        .error$ = "Invalid operator: " + .operator$
+    else
+        # Count matching elements
+        for .i from 1 to .n
+            .x = .data#[.i]
+            .match = 0
+            
+            if .operator$ = "="
+                if .x = .value
+                    .match = 1
+                endif
+            elsif .operator$ = "<>"
+                if .x <> .value
+                    .match = 1
+                endif
+            elsif .operator$ = "<"
+                if .x < .value
+                    .match = 1
+                endif
+            elsif .operator$ = ">"
+                if .x > .value
+                    .match = 1
+                endif
+            elsif .operator$ = "<="
+                if .x <= .value
+                    .match = 1
+                endif
+            elsif .operator$ = ">="
+                if .x >= .value
+                    .match = 1
+                endif
+            endif
+            
+            .count = .count + .match
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlSubset
+# ============================================================================
+# Extracts elements at specified indices.
+#
+# Input:
+#   .data# — source vector
+#   .indices# — vector of 1-based positions to extract
+#
+# Output:
+#   .result# — extracted elements (in order of indices#)
+#   .nSkipped — count of out-of-range indices skipped
+# ============================================================================
+
+procedure emlSubset: .data#, .indices#
+    .nData = size (.data#)
+    .nIndices = size (.indices#)
+    .nSkipped = 0
+    
+    if .nIndices = 0 or .nData = 0
+        .result# = zero# (0)
+    else
+        # First pass: count valid indices
+        .nValid = 0
+        for .i from 1 to .nIndices
+            .idx = .indices#[.i]
+            if .idx >= 1 and .idx <= .nData
+                .nValid = .nValid + 1
+            else
+                .nSkipped = .nSkipped + 1
+            endif
+        endfor
+        
+        # Second pass: extract valid elements
+        if .nValid = 0
+            .result# = zero# (0)
+        else
+            .result# = zero# (.nValid)
+            .outIdx = 0
+            for .i from 1 to .nIndices
+                .idx = .indices#[.i]
+                if .idx >= 1 and .idx <= .nData
+                    .outIdx = .outIdx + 1
+                    .result#[.outIdx] = .data#[.idx]
+                endif
+            endfor
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# @emlUniqueValues
+# ============================================================================
+# Finds sorted unique values in a vector.
+#
+# Input:
+#   .data# — vector of numeric values
+#
+# Output:
+#   .values# — sorted vector of unique values
+#   .nUnique — count of unique values
+# ============================================================================
+
+procedure emlUniqueValues: .data#
+    .n = size (.data#)
+    
+    if .n = 0
+        .values# = zero# (0)
+        .nUnique = 0
+    elsif .n = 1
+        .values# = .data#
+        .nUnique = 1
+    else
+        # Sort the data
+        .sorted# = sort# (.data#)
+        
+        # Count unique values (scan for changes)
+        .nUnique = 1
+        for .i from 2 to .n
+            .iPrev = .i - 1
+            if .sorted#[.i] <> .sorted#[.iPrev]
+                .nUnique = .nUnique + 1
+            endif
+        endfor
+        
+        # Collect unique values
+        .values# = zero# (.nUnique)
+        .values#[1] = .sorted#[1]
+        .uniqueIdx = 1
+        
+        for .i from 2 to .n
+            .iPrev = .i - 1
+            if .sorted#[.i] <> .sorted#[.iPrev]
+                .uniqueIdx = .uniqueIdx + 1
+                .values#[.uniqueIdx] = .sorted#[.i]
+            endif
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlFrequency
+# ============================================================================
+# Computes frequency distribution of values.
+#
+# Input:
+#   .data# — vector of numeric values
+#
+# Output:
+#   .values# — sorted unique values
+#   .counts# — frequency of each unique value (parallel to .values#)
+#   .nUnique — number of unique categories
+# ============================================================================
+
+procedure emlFrequency: .data#
+    .n = size (.data#)
+    
+    if .n = 0
+        .values# = zero# (0)
+        .counts# = zero# (0)
+        .nUnique = 0
+    else
+        # Sort the data
+        .sorted# = sort# (.data#)
+        
+        # Count unique values
+        .nUnique = 1
+        for .i from 2 to .n
+            .iPrev = .i - 1
+            if .sorted#[.i] <> .sorted#[.iPrev]
+                .nUnique = .nUnique + 1
+            endif
+        endfor
+        
+        # Collect unique values and their counts
+        .values# = zero# (.nUnique)
+        .counts# = zero# (.nUnique)
+        
+        .values#[1] = .sorted#[1]
+        .currentCount = 1
+        .uniqueIdx = 1
+        
+        for .i from 2 to .n
+            .iPrev = .i - 1
+            if .sorted#[.i] = .sorted#[.iPrev]
+                .currentCount = .currentCount + 1
+            else
+                # Store count for previous value
+                .counts#[.uniqueIdx] = .currentCount
+                # Start new value
+                .uniqueIdx = .uniqueIdx + 1
+                .values#[.uniqueIdx] = .sorted#[.i]
+                .currentCount = 1
+            endif
+        endfor
+        
+        # Store final count
+        .counts#[.uniqueIdx] = .currentCount
+    endif
+endproc
+
+
+# ============================================================================
+# @emlCumulativeSum
+# ============================================================================
+# Computes running cumulative sum.
+#
+# Input:
+#   .data# — vector of numeric values
+#
+# Output:
+#   .result# — cumulative sum (same length as input)
+# ============================================================================
+
+procedure emlCumulativeSum: .data#
+    .n = size (.data#)
+    
+    if .n = 0
+        .result# = zero# (0)
+    else
+        .result# = zero# (.n)
+        .result#[1] = .data#[1]
+        
+        for .i from 2 to .n
+            .iPrev = .i - 1
+            .result#[.i] = .result#[.iPrev] + .data#[.i]
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlDiff
+# ============================================================================
+# Computes first differences.
+#
+# Input:
+#   .data# — vector of numeric values
+#
+# Output:
+#   .result# — first differences (length n-1)
+#   .error$ — empty if valid, error message if n < 2
+# ============================================================================
+
+procedure emlDiff: .data#
+    .n = size (.data#)
+    .error$ = ""
+    
+    if .n < 2
+        .result# = zero# (0)
+        .error$ = "Input must have at least 2 elements for differencing"
+    else
+        .nOut = .n - 1
+        # First difference: element i+1 minus element i, as two shifted slices.
+        .result# = part# (.data#, 2, .n) - part# (.data#, 1, .nOut)
+    endif
+endproc
+
+
+# ============================================================================
+# @emlLag
+# ============================================================================
+# Creates lagged version of data.
+#
+# Input:
+#   .data# — vector of numeric values
+#   .k — lag order (positive integer)
+#
+# Output:
+#   .result# — lagged data (same length, first k elements = undefined)
+# ============================================================================
+
+procedure emlLag: .data#, .k
+    .n = size (.data#)
+    
+    if .n = 0
+        .result# = zero# (0)
+    elsif .k = 0
+        # No lag - return copy
+        .result# = .data#
+    elsif .k >= .n
+        # All undefined
+        .result# = zero# (.n)
+        for .i from 1 to .n
+            .result#[.i] = undefined
+        endfor
+    else
+        .result# = zero# (.n)
+
+        ; VECTOR-EXEMPT: cat2 -- a lag is a shifted copy with an undefined prefix.
+        ; Praat 6.6.30 has no slice-write (v#[a:b] = ...) or vector concatenation
+        ; to assemble it, so the prefix and the shifted body are filled by loop.
+        # First k elements are undefined
+        for .i from 1 to .k
+            .result#[.i] = undefined
+        endfor
+
+        # Remaining elements are lagged values
+        for .i from .k + 1 to .n
+            .lagIdx = .i - .k
+            .result#[.i] = .data#[.lagIdx]
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlBinData
+# ============================================================================
+# Bins data into histogram.
+#
+# Input:
+#   .data# — vector of numeric values
+#   .nBins — desired number of bins
+#
+# Output:
+#   .binEdges# — vector of bin edge values (length nBins + 1)
+#   .counts# — vector of counts per bin (length nBins)
+#   .nBins — actual number of bins used
+# ============================================================================
+
+procedure emlBinData: .data#, .nBins
+    .n = size (.data#)
+    
+    if .n = 0
+        .binEdges# = zero# (0)
+        .counts# = zero# (0)
+        .nBins = 0
+    else
+        .dataMin = min (.data#)
+        .dataMax = max (.data#)
+        .range = .dataMax - .dataMin
+        
+        if .range = 0
+            # All values identical - single bin
+            .nBins = 1
+            .binEdges# = {.dataMin, .dataMax}
+            .counts# = {.n}
+        else
+            # Create equal-width bins
+            .binWidth = .range / .nBins
+            
+            # Create bin edges
+            .nEdges = .nBins + 1
+            # Equal-width edges: dataMin + 0,1,..,nBins times the width.
+            .binEdges# = .dataMin + from_to# (0, .nBins) * .binWidth
+            
+            # Ensure last edge exactly equals max (avoid floating-point issues)
+            .binEdges#[.nEdges] = .dataMax
+            
+            # Count elements in each bin
+            .counts# = zero# (.nBins)
+            
+            for .i from 1 to .n
+                .x = .data#[.i]
+                
+                # Find which bin this value belongs to
+                .binFound = 0
+                for .b from 1 to .nBins
+                    if .binFound = 0
+                        .leftEdge = .binEdges#[.b]
+                        .bNext = .b + 1
+                        .rightEdge = .binEdges#[.bNext]
+                        
+                        # Last bin includes right endpoint
+                        if .b = .nBins
+                            if .x >= .leftEdge and .x <= .rightEdge
+                                .counts#[.b] = .counts#[.b] + 1
+                                .binFound = 1
+                            endif
+                        else
+                            if .x >= .leftEdge and .x < .rightEdge
+                                .counts#[.b] = .counts#[.b] + 1
+                                .binFound = 1
+                            endif
+                        endif
+                    endif
+                endfor
+            endfor
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# @emlZScore
+# ============================================================================
+# Standardizes values to z-scores.
+#
+# Input:
+#   .data# — vector of numeric values
+#
+# Output:
+#   .result# — z-scores: (xi - mean) / sd
+#   .mean — the mean used
+#   .sd — the standard deviation used
+#   .warning$ — empty if valid, warning message if sd = 0 or n < 2
+# ============================================================================
+
+procedure emlZScore: .data#
+    .n = size (.data#)
+    .warning$ = ""
+    
+    if .n < 2
+        .result# = zero# (.n)
+        .mean = undefined
+        .sd = undefined
+        .warning$ = "Need at least 2 values for z-score computation"
+        
+        if .n = 1
+            .result#[1] = undefined
+        endif
+    else
+        .mean = mean (.data#)
+        .sd = stdev (.data#)
+        
+        if .sd = 0
+            # All values identical
+            .result# = zero# (.n)
+            .warning$ = "Standard deviation is zero; all z-scores set to 0"
+        else
+            .result# = (.data# - .mean) / .sd
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# @emlRemoveUndefined
+# ============================================================================
+# Removes undefined values from a vector.
+#
+# Input:
+#   .data# — vector that may contain undefined values
+#
+# Output:
+#   .result# — vector with undefined values removed
+#   .nRemoved — count of undefined values removed
+#   .nKept — count of valid values retained
+#   .keptIndices# — original indices of kept values
+# ============================================================================
+
+procedure emlRemoveUndefined: .data#
+    .n = size (.data#)
+    
+    if .n = 0
+        .result# = zero# (0)
+        .nRemoved = 0
+        .nKept = 0
+        .keptIndices# = zero# (0)
+    else
+        # First pass: count defined values
+        .nKept = 0
+        for .i from 1 to .n
+            if .data#[.i] <> undefined
+                .nKept = .nKept + 1
+            endif
+        endfor
+        
+        .nRemoved = .n - .nKept
+        
+        # Second pass: collect defined values and their indices
+        if .nKept = 0
+            .result# = zero# (0)
+            .keptIndices# = zero# (0)
+        else
+            .result# = zero# (.nKept)
+            .keptIndices# = zero# (.nKept)
+            .outIdx = 0
+            
+            for .i from 1 to .n
+                if .data#[.i] <> undefined
+                    .outIdx = .outIdx + 1
+                    .result#[.outIdx] = .data#[.i]
+                    .keptIndices#[.outIdx] = .i
+                endif
+            endfor
+        endif
+    endif
+endproc
+
+
+# ============================================================================
+# @emlSortWithIndex
+# ============================================================================
+# Sorts values ascending while tracking original positions.
+#
+# Input:
+#   .data# — vector of numeric values
+#
+# Output:
+#   .sorted# — sorted values (ascending)
+#   .indices# — original positions: .sorted#[i] was at .indices#[i]
+# ============================================================================
+
+procedure emlSortWithIndex: .data#
+    .n = size (.data#)
+    
+    if .n = 0
+        .sorted# = zero# (0)
+        .indices# = zero# (0)
+    else
+        # Create index array
+        .origIndices# = from_to# (1, .n)
+        
+        # Use shared sorting helper
+        @eml_sortPairsByValue: .data#, .origIndices#
+        .sorted# = eml_sortPairsByValue.sortedValues#
+        .indices# = eml_sortPairsByValue.sortedIndices#
+    endif
+endproc
+
+
+# ============================================================================
+# @emlConcatenateVectors
+# ============================================================================
+# Concatenates two vectors.
+#
+# Input:
+#   .v1# — first vector
+#   .v2# — second vector
+#
+# Output:
+#   .result# — concatenation of v1# followed by v2#
+# ============================================================================
+
+procedure emlConcatenateVectors: .v1#, .v2#
+    .n1 = size (.v1#)
+    .n2 = size (.v2#)
+    .nTotal = .n1 + .n2
+    
+    if .nTotal = 0
+        .result# = zero# (0)
+    elsif .n1 = 0
+        .result# = .v2#
+    elsif .n2 = 0
+        .result# = .v1#
+    else
+        .result# = zero# (.nTotal)
+
+        ; VECTOR-EXEMPT: cat2 -- Praat 6.6.30 has no vector concatenation
+        ; (combine#/append#/brace-concat) and no slice-write (v#[a:b] = ...),
+        ; so the two source vectors are copied into place element by element.
+        # Copy first vector
+        for .i from 1 to .n1
+            .result#[.i] = .v1#[.i]
+        endfor
+
+        # Copy second vector
+        for .i from 1 to .n2
+            .outIdx = .n1 + .i
+            .result#[.outIdx] = .v2#[.i]
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlRepeatVector
+# ============================================================================
+# Repeats a vector n times.
+#
+# Input:
+#   .v# — vector to repeat
+#   .nReps — number of repetitions
+#
+# Output:
+#   .result# — v# repeated nReps times
+# ============================================================================
+
+procedure emlRepeatVector: .v#, .nReps
+    .nV = size (.v#)
+    
+    if .nReps <= 0 or .nV = 0
+        .result# = zero# (0)
+    elsif .nReps = 1
+        .result# = .v#
+    else
+        .nTotal = .nV * .nReps
+        .result# = zero# (.nTotal)
+
+        ; VECTOR-EXEMPT: cat2 -- no vector slice-write (v#[a:b] = ...) or tile
+        ; primitive in Praat 6.6.30, so each repetition is copied into place.
+        for .rep from 1 to .nReps
+            .offset = (.rep - 1) * .nV
+            for .i from 1 to .nV
+                .outIdx = .offset + .i
+                .result#[.outIdx] = .v#[.i]
+            endfor
+        endfor
+    endif
+endproc
+
+
+# ============================================================================
+# @emlGenerateUniquePath -- THE NON-DESTRUCTIVE-SAVE PROMISE
+# ============================================================================
+# Every save in the plugin routes through this: the figure, the separately
+# saved legend, the CSV export, the recorded workflow script. Its whole job is
+# that an existing file is never silently overwritten.
+#
+# IT LIVED IN graphs/eml-graphs-form.praat UNTIL 13 AUGUST 2026, which was an
+# accident of where it was first needed rather than a decision. Two costs:
+# scripts/eml-record-save.praat already called it from outside the graphs
+# layer, and stats/eml-output.praat could NOT call it -- the graphs form is
+# included last, so @emlExportResultFiles had no way to collision-protect the
+# three-file export and had to document that as a gap. Core utilities is the
+# first include in both barrels, so everything can reach it from here.
+#
+# Arguments: .path$   the desired path
+# Outputs:   .result$ that path if it is free, else the first free
+#                     <base>_<n><ext> walking n upward from 1
+# ============================================================================
+# ============================================================================
+# @emlFileStamp
+# ============================================================================
+# A timestamp for a FILE NAME: YYYYMMDD_HHMMSS, local time.
+#
+# Outputs: .result$
+#
+# WHY A STAMP AT ALL. A save that proposes the same name twice either
+# overwrites the first run or, with @emlGenerateUniquePath behind it, produces
+# results_1 and results_2 -- protected, but with nothing to say which run is
+# which. A stamped default gives the user a name that cannot collide and that
+# sorts chronologically in their file browser, which is what a study folder
+# needs.
+#
+# WHAT OTHER APPLICATIONS DO, since this is a convention and not a discovery.
+# Three patterns exist. Praat itself, R's ggsave and most plotting libraries
+# silently overwrite. SPSS, JASP and jamovi prompt "file exists -- replace?".
+# MATLAB, Audacity, OBS and most capture and lab-data tools put the stamp in
+# the DEFAULT NAME and let the user edit or delete it. The third is what this
+# is: no modal to dismiss, no collision, sortable, and entirely overridable
+# because it arrives in an editable field rather than being bolted on at
+# write time.
+#
+# WHY date_iso$ () AND NOT date$ (). date$ () returns "Fri Aug 14 15:06:15
+# 2026" -- a month NAME, and a day that is space-padded when it is a single
+# digit, so slicing it means a month table and a pad test. date_iso$ ()
+# returns "2026-08-14T15:06:15+00:00", fixed width, every field already
+# numeric and already zero-padded. Measured on 6.6.30, 14 Aug 2026.
+#
+# THIS IS NOT THE RECORDER'S STAMP, deliberately. eml-record.praat keeps
+# emlRecordStamp$ in date$ () form because it is READ BY A PERSON at the top
+# of an emitted script, where "Fri Aug 14" beats "20260814". Two purposes,
+# two formats, and the difference is written down here so the next person does
+# not unify them into whichever one they met first.
+# ----------------------------------------------------------------------------
+procedure emlFileStamp
+    .iso$ = date_iso$ ()
+    .result$ = left$ (.iso$, 4) + mid$ (.iso$, 6, 2) + mid$ (.iso$, 9, 2)
+    ... + "_" + mid$ (.iso$, 12, 2) + mid$ (.iso$, 15, 2)
+    ... + mid$ (.iso$, 18, 2)
+endproc
+
+# ----------------------------------------------------------------------------
+# @emlGenerateUniquePath
+# Appends ascending integer to filename until path is available.
+# Arguments: .path$ (original desired path)
+# Outputs: .result$ (available path)
+# ----------------------------------------------------------------------------
+procedure emlGenerateUniquePath: .path$
+    if not fileReadable (.path$)
+        .result$ = .path$
+    else
+        # Split into directory, base, extension
+        .lastSlash = rindex (.path$, "/")
+        if .lastSlash > 0
+            .dir$ = left$ (.path$, .lastSlash)
+            .filename$ = mid$ (.path$, .lastSlash + 1, length (.path$) - .lastSlash)
+        else
+            .dir$ = ""
+            .filename$ = .path$
+        endif
+
+        .lastDot = rindex (.filename$, ".")
+        if .lastDot > 0
+            .base$ = left$ (.filename$, .lastDot - 1)
+            .ext$ = mid$ (.filename$, .lastDot, length (.filename$) - .lastDot + 1)
+        else
+            .base$ = .filename$
+            .ext$ = ""
+        endif
+
+        .counter = 1
+        .result$ = .dir$ + .base$ + "_" + string$ (.counter) + .ext$
+        while fileReadable (.result$)
+            .counter = .counter + 1
+            .result$ = .dir$ + .base$ + "_" + string$ (.counter) + .ext$
+        endwhile
+    endif
+endproc
+
+
+# ============================================================================
+# OBJECT-LIFETIME PRIMITIVES
+# ----------------------------------------------------------------------------
+# Praat gives object ids in strictly increasing order and never reuses them, so
+# a watermark taken on entry cleanly separates objects made before a scope from
+# objects made inside it. @emlObjMark records that watermark; @emlScopeClose and
+# its keep-selected / keep-vector variants remove everything created after the
+# mark (except keepers), in one batched removeObject; @emlKeepOnly is the
+# backstop that keeps only an explicit id list. The scan reads the whole
+# selection as a vector (selected#) so it stays cheap even near the 10,000-object
+# ceiling. Loops here range over the live-object list, never data rows.
+# ============================================================================
+
+procedure emlObjMark
+    select all
+    .n = numberOfSelected ()
+    if .n > 0
+        .id = max (selected# ())
+    else
+        .id = 0
+    endif
+endproc
+
+# Shared engine: remove every live object with id > .mark whose id is NOT in
+# the space-separated keep-list, in ONE batched removeObject call. Pass
+# .mark = -1 to consider every object (the keep-only backstop). The scan reads
+# the whole selection as a vector (selected#()); the removal is a single call.
+procedure eml_reap: .mark, .keep$
+    select all
+    .n = numberOfSelected ()
+    if .n > 0
+        .all# = selected# ()
+        .pad$ = " " + .keep$ + " "
+        # single pass: collect ids to remove into an over-allocated vector,
+        # then remove them all in ONE call. Trailing slots stay 0; id 0 is
+        # never a real object, and nocheck lets removeObject skip the padding.
+        .rm# = zero# (.n)
+        .j = 0
+        for .i to .n
+            if .all# [.i] > .mark and index (.pad$, " " + string$ (.all# [.i]) + " ") = 0
+                .j += 1
+                .rm# [.j] = .all# [.i]
+            endif
+        endfor
+        if .j > 0
+            nocheck removeObject: .rm#
+        endif
+    endif
+endproc
+
+# ids of the current selection as a space-separated string.
+procedure eml_selStr
+    .s$ = ""
+    .n = numberOfSelected ()
+    if .n > 0
+        .ids# = selected# ()
+        for .i to .n
+            .s$ = .s$ + " " + string$ (.ids# [.i])
+        endfor
+    endif
+endproc
+
+# vector of ids as a space-separated string.
+procedure eml_vecStr: .v#
+    .s$ = ""
+    for .i to size (.v#)
+        .s$ = .s$ + " " + string$ (.v# [.i])
+    endfor
+endproc
+
+# re-select a space-separated id list (restores a saved selection).
+procedure eml_reselect: .ids$
+    .ids$ = .ids$ + " "
+    .first = 1
+    .rest$ = .ids$
+    while .rest$ <> "" and index (.rest$, " ") > 0
+        .tok$ = left$ (.rest$, index (.rest$, " ") - 1)
+        .rest$ = mid$ (.rest$, index (.rest$, " ") + 1, 10000)
+        if .tok$ <> ""
+            if .first = 1
+                selectObject: number (.tok$)
+                .first = 0
+            else
+                plusObject: number (.tok$)
+            endif
+        endif
+    endwhile
+endproc
+
+# Close a scope keeping NOTHING: remove every object created after .mark.
+procedure emlScopeClose: .mark
+    @eml_reap: .mark, ""
+endproc
+
+# Close a scope keeping whatever is SELECTED (and restore that selection).
+procedure emlScopeCloseKeepSel: .mark
+    @eml_selStr
+    .keep$ = eml_selStr.s$
+    @eml_reap: .mark, .keep$
+    @eml_reselect: .keep$
+endproc
+
+# Close a scope keeping the objects whose ids are in the vector .keep# (any count).
+procedure emlScopeCloseKeepVec: .mark, .keep#
+    @eml_vecStr: .keep#
+    .keep$ = eml_vecStr.s$
+    @eml_reap: .mark, .keep$
+    @eml_reselect: .keep$
+endproc
+
+# Backstop GC: keep ONLY the space-separated ids in .keep$, remove all else.
+procedure emlKeepOnly: .keep$
+    @eml_reap: -1, .keep$
+endproc
+
+# ============================================================================
+# @emlCommaListToVector
+# ============================================================================
+# The one comma-string to string-vector bridge for every door that collects
+# its list as free text instead of a native vector -- the repeated-measures
+# and Friedman doors' condition list, built by the wizard from its condition
+# dropdowns and by the kit runner from matrix.tsv's col_a field. Both callers
+# convert here, so the comma convention lives in one place.
+#
+# The split is the interpreter's own splitBy$#. This procedure adds the two
+# things it does not: it trims each item of surrounding whitespace and drops
+# every empty item, so a trailing comma or a doubled comma never becomes a
+# blank condition.
+#
+# Input:
+#   .s$  a comma-separated string, e.g. "SPL_soft, SPL_medium, SPL_loud".
+#
+# Output:
+#   .v$#  string vector of the non-empty items, each trimmed of leading and
+#         trailing whitespace.
+#   .n  size of .v$# (0 for an empty or all-comma input).
+#
+# WHAT THIS DOES NOT DO. It does not resolve names against a table, does not
+# de-duplicate, and does not case-fold. A caller that needs those decisions
+# makes them on the returned vector.
+# ============================================================================
+procedure emlCommaListToVector: .s$
+    .raw$# = splitBy$# (.s$, ",")
+    .n = 0
+    for .i to size (.raw$#)
+        .tok$ = replace_regex$ (.raw$# [.i], "^\s+|\s+$", "", 0)
+        if .tok$ <> ""
+            .n += 1
+            .part$ [.n] = .tok$
+        endif
+    endfor
+    .v$# = empty$# (.n)
+    for .i to .n
+        .v$# [.i] = .part$ [.i]
+    endfor
+endproc
+
+
+# ============================================================================
+# END OF CORE UTILITY PROCEDURES
+# ============================================================================

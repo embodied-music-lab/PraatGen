@@ -1,0 +1,1616 @@
+
+# PRAAT SCRIPT UX STANDARDS (APPENDIX F)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+#
+# Design standards for user-facing script behavior. When a script meets
+# the triggering criteria for a feature, the compiler MUST implement that
+# feature unless the user explicitly opts out.
+#
+# Version: 1.2
+# Date: 26 February 2026
+# Revised: 29 July 2026 (PraatGen v14.0.0) — stale `EML_DRAWING_PROCEDURES.txt` references repointed to `eml-graph-procedures.txt`
+# Revised: 26 November 2026 — S8D Info window house style; S7A and S8 examples use it
+
+# ============================================================================
+# DESIGN PRINCIPLES
+# ============================================================================
+#
+# 1. PROGRESSIVE DISCLOSURE: Show only what is relevant at each decision
+#    point. The default path should require the fewest clicks. Advanced
+#    parameters exist behind an opt-in gate.
+#
+# ⚠️ FILE-OUTPUT ENCODING (hard) — sandbox-verified, Praat 6.6.30, 29 Jul 2026
+#   Every string literal written to a file must be pure ASCII. Under Praat's
+#   default text-writing setting, ONE non-ASCII character (— – … ’ “ ° µ ±
+#   Δ é ≥ …) makes Praat write the ENTIRE file as UTF-16 BE, even when Praat
+#   is launched with --utf8, and subsequent appendFileLine: calls keep it
+#   UTF-16. A UTF-16 CSV is unreadable to R read.csv, pandas, Excel import
+#   and grep. Use -> not →, - not —, deg not °, +/- not ±. Non-ASCII in
+#   Info-window or Picture output is fine. A script that writes text from
+#   file names, labels or user input sets Text writing preferences: "UTF-8"
+#   before its first write (Rule 27, File text encoding; APPENDIX_E
+#   Section 8).
+# 2. TEMPORAL CONTINUITY: A script used repeatedly should remember its
+#    previous configuration. The user should never re-enter information
+#    the script already knows.
+#
+# 3. STRUCTURAL SAFETY: Output organization should make accidental
+#    overwrites structurally impossible, not merely guarded against.
+#    The user should never lose data because of a script.
+#
+# 4. ORIENTATION: The user should always know what the script is doing,
+#    how far along it is, and how to stop it. Silence breeds anxiety.
+#
+# 5. PROPOSED NAMES, NOT REQUIRED NAMES: The script always proposes
+#    output filenames. The user edits only if they want to. Naming
+#    files is cognitive work that the script can do better.
+#
+# 6. GRACEFUL EXIT: Every dialog offers a quit path. Every long
+#    operation offers an interrupt mechanism. The user is never trapped.
+#
+# 7. POST-COMPLETION CLARITY: When a script finishes, the user should
+#    understand what happened without opening output files.
+
+# ============================================================================
+# S0 DIALOG CONVENTIONS (hard)
+# ============================================================================
+#
+# These conventions apply to EVERY beginPause/endPause block in every
+# script. No exceptions.
+#
+# S0-WRAP: BREAK YOUR OWN LINES (hard)
+#
+# A `comment:` line that is too wide WRAPS, but the dialog reserves only ONE
+# line of height for it. The wrapped remainder is drawn on top of whatever
+# comes next. The text is not clipped and nothing errors — the layout simply
+# does not know the wrap happened, and every line below it is corrupted.
+#
+# Measured, Praat 6.6.30 under GTK: one over-long comment between two short
+# ones wrapped to three lines, and lines two and three overdrew the following
+# comment, leaving both illegible.
+#
+# RULE: put in the line breaks yourself. One idea per `comment:`, and keep
+# each under roughly 60 characters. Never build a `comment:` by concatenating
+# a variable of unknown length onto a label — split it across two comments, or
+# truncate the variable.
+#
+# Wrap width is platform-dependent (GTK, Cocoa and Windows measure text
+# differently), so a line that fits on one machine can wrap on another. Short
+# enough to fit everywhere is the only safe target. This is also why the full
+# text belongs in the Info window as well: it has no layout to break, and the
+# user can select and copy from it.
+#
+# S0A: SUPPRESS STOP BUTTON (hard)
+#
+# Every endPause call must include 0 as the final argument. This
+# suppresses Praat's default Stop button, which otherwise appears
+# alongside the script's own buttons and confuses users.
+#
+#   CORRECT:
+#     clicked = endPause: "Quit", "Continue", 2, 0
+#
+#   WRONG (Stop button appears):
+#     clicked = endPause: "Quit", "Continue", 2
+#
+#   NOT PREFERRED (button 1 becomes the cancel button — clicked still
+#   receives the button index, but field variables are NOT updated
+#   on cancel click, which can silently leave them undefined or stale):
+#     clicked = endPause: "Quit", "Continue", 2, 1
+#
+# The 0 value means: suppress the Stop button, but do not designate
+# any button as a system-level cancel. All buttons return their index
+# to the clicked variable, and the script handles every path explicitly.
+#
+# S0B: QUIT, NOT CANCEL (hard)
+#
+# The exit button on every dialog must read "Quit", not "Cancel".
+# Rationale: The action terminates the script. "Cancel" implies
+# undoing a pending operation; "Quit" accurately describes exiting.
+# "Quit" is also shorter, which matters when dialogs have 3-4 buttons
+# and Praat renders them in a horizontal row.
+#
+# Standard exit handling:
+#
+#   clicked = endPause: "Quit", "Continue", 2, 0
+#   if clicked = 1
+#       exitScript: "User quit."
+#   endif
+#
+# S0C: STANDARD / DEFAULTS BUTTON (hard)
+#
+# When a dialog contains editable analysis parameters that have
+# canonical values (from APPENDIX_D or other authoritative source),
+# include a "Standard" button that resets all parameter fields to
+# their canonical defaults.
+#
+# This is essential for the progressive disclosure pattern: a user
+# who enters Tier 3 (advanced parameters) and experiments with
+# custom values must always be able to return to known-good settings
+# with a single click.
+#
+# Implementation: Because Praat cannot dynamically repopulate a live
+# dialog, the Standard button causes the dialog to re-display with
+# canonical defaults. The script detects the Standard button click,
+# resets variables to canonical values, and loops back to redisplay
+# the same dialog:
+#
+#   # Initialize with canonical defaults
+#   formantCeiling = 5500
+#   nFormants = 5
+#   windowLength = 0.025
+#   preEmphasis = 50
+#
+#   repeat
+#       beginPause: "Formant analysis parameters"
+#           positive: "Formant ceiling (Hz)", string$ (formantCeiling)
+#           natural: "Number of formants", string$ (nFormants)
+#           positive: "Window length (s)", string$ (windowLength)
+#           positive: "Pre-emphasis from (Hz)", string$ (preEmphasis)
+#       clicked = endPause: "Quit", "Standard", "Run", 3, 0
+#       if clicked = 1
+#           exitScript: "User quit."
+#       elsif clicked = 2
+#           # Reset to canonical defaults
+#           @setSpeakerDefaults: speaker_category
+#           nFormants = 5
+#           windowLength = 0.025
+#           preEmphasis = 50
+#           # Loop will redisplay with reset values
+#       endif
+#   until clicked <> 2
+#
+# Button ordering convention: Quit is always leftmost (position 1).
+# Standard is always second-from-left (position 2) when present.
+# The primary action button (Run, Continue, Analyze, etc.) is always
+# rightmost and is the default button (its index in the default
+# argument).
+#
+# The "Standard" button is required whenever:
+#   - The dialog shows APPENDIX_D clinical parameters
+#   - The dialog shows parameters from a named citation
+#   - The dialog shows values loaded from a config file (S3)
+#     where the user may want to revert to canonical values
+#     as distinct from their saved custom values
+#
+# When both config-loaded and canonical defaults are relevant, use
+# two reset paths: "Standard" resets to canonical (APPENDIX_D),
+# and the config file provides the initial defaults on first display.
+# This gives the user three states: canonical, previously saved, and
+# whatever they're currently editing.
+#
+# S0D: BUTTON LAYOUT SUMMARY
+#
+#   2-button (no parameters):
+#     clicked = endPause: "Quit", "Continue", 2, 0
+#
+#   2-button (choice, not abort):
+#     clicked = endPause: "Don't save", "Save", 1, 0
+#
+#   3-button (with parameters):
+#     clicked = endPause: "Quit", "Standard", "Run", 3, 0
+#
+#   3-button (choice with quit):
+#     clicked = endPause: "Quit", "Append", "New file", 2, 0
+#
+# SELF-AUDIT must confirm: "Dialog conventions (S0): all endPause
+# calls use trailing 0; all exit buttons read 'Quit'; Standard
+# button present where canonical parameters are editable."
+
+# ============================================================================
+# S1 FEATURE TRIGGERING MATRIX
+# ============================================================================
+#
+# Each UX feature has a triggering threshold. ABOVE threshold, the feature
+# is implemented by default. BELOW threshold, the feature is offered as a
+# boolean opt-in (e.g., "Save settings for next run?"). The feature is
+# NEVER silently unavailable.
+#
+#   Feature                     Default-ON threshold      Always available as
+#   -------------------------   ----------------------    --------------------
+#   Config persistence (S3)     6+ user parameters        Boolean opt-in
+#   Output scaffolding (S4)     2+ output file types      Boolean opt-in
+#                               OR batch processing
+#   Graceful interrupt (S5)     Any batch processing      Boolean opt-in
+#   Dry-run mode (S6)           Batch + clinical params   Boolean opt-in
+#                               OR 10+ parameters
+#   Progress reporting (S7)     Any batch processing      Always ON for batch
+#   Post-completion summary     Any data output            Always ON
+#   (S8)                        (CSV, Table, Info)
+#   Auto-generated names (S9)   Universal — always ON     N/A
+#   Progressive disclosure      8+ total parameters        Always available
+#   (S2)                        OR natural parameter
+#                               grouping exists
+#   Loop repopulation (S2C)     Any beginPause in a       N/A (structural)
+#                               loop or re-run path
+#   Error recovery (S10)        Any batch processing      Boolean opt-in
+#
+# The COMMAND PLAN must state which UX features are triggered and whether
+# each is default-ON or opt-in for the given script.
+
+# ============================================================================
+# S2 PROGRESSIVE DISCLOSURE (WIZARD-STYLE DIALOGS)
+# ============================================================================
+#
+# S2A: TIERED DIALOG STRUCTURE
+#
+# When a script has parameters that divide into "most users need this"
+# and "some users need this," use chained beginPause dialogs instead of
+# a single monolithic form.
+#
+# Tier 1 — Intent: What workflow does the user want? High-level branch
+# point with 2-4 options. No parameters yet.
+#
+# Tier 2 — Context: Based on intent, collect minimum necessary inputs.
+# File paths, speaker category, output preferences. Pre-populate
+# everything possible. If clinical defaults exist for the chosen
+# workflow, load them silently.
+#
+# Tier 3 — Advanced (optional): Only shown if user opts in via a
+# boolean in Tier 2 (e.g., "Customize analysis parameters"). Contains
+# full parameter set with defaults pre-filled from APPENDIX_D or
+# equivalent. Most users never see this tier. This tier MUST include
+# a "Standard" button (S0C) so the user can reset to canonical values.
+#
+# Every tier includes a "Quit" path that exits cleanly with a message.
+#
+# CANONICAL THREE-TIER EXAMPLE:
+#
+#   # ---- TIER 1: Intent ----
+#   beginPause: "Voice Quality Analysis"
+#       optionmenu: "Analysis mode", 1
+#           option: "Clinical (standard parameters)"
+#           option: "Exploratory (full parameter control)"
+#       optionmenu: "Input type", 1
+#           option: "Single file"
+#           option: "Batch folder"
+#   clicked = endPause: "Quit", "Continue", 2, 0
+#   if clicked = 1
+#       exitScript: "User quit."
+#   endif
+#
+#   # ---- TIER 2: Context ----
+#   if input_type = 1
+#       beginPause: "Select input"
+#           infile: "Sound file", ""
+#       clicked = endPause: "Quit", "Continue", 2, 0
+#   else
+#       beginPause: "Select input"
+#           folder: "Input folder", ""
+#           word: "File extension", "wav"
+#       clicked = endPause: "Quit", "Continue", 2, 0
+#   endif
+#   if clicked = 1
+#       exitScript: "User quit."
+#   endif
+#
+#   # Speaker category sets defaults silently
+#   beginPause: "Speaker"
+#       optionmenu: "Speaker category", 1
+#           option: "Adult female (speech)"
+#           option: "Adult male (speech)"
+#           option: "Child (speech)"
+#           option: "Adult female (singing)"
+#           option: "Adult male (singing)"
+#           option: "Custom"
+#       if analysis_mode = 2
+#           boolean: "Customize parameters", 0
+#       endif
+#   clicked = endPause: "Quit", "Continue", 2, 0
+#   if clicked = 1
+#       exitScript: "User quit."
+#   endif
+#
+#   # Map speaker category to defaults (see S2B)
+#   @setSpeakerDefaults: speaker_category
+#
+#   # ---- TIER 3: Advanced (only if requested) ----
+#   if analysis_mode = 2 and customize_parameters = 1
+#       repeat
+#           beginPause: "Formant analysis parameters"
+#               positive: "Formant ceiling (Hz)", string$ (formantCeiling)
+#               natural: "Number of formants", string$ (nFormants)
+#               positive: "Window length (s)", string$ (windowLength)
+#               positive: "Pre-emphasis from (Hz)", string$ (preEmphasis)
+#           clicked = endPause: "Quit", "Standard", "Run", 3, 0
+#           if clicked = 1
+#               exitScript: "User quit."
+#           elsif clicked = 2
+#               # Reset to canonical defaults for selected speaker category
+#               @setSpeakerDefaults: speaker_category
+#               nFormants = 5
+#               windowLength = 0.025
+#               preEmphasis = 50
+#               # Loop will redisplay with reset values
+#           endif
+#       until clicked <> 2
+#   endif
+#
+# S2B: SPEAKER CATEGORY PATTERN
+#
+# When analysis parameters depend on speaker characteristics
+# (formant ceilings), offer a speaker category chooser that
+# silently sets appropriate defaults. Pitch algorithm parameters
+# are governed by APPENDIX_D §0/§1 and are not set by speaker
+# category.
+#
+# Implementation as a procedure for reuse by the Standard button:
+#
+#   procedure setSpeakerDefaults: .category
+#       # Speaker category determines formant ceiling (vocal tract
+#       # size). Pitch algorithm selection and parameters are
+#       # governed by APPENDIX_D §0/§1 — not by speaker category.
+#       if .category = 1
+#           # Adult female (speech)
+#           formantCeiling = 5500
+#       elsif .category = 2
+#           # Adult male (speech)
+#           formantCeiling = 5000
+#       elsif .category = 3
+#           # Child (speech)
+#           formantCeiling = 8000
+#       elsif .category = 4
+#           # Adult female (singing)
+#           formantCeiling = 5500
+#       elsif .category = 5
+#           # Adult male (singing)
+#           formantCeiling = 5000
+#       elsif .category = 6
+#           # Custom — values unchanged, proceed to Tier 3
+#       endif
+#   endproc
+#
+#
+# S2C: LOOP REPOPULATION (hard)
+#
+# When a beginPause dialog appears inside a loop or on a re-run path,
+# field defaults MUST be set to the current variable values, not the
+# original defaults. This ensures the user sees their previous choices
+# pre-filled.
+#
+# Praat's beginPause supports this natively — the default argument of
+# each field is evaluated at runtime. Use variables, not literals:
+#
+#   # CORRECT — repopulates with current values
+#   beginPause: "Settings"
+#       positive: "Formant ceiling (Hz)", string$ (formantCeiling)
+#       positive: "Window length (s)", string$ (windowLength)
+#   clicked = endPause: "Quit", "Run", 2, 0
+#
+#   # WRONG — always shows initial defaults
+#   beginPause: "Settings"
+#       positive: "Formant ceiling (Hz)", "5500"
+#       positive: "Window length (s)", "0.025"
+#   clicked = endPause: "Quit", "Run", 2, 0
+#
+# This is why beginPause is preferred over form for any script that
+# might loop or re-run. form blocks execute only once at launch and
+# cannot repopulate.
+#
+# SELF-AUDIT must confirm: "Loop repopulation: beginPause defaults use
+# variables" or "Not applicable — no loops."
+
+# ============================================================================
+# S3 CONFIGURATION FILE PERSISTENCE
+# ============================================================================
+#
+# S3A: PURPOSE
+#
+# A config file stores the user's parameter choices so that subsequent
+# runs of the same script pre-populate with previous values. The config
+# file is per-script, not cross-script. Where it lives depends on the
+# script's scope (S3C).
+#
+# S3B: FILE FORMAT
+#
+# Plain text, one key-value pair per line, tab-separated. Lines
+# beginning with # are comments. The first line is a header identifying
+# the script and config version.
+#
+#   # EML_A2_config v1.0
+#   input_folder	/Users/researcher/Study1/audio
+#   output_folder	/Users/researcher/Study1/results
+#   speaker_category	1
+#   formant_ceiling	5500
+#   include_cpps	1
+#
+# S3C: CONFIG FILE LOCATION
+#
+# Where the file goes depends on the script's scope. When a script keeps
+# settings, ask in the PRE-FLIGHT.
+#
+#   A short, single-file script: beside the script, named
+#   [scriptBaseName]_config.txt.
+#   A multi-file plugin: its own subfolder of the apps folder in the Praat
+#   preferences folder, which survives a plugin update:
+#       createFolder: preferencesDirectory$ + "/apps"
+#       configDir$ = preferencesDirectory$ + "/apps/" + toolName$
+#       createFolder: configDir$
+#   Anything in between: the user decides.
+#
+# Source: the Praat manual's "preferences folder" page names the apps
+# subfolder for the preferences of scripts.
+#
+# A script kept beside its settings file discovers its own directory
+# using:
+#
+#   scriptPath$ = defaultDirectory$
+#   configPath$ = scriptPath$ + "/" + scriptName$ + "_config.txt"
+#
+# If the script cannot determine its directory (e.g., run from editor),
+# fall back to the output folder if one has been selected.
+#
+# S3D: LOAD PATTERN
+#
+# At script launch, before the first dialog, check for the config file.
+# If found, parse it and use values as dialog defaults. If not found,
+# use hardcoded defaults.
+#
+#   # --- Config load ---
+#   configPath$ = defaultDirectory$ + "/MyScript_config.txt"
+#   # Initialize with hardcoded defaults
+#   cfg_formantCeiling = 5500
+#   cfg_inputFolder$ = ""
+#   cfg_outputFolder$ = ""
+#
+#   if fileReadable (configPath$)
+#       configLines$# = readLinesFromFile$# (configPath$)
+#       for iLine from 1 to size (configLines$#)
+#           line$ = configLines$#[iLine]
+#           # Skip comments and blank lines
+#           if left$ (line$, 1) <> "#" and length (line$) > 0
+#               key$ = extractWord$ (line$, "")
+#               val$ = mid$ (line$,
+#               ... index (line$, tab$) + 1,
+#               ... length (line$))
+#               if key$ = "formant_ceiling"
+#                   cfg_formantCeiling = number (val$)
+#               elsif key$ = "input_folder"
+#                   cfg_inputFolder$ = val$
+#               elsif key$ = "output_folder"
+#                   cfg_outputFolder$ = val$
+#               endif
+#           endif
+#       endfor
+#       appendInfoLine: "Loaded settings from config file."
+#   endif
+#
+# Then use cfg_* variables as defaults in beginPause fields:
+#
+#   beginPause: "Analysis settings"
+#       folder: "Input folder", cfg_inputFolder$
+#       folder: "Output folder", cfg_outputFolder$
+#       positive: "Formant ceiling (Hz)", string$ (cfg_formantCeiling)
+#   clicked = endPause: "Quit", "Standard", "Run", 3, 0
+#   if clicked = 1
+#       exitScript: "User quit."
+#   elsif clicked = 2
+#       # Reset to canonical default for selected speaker category
+#       @setSpeakerDefaults: speaker_category
+#       cfg_formantCeiling = formantCeiling
+#       # ... redisplay (wrap in repeat/until loop per S0C) ...
+#   endif
+#
+# Note: The "Standard" button resets to canonical values for the
+# selected speaker category, which may differ from the config-file
+# values. This gives the user three reference points: canonical
+# defaults, saved preferences, and their current edits.
+#
+# S3E: SAVE PATTERN
+#
+# After successful script completion (not on error or quit), offer
+# to save the current settings. If the feature is default-ON (6+
+# parameters), save automatically with a notification. If opt-in,
+# use a confirmation dialog.
+#
+# Default-ON save (automatic):
+#
+#   # --- Config save ---
+#   writeFileLine: configPath$, "# ", scriptTitle$, " config v1.0"
+#   appendFileLine: configPath$, "# Saved: ", date$ ()
+#   appendFileLine: configPath$, "input_folder", tab$, input_folder$
+#   appendFileLine: configPath$, "output_folder", tab$, output_folder$
+#   appendFileLine: configPath$, "formant_ceiling", tab$, string$ (formant_ceiling)
+#   appendInfoLine: "Settings saved to: ", configPath$
+#
+# Opt-in save (below threshold):
+#
+#   beginPause: "Save settings?"
+#       comment: "Save current settings for next run?"
+#   clicked = endPause: "Don't save", "Save", 1, 0
+#   if clicked = 2
+#       # ... write config file ...
+#   endif
+#
+# NOTE: The "Don't save" / "Save" dialog does not include "Quit"
+# because both options are valid terminal actions — the script has
+# already completed successfully. Neither button is an abort.
+#
+# S3F: CONFIG VERSION MIGRATION
+#
+# If the script adds new parameters in a future version, the config
+# loader must handle missing keys gracefully — the hardcoded defaults
+# initialized before the load loop serve as fallbacks for any key not
+# present in an older config file.
+#
+# SELF-AUDIT must confirm: "Config persistence: [implemented / offered
+# as opt-in / not applicable]" and "Config load handles missing keys
+# via pre-initialized defaults."
+
+# ============================================================================
+# S4 OUTPUT DIRECTORY SCAFFOLDING
+# ============================================================================
+#
+# S4A: PRINCIPLE
+#
+# The user selects an output folder via a folder: chooser. The script
+# creates subdirectories as needed within that folder. The user's chosen
+# folder is the project container — it belongs to their mental model,
+# not the script's.
+#
+# S4B: STANDARD SUBDIRECTORY STRUCTURE
+#
+# For scripts producing multiple output types:
+#
+#   [user-chosen folder]/
+#       data/           <- CSV files, tables, numeric results
+#       figures/        <- PNG, PDF figure output
+#       log/            <- Run log, config snapshot, STOP.txt sentinel
+#
+# Not all subdirectories are required — create only what the script
+# will use. A script that produces only CSV needs only data/.
+#
+# S4C: CREATION PATTERN
+#
+# Use createFolder() which is a no-op if the folder already exists:
+#
+#   # Build output structure
+#   dataDir$ = output_folder$ + "/data"
+#   figDir$ = output_folder$ + "/figures"
+#   logDir$ = output_folder$ + "/log"
+#   createFolder (dataDir$)
+#   createFolder (figDir$)
+#   createFolder (logDir$)
+#
+# S4D: REUSE OF EXISTING STRUCTURE
+#
+# If the user points to a folder that already contains the expected
+# subdirectories, the script uses them without modification. The
+# createFolder() no-op behavior handles this automatically.
+#
+# For CSV results files: if an existing results file is detected in
+# data/, the script must ask whether to append or create a new file:
+#
+#   csvPath$ = dataDir$ + "/" + proposedName$
+#   if fileReadable (csvPath$)
+#       beginPause: "Results file exists"
+#           comment: "Found existing results file:"
+#           comment: proposedName$
+#           comment: "Append new results, or create a separate file?"
+#       clicked = endPause: "Quit", "Append", "New file", 2, 0
+#       if clicked = 1
+#           exitScript: "User quit."
+#       elsif clicked = 3
+#           # Generate non-colliding name (Rule 27)
+#           suffix = 2
+#           base$ = proposedName$ - ".csv"
+#           repeat
+#               csvPath$ = dataDir$ + "/" + base$ + "_" + string$ (suffix) + ".csv"
+#               suffix = suffix + 1
+#           until not fileReadable (csvPath$)
+#       endif
+#       # If clicked = 2 (Append), csvPath$ unchanged — will appendFile
+#   endif
+#
+# S4E: CONFIG SNAPSHOT
+#
+# When output scaffolding is active, the script writes a config
+# snapshot to log/ at the start of each run. This records the exact
+# parameters used, providing a reproducibility trail:
+#
+#   snapshotPath$ = logDir$ + "/config_" + dateStamp$ + ".txt"
+#   writeFileLine: snapshotPath$, "# Run parameters - ", date$ ()
+#   appendFileLine: snapshotPath$, "formant_ceiling", tab$, string$ (formant_ceiling)
+#   # ... all parameters ...
+#
+# This is distinct from the config persistence file (S3). The config
+# file stores the user's preferences for next time. The snapshot
+# records what was actually used for this run.
+#
+# SELF-AUDIT must confirm: "Output scaffolding: [directories created /
+# offered as opt-in / not applicable]."
+
+# ============================================================================
+# S5 GRACEFUL INTERRUPTION (STOP SENTINEL)
+# ============================================================================
+#
+# S5A: PURPOSE
+#
+# Batch processing scripts can run for extended periods. The user needs
+# a way to halt processing after the current file completes, without
+# killing Praat (which loses all unsaved state and Info window content).
+#
+# S5B: MECHANISM
+#
+# The script creates a sentinel file named STOP.txt in the log/
+# subdirectory (or the output folder root if no scaffolding). The file
+# contains self-documenting instructions and a status keyword.
+#
+# Initial content (written by script at batch start):
+#
+#   RUN
+#   ---
+#   To stop processing after the current file, change the
+#   first line of this file from RUN to STOP and save.
+#   The script checks this file after each file completes.
+#
+# S5C: CHECK PATTERN
+#
+# At the top of each batch loop iteration, read line 1 and perform a
+# case-insensitive comparison:
+#
+#   procedure checkStopSentinel: .sentinelPath$
+#       .shouldStop = 0
+#       if fileReadable (.sentinelPath$)
+#           .content$ = readFile$ (.sentinelPath$)
+#           .firstLine$ = extractWord$ (.content$, "")
+#           if index_caseInsensitive (.firstLine$, "stop") > 0
+#               .shouldStop = 1
+#           endif
+#       endif
+#   endproc
+#
+# Usage in the batch loop:
+#
+#   for iFile from 1 to nFiles
+#       @checkStopSentinel: sentinelPath$
+#       if checkStopSentinel.shouldStop
+#           appendInfoLine: newline$,
+#           ... "=== STOPPED BY USER after ",
+#           ... string$ (iFile - 1), " of ",
+#           ... string$ (nFiles), " files ==="
+#           # Write summary of completed work
+#           @writeBatchSummary
+#           # Reset sentinel for next run
+#           @initSentinel: sentinelPath$
+#           goto BATCH_END
+#       endif
+#       # ... process file ...
+#   endfor
+#   label BATCH_END
+#
+# S5D: ANNOUNCEMENT
+#
+# At batch start, the script must inform the user that the interrupt
+# mechanism exists:
+#
+#   appendInfoLine: "Sentinel file: ", sentinelPath$
+#   appendInfoLine: "To stop processing, open that file and change"
+#   appendInfoLine: "the first line from RUN to STOP, then save."
+#   appendInfoLine: ""
+#
+# S5E: CLEANUP
+#
+# On normal batch completion (no interrupt), reset the sentinel to RUN
+# so it is ready for the next run. Do NOT delete it — the persistent
+# file is part of the output structure.
+#
+# SELF-AUDIT must confirm: "Graceful interrupt: STOP sentinel
+# [implemented / offered as opt-in / not applicable]."
+
+# ============================================================================
+# S6 DRY-RUN MODE
+# ============================================================================
+#
+# S6A: PURPOSE
+#
+# Before committing to a full batch run, the user can preview the
+# analysis on the first file to verify that parameters produce sensible
+# results.
+#
+# S6B: IMPLEMENTATION
+#
+# After all parameters are collected but before the batch loop:
+#
+#   beginPause: "Dry run?"
+#       comment: "Process first file only as a preview?"
+#       comment: "You can verify results before running the full batch."
+#   clicked = endPause: "Skip preview", "Preview first file", 2, 0
+#
+#   if clicked = 2
+#       # Process file 1 only
+#       # ... analysis code for single file ...
+#       # Show results
+#       appendInfoLine: "=== DRY RUN COMPLETE ==="
+#       appendInfoLine: "Review the results above."
+#
+#       beginPause: "Continue?"
+#           comment: "Proceed with remaining files using these settings?"
+#       clicked2 = endPause: "Quit", "Continue batch", 2, 0
+#       if clicked2 = 1
+#           exitScript: "User quit after dry run."
+#       endif
+#       # If continue: fall through to batch loop starting at file 2
+#       batchStart = 2
+#   else
+#       batchStart = 1
+#   endif
+#
+#   for iFile from batchStart to nFiles
+#       # ... batch processing ...
+#   endfor
+#
+# S6C: DRY-RUN WITH PICTURE OUTPUT
+#
+# If the script produces figures, the dry run should display the
+# preview figure in the Picture window so the user can visually
+# assess parameter quality. The "Continue?" dialog appears after
+# the figure is visible.
+#
+# SELF-AUDIT must confirm: "Dry-run mode: [implemented / offered as
+# opt-in / not applicable]."
+
+# ============================================================================
+# S7 PROGRESS REPORTING
+# ============================================================================
+#
+# S7A: MINIMUM STANDARD (batch scripts)
+#
+# Every batch iteration must report to the Info window:
+#
+#   @infoBar: iFile, nFiles, 20
+#   appendInfoLine: "  [ ", string$ (iFile), " / ", string$ (nFiles), " ] ",
+#   ... infoBar.result$, "  ", baseName$
+#
+# (infoBar and the Info window characters: S8D.)
+#
+# This gives the user a running count and current file identity.
+#
+# S7B: ENHANCED REPORTING (long batches, 20+ files)
+#
+# Add elapsed time and estimated time remaining. Use date#() to
+# capture timestamps, since Praat's stopwatch resets on each call:
+#
+#   # At batch start
+#   startVec# = date# ()
+#   startSeconds = startVec#[4] * 3600 + startVec#[5] * 60 + startVec#[6]
+#
+#   # Inside loop, after processing each file
+#   nowVec# = date# ()
+#   nowSeconds = nowVec#[4] * 3600 + nowVec#[5] * 60 + nowVec#[6]
+#   elapsed = nowSeconds - startSeconds
+#   if elapsed < 0
+#       # Midnight crossing
+#       elapsed = elapsed + 86400
+#   endif
+#   avgPerFile = elapsed / iFile
+#   remaining = avgPerFile * (nFiles - iFile)
+#   remainMin = floor (remaining / 60)
+#   remainSec = remaining - (remainMin * 60)
+#   appendInfoLine: "  Elapsed: ", fixed$ (elapsed, 0), " s",
+#   ... "  |  Est. remaining: ",
+#   ... string$ (remainMin), " min ", fixed$ (remainSec, 0), " s"
+#
+# S7C: WARNING ACCUMULATION
+#
+# During batch processing, accumulate warnings in a counter rather
+# than relying on the user to notice them scrolling past:
+#
+#   nWarnings = 0
+#   # ... inside loop, when a warning fires ...
+#   nWarnings = nWarnings + 1
+#
+# Report the total at batch end (see S8).
+#
+# SELF-AUDIT must confirm: "Progress reporting: [standard / enhanced /
+# not applicable]."
+
+# ============================================================================
+# S8 POST-COMPLETION SUMMARY
+# ============================================================================
+#
+# S8A: STANDARD
+#
+# Every script that produces data output must end with a summary block
+# in the Info window. This supplements (not replaces) Rule 22's output
+# richness standard.
+#
+# Minimum summary content:
+#
+#   @infoSection: "Complete"
+#   @infoLine: "Files processed", string$ (nProcessed)
+#   @infoLine: "Files skipped", string$ (nSkipped)
+#   @infoLine: "Warnings", string$ (nWarnings)
+#   @infoLine: "Output", csvPath$
+#   @infoRule
+#
+# (infoSection, infoLine, infoRule: S8D.)
+#
+# S8B: DATA RANGE SUMMARY
+#
+# For analysis scripts, include the range of key measures across all
+# processed files. This gives the researcher an immediate quality check:
+#
+#   @infoSection: "Measure ranges"
+#   @infoLine: "Mean F0 (Hz)", fixed$ (minMeanF0, 1) + " - " + fixed$ (maxMeanF0, 1)
+#   @infoLine: "Jitter (%)", fixed$ (minJitter, 3) + " - " + fixed$ (maxJitter, 3)
+#   @infoLine: "Shimmer (%)", fixed$ (minShimmer, 3) + " - " + fixed$ (maxShimmer, 3)
+#
+# Outlier values in these ranges immediately alert the researcher to
+# potential data quality issues.
+#
+# S8C: LOG FILE MIRRORING
+#
+# When output scaffolding is active (S4), mirror the Info window
+# summary to a log file in log/:
+#
+#   logPath$ = logDir$ + "/run_log_" + dateStamp$ + ".txt"
+#   # Use appendFile throughout the script instead of (or in addition
+#   # to) appendInfoLine, so the log persists after the Info window
+#   # is cleared by the next script run.
+#
+# Alternatively, at script end, capture Info window content:
+#
+#   info$ = info$ ()
+#   writeFile: logPath$, info$
+#
+# SELF-AUDIT must confirm: "Post-completion summary: [implemented /
+# not applicable]."
+#
+# S8D: INFO WINDOW HOUSE STYLE (every script that writes to the Info window)
+#
+# Verified in the Info window of Praat 6.6.30 and 6.4.39 (Linux, default
+# fixed-width font, 26 Nov 2026): every character below renders and
+# padded columns align.
+#
+# Layout, 46 characters wide:
+#   - a header: a rule line, the script's title, date$ (), a rule line
+#   - titled sections, each preceded by a blank line
+#   - label-value lines: two-space indent, label padded to 22 characters,
+#     units in the label ("Pitch floor (Hz)")
+#   - the S8A summary as the last section, closed by a rule line
+#   - batch progress (S7A) as "[ 12 / 40 ] " + a 20-character bar + name
+#   - pass, fail and warning lines marked with the ok, fail and warn marks
+#   - a short distribution may show as a sparkline: "▁▂▃▄▅▆▇█", one
+#     character per value scaled from minimum to maximum
+#
+# Data tables: when the script also writes the data to a file, the Info
+# window table uses columns padded with spaces (tabs don't align in the
+# Info window). When the Info window is the only output, rows stay
+# tab-separated, with a header row carrying units, so they paste into a
+# spreadsheet.
+#
+# Characters are set once, at the top of the script. When the Info window
+# is mirrored to a file (S8C), use the ASCII set, because the file-output
+# encoding rule at the top of this appendix applies to that file.
+#
+#   # Info window characters: Unicode set; ASCII set when mirrored to a file
+#   infoWidth = 46
+#   infoRule$ = "═"
+#   infoDash$ = "─"
+#   infoFull$ = "█"
+#   infoEmpty$ = "░"
+#   infoOk$ = "✓"
+#   infoFail$ = "✗"
+#   infoWarn$ = "⚠"
+#   # ASCII set: "=", "-", "#", ".", "+", "x", "!"
+#
+#   procedure infoRule
+#       .line$ = ""
+#       for .i to infoWidth
+#           .line$ = .line$ + infoRule$
+#       endfor
+#       appendInfoLine: .line$
+#   endproc
+#
+#   procedure infoSection: .title$
+#       appendInfoLine: ""
+#       .line$ = "  " + infoDash$ + infoDash$ + " " + .title$ + " "
+#       while length (.line$) < infoWidth
+#           .line$ = .line$ + infoDash$
+#       endwhile
+#       appendInfoLine: .line$
+#   endproc
+#
+#   procedure infoLine: .label$, .value$
+#       .line$ = "  " + .label$
+#       while length (.line$) < 24
+#           .line$ = .line$ + " "
+#       endwhile
+#       appendInfoLine: .line$, .value$
+#   endproc
+#
+#   procedure infoBar: .done, .total, .width
+#       .filled = round (.width * .done / .total)
+#       .result$ = ""
+#       for .i to .width
+#           if .i <= .filled
+#               .result$ = .result$ + infoFull$
+#           else
+#               .result$ = .result$ + infoEmpty$
+#           endif
+#       endfor
+#   endproc
+#
+# Header:
+#   writeInfoLine: ""
+#   @infoRule
+#   appendInfoLine: "  ", scriptTitle$
+#   appendInfoLine: "  ", date$ ()
+#   @infoRule
+
+# ============================================================================
+# S9 AUTO-GENERATED OUTPUT FILENAMES
+# ============================================================================
+#
+# S9A: PRINCIPLE (hard)
+#
+# No script shall require the user to type an output filename. Every
+# output file must have a script-proposed name. The user may edit the
+# proposal but is never forced to create a name from scratch.
+#
+# S9B: NAMING CONVENTION
+#
+# Format: [scriptID]_[inputIdentifier]_[dateStamp].[ext]
+#
+# Components:
+#   - scriptID: Short identifier for the script (e.g., "A2", "VQ",
+#     "BatchFormants"). Defined in the script as a constant.
+#   - inputIdentifier: Derived from input. For batch scripts, the
+#     input folder name. For single-file scripts, the input file's
+#     basename (without extension).
+#   - dateStamp: YYYY-MM-DD format, extracted from date#().
+#   - ext: Appropriate extension (csv, txt, png, pdf).
+#
+# S9C: DATE STAMP EXTRACTION
+#
+# Use the @buildDateStamp procedure (S12C):
+#
+#   @buildDateStamp
+#   dateStamp$ = buildDateStamp.result$
+#   # Result: "2026-02-26"
+#
+# S9D: INPUT IDENTIFIER EXTRACTION
+#
+# Use the @proposeName procedure (S12E) which handles both folder-based
+# and file-based inputs. For manual extraction:
+#
+# For folder-based batch scripts, extract the folder name:
+#
+#   # Given: input_folder$ = "/Users/researcher/Study1/Session1"
+#   slashPos = rindex (input_folder$, "/")
+#   if slashPos > 0
+#       folderName$ = right$ (input_folder$, length (input_folder$) - slashPos)
+#   else
+#       folderName$ = input_folder$
+#   endif
+#   # folderName$ = "Session1"
+#
+# For single-file scripts, extract the basename:
+#
+#   # Given: sound_file$ = "/Users/researcher/audio/participant01.wav"
+#   slashPos = rindex (sound_file$, "/")
+#   if slashPos > 0
+#       fileName$ = right$ (sound_file$, length (sound_file$) - slashPos)
+#   else
+#       fileName$ = sound_file$
+#   endif
+#   dotPos = rindex (fileName$, ".")
+#   if dotPos > 1
+#       baseName$ = left$ (fileName$, dotPos - 1)
+#   else
+#       baseName$ = fileName$
+#   endif
+#   # baseName$ = "participant01"
+#
+# S9E: PROPOSED NAME IN DIALOG
+#
+# The proposed name appears as an editable default. When output
+# scaffolding (S4) is active, the directory is already determined by
+# the scaffold, so present only the filename for editing:
+#
+#   # Script builds the proposed name
+#   @proposeName: scriptID$, input_folder$, "csv"
+#   proposedName$ = proposeName.result$
+#
+#   # User can edit the filename; directory already chosen
+#   beginPause: "Output filename"
+#       comment: "Proposed output filename (edit if desired):"
+#       word: "Output filename", proposedName$
+#   clicked = endPause: "Quit", "OK", 2, 0
+#   if clicked = 1
+#       exitScript: "User quit."
+#   endif
+#
+#   # Combine with scaffold directory
+#   csvPath$ = dataDir$ + "/" + output_filename$
+#
+# When output scaffolding is NOT active (simple scripts), use outfile:
+# with the proposed name as default:
+#
+#   @proposeName: scriptID$, sound_file$, "csv"
+#   outfile: "Save results as", defaultDirectory$ + "/" + proposeName.result$
+#
+# SELF-AUDIT must confirm: "Auto-generated filenames: [implemented for
+# all output files / not applicable]."
+
+# ============================================================================
+# S10 ERROR RECOVERY FOR BATCH SCRIPTS
+# ============================================================================
+#
+# S10A: SKIP-ALREADY-PROCESSED PATTERN
+#
+# When a batch script is re-run on the same folder (after a crash,
+# parameter change, or addition of new files), it should detect which
+# files have already been processed and offer to skip them.
+#
+# Detection method: Check whether the output CSV already contains a
+# row for the current file. This requires reading existing output:
+#
+#   # If appending to existing CSV, load processed file list
+#   processedFiles$# = empty$# (0)
+#   if fileReadable (csvPath$) and appendMode
+#       existingLines$# = readLinesFromFile$# (csvPath$)
+#       # Extract filename column from each data row
+#       # (skip header row)
+#       for iLine from 2 to size (existingLines$#)
+#           line$ = existingLines$#[iLine]
+#           existingFile$ = extractWord$ (line$, "")
+#           # ... accumulate into a tracking structure ...
+#       endfor
+#   endif
+#
+# NOTE: Praat's string array manipulation is limited. For complex
+# skip-detection, a simpler approach is to check for the existence
+# of per-file output (e.g., individual figure files named by input
+# file). This avoids parsing CSVs.
+#
+# S10B: BATCH START INDEX
+#
+# A simpler alternative: offer the user a starting index:
+#
+#   beginPause: "Batch range"
+#       comment: "Found " + string$ (nFiles) + " files."
+#       natural: "Start from file", "1"
+#       natural: "End at file", string$ (nFiles)
+#   clicked = endPause: "Quit", "Run", 2, 0
+#   if clicked = 1
+#       exitScript: "User quit."
+#   endif
+#
+#   for iFile from start_from_file to end_at_file
+#       # ... processing ...
+#   endfor
+#
+# This is less automatic but more transparent and easier to implement
+# reliably. It also allows the user to process a subset for testing.
+#
+# SELF-AUDIT must confirm: "Error recovery: [skip-processed / batch
+# range / not applicable]."
+
+# ============================================================================
+# S11 INTEGRATION WITH MASTER PROMPT
+# ============================================================================
+#
+# S11A: RETRIEVAL PROTOCOL ENTRY
+#
+# Add to the Reference Retrieval Protocol table:
+#
+#   | APPENDIX_F_UX_STANDARDS.txt | Script has user input (form or
+#   |                             | beginPause), file output, or batch
+#   |                             | processing |
+#
+# S11B: COMMAND PLAN REQUIREMENT
+#
+# When UX features are triggered, the COMMAND PLAN must include a
+# section:
+#
+#   **UX FEATURES (Appendix F):**
+#   - Config persistence: [default-ON / opt-in / not applicable]
+#   - Output scaffolding: [default-ON / opt-in / not applicable]
+#   - Graceful interrupt:  [default-ON / opt-in / not applicable]
+#   - Dry-run mode:       [default-ON / opt-in / not applicable]
+#   - Progress reporting: [standard / enhanced / not applicable]
+#   - Post-completion:    [implemented / not applicable]
+#   - Auto filenames:     [implemented / not applicable]
+#   - Progressive disclosure: [tiered / single dialog / not applicable]
+#   - Loop repopulation:  [implemented / not applicable]
+#   - Error recovery:     [skip-processed / batch range / not applicable]
+#
+# S11C: SELF-AUDIT ADDITION
+#
+# Add to the SELF-AUDIT template:
+#
+#   V **UX standards (Appendix F):**
+#       - Dialog conventions (S0): all endPause use trailing 0; exit
+#         buttons read "Quit"; Standard button present where canonical
+#         parameters are editable
+#       - [list triggered features with compliance confirmation]
+#       - Auto-generated filenames for all output files
+#       - Config persistence: [status]
+#       - Loop repopulation: [status]
+#
+# S11D: CORRESPONDING MASTER PROMPT RULE
+#
+# The following new rule should be added to the Master Prompt:
+#
+#   ### Rule 33: UX standards (hard)
+#
+#   Load APPENDIX_F_UX_STANDARDS.txt when the script involves user
+#   input (form or beginPause), file output, or batch processing.
+#   Apply the triggering matrix (S1) to determine which features are
+#   default-ON vs. opt-in. The COMMAND PLAN must include a UX features
+#   section. The SELF-AUDIT must confirm compliance.
+#
+#   Key requirements:
+#   - Dialog conventions (S0): endPause trailing 0, "Quit" not
+#     "Cancel", "Standard" button for canonical parameters — universal
+#   - Auto-generated filenames for ALL output files (S9) — universal
+#   - beginPause preferred over form for any script that may loop (S2C)
+#   - No script shall require the user to type an output filename (S9A)
+#   - Config persistence for 6+ parameter scripts (S3)
+#   - STOP sentinel for batch scripts (S5)
+#   - Progress reporting for batch scripts (S7)
+#   - Post-completion summary for data-producing scripts (S8)
+
+# ============================================================================
+# S12 PROCEDURES LIBRARY
+# ============================================================================
+#
+# The following reusable procedures implement Appendix F patterns.
+# They are EML Graphs procedures in eml-graph-procedures.txt
+# (see EML_PROCEDURE_REGISTRY.md, Graphs: Core).
+#
+# S12A: @checkStopSentinel
+#
+#   procedure checkStopSentinel: .sentinelPath$
+#       .shouldStop = 0
+#       if fileReadable (.sentinelPath$)
+#           .content$ = readFile$ (.sentinelPath$)
+#           .firstLine$ = extractWord$ (.content$, "")
+#           if index_caseInsensitive (.firstLine$, "stop") > 0
+#               .shouldStop = 1
+#           endif
+#       endif
+#   endproc
+#
+# S12B: @initSentinel
+#
+#   procedure initSentinel: .sentinelPath$
+#       writeFileLine: .sentinelPath$, "RUN"
+#       appendFileLine: .sentinelPath$, "---"
+#       appendFileLine: .sentinelPath$, "To stop processing after the current file, change the"
+#       appendFileLine: .sentinelPath$, "first line of this file from RUN to STOP and save."
+#       appendFileLine: .sentinelPath$, "The script checks this file after each file completes."
+#   endproc
+#
+# S12C: @buildDateStamp
+#
+#   procedure buildDateStamp
+#       .vec# = date# ()
+#       .year$ = string$ (.vec#[1])
+#       .month$ = right$ ("0" + string$ (.vec#[2]), 2)
+#       .day$ = right$ ("0" + string$ (.vec#[3]), 2)
+#       .result$ = .year$ + "-" + .month$ + "-" + .day$
+#   endproc
+#
+# S12D: @buildOutputScaffold
+#
+#   procedure buildOutputScaffold: .rootDir$, .makeData, .makeFigures, .makeLog
+#       if .makeData
+#           .dataDir$ = .rootDir$ + "/data"
+#           createFolder (.dataDir$)
+#       else
+#           .dataDir$ = ""
+#       endif
+#       if .makeFigures
+#           .figDir$ = .rootDir$ + "/figures"
+#           createFolder (.figDir$)
+#       else
+#           .figDir$ = ""
+#       endif
+#       if .makeLog
+#           .logDir$ = .rootDir$ + "/log"
+#           createFolder (.logDir$)
+#       else
+#           .logDir$ = ""
+#       endif
+#   endproc
+#
+# S12E: @proposeName
+#
+#   procedure proposeName: .scriptID$, .inputPath$, .extension$
+#       # Extract input identifier (last path component, no extension)
+#       .slashPos = rindex (.inputPath$, "/")
+#       if .slashPos > 0
+#           .component$ = right$ (.inputPath$,
+#           ... length (.inputPath$) - .slashPos)
+#       else
+#           .component$ = .inputPath$
+#       endif
+#       .dotPos = rindex (.component$, ".")
+#       if .dotPos > 1
+#           .identifier$ = left$ (.component$, .dotPos - 1)
+#       else
+#           .identifier$ = .component$
+#       endif
+#       # Build date stamp
+#       @buildDateStamp
+#       # Assemble proposed name
+#       .result$ = .scriptID$ + "_" + .identifier$ + "_"
+#       ... + buildDateStamp.result$ + "." + .extension$
+#   endproc
+#
+# S12F: @nonCollidingPath
+#
+#   procedure nonCollidingPath: .dir$, .proposedName$
+#       .path$ = .dir$ + "/" + .proposedName$
+#       if fileReadable (.path$)
+#           # Extract base and extension
+#           .dotPos = rindex (.proposedName$, ".")
+#           if .dotPos > 1
+#               .base$ = left$ (.proposedName$, .dotPos - 1)
+#               .ext$ = right$ (.proposedName$,
+#               ... length (.proposedName$) - .dotPos + 1)
+#           else
+#               .base$ = .proposedName$
+#               .ext$ = ""
+#           endif
+#           .suffix = 2
+#           repeat
+#               .path$ = .dir$ + "/" + .base$ + "_"
+#               ... + string$ (.suffix) + .ext$
+#               .suffix = .suffix + 1
+#           until not fileReadable (.path$)
+#       endif
+#   endproc
+
+---
+
+# ============================================================================
+# S14 STEREO CHANNEL HANDLING
+# ============================================================================
+#
+# S14A: PRINCIPLE
+#
+# Scripts must never silently discard a channel. When a stereo (or
+# multi-channel) file is encountered, the user chooses how to handle
+# it: extract left, extract right, or mix to mono.
+#
+# This standard applies to ALL scripts that accept Sound input.
+# The PRE-FLIGHT channel query (Rule 29A) determines whether channel
+# handling code is included. If the user confirms mono-only input,
+# channel handling is omitted entirely.
+#
+# S14B: SINGLE-FILE PATTERN
+#
+# USE THE PROCEDURE. `@emlHandleStereo: soundId, fileName$` implements
+# everything below and returns `emlHandleStereo.resultId`. Emit that, not a
+# hand-rolled copy — a copy is a second implementation to keep in sync, and
+# Rule 34 names re-implementing an existing procedure as an anti-pattern.
+#
+# The expansion below is here so you can see what the procedure does and
+# recognise a correct one in inherited code. It is NOT the thing to paste.
+#
+# Present a dialog only when a stereo file is actually detected.
+# The dialog does not appear for mono files.
+#
+#   selectObject: soundId
+#   nChannels = Get number of channels
+#   if nChannels > 1
+#       beginPause: "Stereo file detected"
+#           comment: "File: " + fileName$
+#           comment: "This file has " + string$ (nChannels) + " channels."
+#           optionmenu: "Channel handling", 1
+#               option: "Left channel only"
+#               option: "Right channel only"
+#               option: "Mix to mono"
+#       clicked = endPause: "Quit", "Continue", 2, 0
+#       if clicked = 1
+#           removeObject: soundId
+#           exitScript: "User quit."
+#       endif
+#       if channel_handling$ = "Left channel only"
+#           newId = Extract one channel: 1
+#       elsif channel_handling$ = "Right channel only"
+#           newId = Extract one channel: 2
+#       elsif channel_handling$ = "Mix to mono"
+#           newId = Convert to mono
+#       else
+#           exitScript: "Unknown channel handling: " + channel_handling$
+#       endif
+#       removeObject: soundId
+#       soundId = newId
+#   endif
+#
+# S14C: BATCH PATTERN
+#
+# Channel handling is a parameter in the main settings dialog,
+# applied uniformly to all files. Mono files skip the logic.
+#
+# In the main beginPause:
+#
+#   optionmenu: "Channel handling", 1
+#       option: "Left channel only"
+#       option: "Right channel only"
+#       option: "Mix to mono"
+#
+# In the per-file loop:
+#
+#   selectObject: soundId
+#   nChannels = Get number of channels
+#   if nChannels > 1
+#       if channel_handling$ = "Left channel only"
+#           newId = Extract one channel: 1
+#       elsif channel_handling$ = "Right channel only"
+#           newId = Extract one channel: 2
+#       elsif channel_handling$ = "Mix to mono"
+#           newId = Convert to mono
+#       else
+#           exitScript: "Unknown channel handling: " + channel_handling$
+#       endif
+#       removeObject: soundId
+#       soundId = newId
+#       appendInfoLine: "  NOTE: ", fileName$, " — ",
+#           ... channel_handling$, " (", nChannels, " channels)"
+#   endif
+#
+# S14D: VARIABLE DERIVATION
+#
+# The optionmenu "Channel handling" derives:
+#   channel_handling   — numeric index (1 = left, 2 = right, 3 = mono mix)
+#   channel_handling$  — string ("Left channel only", etc.)
+# Left channel only is listed first and is the default. The action is chosen
+# from channel_handling$, never from the index, so the order of the options
+# can't pick the wrong channel. Any other text stops the script.
+#
+# S14E: INFO WINDOW REPORTING
+#
+# When channel handling is applied, report the action in the Info
+# window per file. For batch scripts, include the channel handling
+# setting in the header summary:
+#
+#   appendInfoLine: "Channel handling: ", channel_handling$
+#
+# S14F: EDGE CASES
+#
+# - Files with 3+ channels: Extract one channel: still works with
+#   channel index 1 or 2. Mix to mono via Convert to mono averages
+#   all channels. If channel-specific extraction beyond L/R is
+#   needed (e.g., channel 3 for EGG), the script must be customized.
+# - Mixed mono/stereo batches: The channel handling setting applies
+#   only to files where nChannels > 1. Mono files pass through
+#   unchanged.
+# - The reusable procedures @emlHandleStereo (interactive, single-file)
+#   and @emlApplyChannelChoice (non-interactive, batch) implement
+#   these patterns. See eml-graph-procedures.txt (registry: Graphs: Core).
+
+---
+
+*End of Appendix F. This appendix is authoritative for UX design
+standards (Rule 33).*
+
+# ============================================================================
+# BATCH COUNTERS: REMAINING WORK IS FILES WITHOUT OUTPUT (hard)
+# ============================================================================
+#
+# Do not increment one `nSkipped` at every skip site. Skips have unrelated
+# meanings and a single counter conflates them:
+#
+#   already annotated   - finished, nothing to do
+#   unreadable          - cannot be done
+#   wrong channel count - cannot be done as configured
+#   user chose Skip     - NOT finished; still outstanding
+#
+# A summary computing
+#
+#     nRemaining = nFiles - nSkipped - nSaved
+#
+# counts a file the user skipped without annotating as finished. Skip every
+# file in a folder and the report says nothing remains when everything does.
+# No work is lost — those files have no output and are re-offered next run —
+# but the report misleads at exactly the moment the user is deciding whether
+# they are done.
+#
+# Use one counter per reason, and define remaining work by the artifact:
+#
+#     nRemaining = nFiles - nAlreadyDone - nSaved
+#     # i.e. files with no output on disk, not files not touched this session
+#
+# Report the reasons separately:
+#
+#     appendInfoLine: "Saved this session: ", nSaved
+#     appendInfoLine: "Already annotated:  ", nAlreadyDone
+#     appendInfoLine: "Skipped by you:     ", nUserSkipped, " (still to do)"
+#     appendInfoLine: "Unreadable:         ", nUnreadable
+#     appendInfoLine: "Remaining:          ", nRemaining
+
+# ============================================================================
+# S15 PRAAT VERSION CHECK
+# ============================================================================
+##
+# S15A: WHEN — every script, always (hard)
+#
+# EVERY generated script emits the check. There is no case where it is omitted.
+#
+# The floor is Praat 6.4.39 (PRAAT_VERSION_FLOOR.txt). The script carries a
+# LIST of the specific things it uses that need something newer than the floor,
+# each with its own minimum and its own consequence. Not one number — a list,
+# because "this script needs 6.4.62" tells the user nothing about what will
+# happen or why.
+#
+# If the script uses nothing above the floor, the list holds one entry: the
+# floor itself. The check still ships. A user below 6.4.39 must be told.
+#
+# S15B: PLACEMENT
+#
+# Before the first object creation and before the first file write, so a user
+# who quits is left with exactly what they started with.
+#
+# S15C: WHAT IT REPORTS
+#
+# Only the entries the running Praat is actually below. A user on 6.6.30 sees
+# nothing, because nothing in their copy of the list applies to them.
+#
+# Each entry states which of TWO THINGS happens, and they are worded
+# differently because they are different problems:
+#
+#   STOPS   the command, function or option value does not exist. Praat raises
+#           an error at that line and the script halts. Say so plainly: the
+#           script will stop, and where.
+#
+#   DIFFERS the call runs and returns a different number. Say what the measure
+#           is and, where PRAAT_VERSION_FLOOR.txt gives one, how far apart the
+#           versions are. This is the dangerous kind and must not be worded
+#           like a warning about a missing feature.
+#
+# NO GENERIC MESSAGE. Never emit "your Praat is old" or "some features may not
+# work". If nothing in this script is affected, say nothing. Every line the
+# user reads must name something in the script in front of them.
+#
+# S15D: CONDITION ON THE ARGUMENTS, NOT JUST THE COMMAND (hard)
+#
+# Some entries depend on how the command is called. `Get CPPS` is the worked
+# case: at the 6.4.24 revision, straight tilt lines moved by -0.01 to +0.41 dB
+# while exponential-decay fits moved by more than 3 dB.
+#
+# So an entry is keyed to the call the script actually emits. A script using a
+# straight tilt line and one using exponential decay do not get the same
+# warning, and a script whose settings are unaffected gets no entry at all.
+#
+# S15E: SUPPRESSION IS STAMPED, NOT PERMANENT (hard)
+#
+#   config key            silences        only while
+#   --------------------  --------------  --------------------------------
+#   suppressed_for_min    the whole check  >= the highest minimum in the list
+#   suppressed_at_praat   (diagnostic only)
+#
+# One key, because there is now only one kind of notice. It records the
+# requirement level dismissed, so a dismissal covers that level and nothing
+# above it:
+#
+#   Dismissed on 6.4.30 for a script needing 6.4.46 -> stores 6446.
+#   They upgrade to 6.6.30; nothing fires, they are past it.
+#   A year later a script needs 7100 and they are still on 6.6.30:
+#     6446 >= 7100 ?  NO  ->  it fires again.
+#
+# Never write a bare permanent flag.
+#
+# S15F: PATTERN
+#
+# Top level, not inside a procedure: no leading-dot names, everything
+# `vc_`-prefixed so it cannot collide with the script it guards.
+#
+#   vc_n = 2
+#   vc_needs# = {6439, 6462}
+#   vc_what$# = {"Get CPPS (exponential-decay tilt line)",
+#       ... "Sound: To TextGrid (speech activity, Silero)"}
+#   vc_kind$# = {"DIFFERS", "STOPS"}
+#   vc_note$# = {"your build reports this measure about 1.8 dB from current",
+#       ... "this command does not exist in your version; the script stops here"}
+#   vc_url$ = "https://www.fon.hum.uva.nl/praat/"
+#   vc_prefPath$ = preferencesDirectory$ + "/eml_version_check.txt"
+#
+#   # highest requirement in the list, for the suppression stamp
+#   vc_max = 0
+#   for vc_i to vc_n
+#       if vc_needs# [vc_i] > vc_max
+#           vc_max = vc_needs# [vc_i]
+#       endif
+#   endfor
+#
+#   vc_forMin = 0
+#   if fileReadable (vc_prefPath$)
+#       vc_prefTxt$ = readFile$ (vc_prefPath$)
+#       vc_k = index (vc_prefTxt$, "suppressed_for_min" + tab$)
+#       if vc_k > 0
+#           vc_rest$ = mid$ (vc_prefTxt$, vc_k + 19, 20) + newline$
+#           vc_forMin = number (left$ (vc_rest$,
+#               ... index (vc_rest$, newline$) - 1))
+#           if vc_forMin = undefined
+#               vc_forMin = 0
+#           endif
+#       endif
+#   endif
+#
+#   # how many entries actually apply to THIS user?
+#   vc_hits = 0
+#   for vc_i to vc_n
+#       if praatVersion < vc_needs# [vc_i]
+#           vc_hits = vc_hits + 1
+#       endif
+#   endfor
+#
+#   if vc_hits > 0 and vc_forMin < vc_max
+#       writeInfoLine: "This script uses ", vc_hits,
+#           ... " thing(s) your Praat does not have as this script expects."
+#       appendInfoLine: "You are running ", praatVersion$, "."
+#       appendInfoLine: ""
+#       for vc_i to vc_n
+#           if praatVersion < vc_needs# [vc_i]
+#               appendInfoLine: "  ", vc_what$# [vc_i]
+#               appendInfoLine: "      needs ", vc_needs# [vc_i],
+#                   ... " -- ", vc_note$# [vc_i]
+#               appendInfoLine: ""
+#           endif
+#       endfor
+#       appendInfoLine: "Update here:  ", vc_url$
+#
+#       beginPause: "Praat version"
+#           comment: "This script uses " + string$ (vc_hits) +
+#               ... " thing(s) your Praat handles differently."
+#           comment: "You are running " + praatVersion$ + "."
+#           comment: ""
+#           for vc_i to vc_n
+#               if praatVersion < vc_needs# [vc_i]
+#                   comment: "- " + vc_what$# [vc_i] +
+#                       ... "  (needs " + string$ (vc_needs# [vc_i]) + ")"
+#                   comment: "    " + vc_note$# [vc_i]
+#               endif
+#           endfor
+#           comment: ""
+#           comment: "Update at:  " + vc_url$
+#           comment: "(the full list is in the Info window, ready to copy)"
+#           boolean: "Check again next time", 1
+#       vc_clicked = endPause: "Quit", "Run anyway", 2, 0
+#
+#       if check_again_next_time = 0
+#           writeFileLine: vc_prefPath$, "# EML PraatGen version check"
+#           appendFileLine: vc_prefPath$, "suppressed_for_min", tab$,
+#               ... string$ (vc_max)
+#           appendFileLine: vc_prefPath$, "suppressed_at_praat", tab$,
+#               ... string$ (praatVersion)
+#       endif
+#       if vc_clicked = 1
+#           exitScript: "Stopped. Update at ", vc_url$
+#       endif
+#   endif
+#
+# S15G: NOTES
+#
+#   - `praatVersion` is an integer: major*1000 + minor*100 + patch. 6.4.39 is
+#     6439. `praatVersion$` is the display string.
+#   - A missing or corrupt preference file parses to 0 and therefore WARNS. It
+#     fails loud.
+#   - `vc_note$#` says what happens in the user's terms. For STOPS entries name
+#     the failure ("the script stops here"). For DIFFERS entries give the size
+#     of the disagreement where PRAAT_VERSION_FLOOR.txt provides one.
+#   - Writing the preference file is the ONE file write permitted before the
+#     gate, and only when the user asked for it.
+#   - Every `comment:` here is short by construction. See S0-WRAP: an over-long
+#     comment wraps but is allocated one line of height, so it overdraws the
+#     entries below it. The entry list is the part most at risk, since its text
+#     is assembled from variables.
+#   - The list is fixed when the script is generated. A Praat change announced
+#     later will not be in a script written earlier; regeneration is the route
+#     to currency.
+#   - Prefer `"Robust"` over `"Robust slow"` in `Get CPPS`. The latter is
+#     rejected on 6.4.39 and 6.4.46 while working either side of them; see
+#     PRAAT_VERSION_FLOOR.txt §3.
+#
+# Verified Praat 6.6.30, 3 August 2026: decision logic across 11 simulated
+# builds x 4 requirement levels, plus 17 suppression cases. The underlying
+# version facts were measured on seven real builds — 6.4.14, 6.4.20, 6.4.24,
+# 6.4.30, 6.4.39, 6.4.46, 6.6.30.
+#
+# SELF-AUDIT must confirm: "Version check: emitted, <n> entries, highest
+# minimum <version>." List each entry and its kind.

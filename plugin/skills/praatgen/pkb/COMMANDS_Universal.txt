@@ -1,0 +1,283 @@
+# PRAAT COMMANDS: Universal + Save
+# Source: Praat C API (praatlib.h), June 2025
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: None — these apply to any selected object
+
+---
+
+## Selection Management
+# Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
+#   46 documented commands probed against a live Praat install by invoking each
+#   with excess arguments; Praat's "requires only N arguments" error reports the
+#   true arity, compared against what this file documents.
+#   Result: 8 exact arity match, 16 present and accepting the documented
+#   argument count, 22 requiring a co-selection or class-specific selection
+#   this harness could not supply (spot-checked, not exhaustively resolved).
+#   SCOPE — this establishes that each command EXISTS on this object type and
+#   that its documented PARAMETER COUNT is right. It does NOT verify parameter
+#   ORDER, parameter TYPES, default values, or semantic correctness. Those
+#   remain as previously sourced.
+
+  selectObject: id
+  selectObject: id1, id2, ...
+  # Selects one or more objects by numeric ID. Clears previous selection.
+  # Multi-argument form: selectObject: id1, id2, id3
+  # Also accepts string form: selectObject: "Sound mySound"
+  plusObject: id
+  # Adds an object to the current selection.
+  # Also accepts string form: plusObject: "Sound mySound"
+  minusObject: id
+  # Removes an object from the current selection.
+  # Also accepts string form: minusObject: "Sound mySound"
+  removeObject: id
+  removeObject: id1, id2, ...
+  # Permanently removes object(s) from the object list.
+  # Multi-argument form: removeObject: id1, id2, id3
+  select all
+  # Selects all objects in the object list. No colon, no arguments.
+
+  # Selection query functions (use in expressions, not as commands):
+  #   numberOfSelected ()            — total selected objects
+  #   numberOfSelected ("Sound")     — selected objects of a type
+  #   selected ("Sound")             — ID of the first selected Sound
+  #   selected ("Sound", n)          — ID of the nth selected Sound
+  #   selected$ ("Sound")            — name of the first selected Sound
+  #   selected$ ("Sound", n)         — name of the nth selected Sound
+  #   selected# ("Sound")            — vector of all selected Sound IDs
+
+  # INTERPRETER BEHAVIOR: Selection is a set, not a multiset.
+  # Adding an already-selected object via plusObject: is a no-op.
+  # Selection always contains each object exactly once.
+
+  # Capturing a command that creates several objects
+  # (sandbox-verified, Praat 6.6.30, 12 Oct 2026)
+  # A command whose Returns line names several objects leaves all of them
+  # selected. x = Command then stops with "Multiple objects selected. Cannot
+  # assign object IDs to numeric variable". Capture the IDs with selected#,
+  # and read every name or selection-dependent value before the first
+  # selectObject:, because selectObject: clears the rest of the selection.
+  #   Eigen (complex)
+  #   ids# = selected# ()
+  #   vectors = ids# [1]
+  #   values = ids# [2]
+  #   vectorsName$ = selected$ (1)
+  #   valuesName$ = selected$ (2)
+  #   selectObject: values
+  # The order in ids# is creation order; the Returns line gives it. For a
+  # count that depends on the data (Extract all intervals, Read separate
+  # channels from sound file), loop over size (ids#).
+  # selectObject: a, b, b produces the selection {a, b}, not {a, b, b}.
+  # Combine to stereo, Combine to mono, and other multi-selection
+  # commands see each selected object once.
+  # Provenance: Empirical test + Praat source, 12 Mar 2026
+
+---
+
+## Universal (any selected object)
+
+  Rename: new name$
+  Copy: new name$
+  # Returns: one object of the selected type
+  Info
+  Remove
+  Read from file: file path$
+  # Returns: the object or objects stored in the file; the file sets the type
+  # Time-domain queries (Sound, TextGrid, Pitch, etc.)
+  Get start time
+  Get end time
+  Get total duration
+  Shift times by: shift
+  Shift times to: shift$, time
+  # Verified: Shift times to: "start time", 5
+  # The shift option is "start time", "centre time" or "end time".
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  Scale times by: factor
+  Scale times to: new start time, new end time
+  # TimeTier queries (PitchTier, IntensityTier, DurationTier, AmplitudeTier)
+  Get number of points
+  Get low index from time: time
+  Get high index from time: time
+  Get nearest index from time: time
+  Get time from index: point number
+  Remove point: point number
+  Remove point near: time
+  Remove points between: from time, to time
+  Add point: time, value
+  # Frame-sampled queries (Pitch, Formant, Intensity, Spectrogram)
+  Get number of frames
+  Get time step
+  Get time from frame number: frame number
+  Get frame number from time: time
+  List all frame times
+
+  # Sampled extrema queries (Matrix, Sound, Ltas, and other Sampled types)
+  # These are inherited from the Vector/Sampled hierarchy.
+  # No-argument forms return the global extremum across the entire object.
+  Get minimum
+  # Verified: Get minimum
+  #   Verified on a Matrix created from Ltas and from PowerCepstrum.
+  Get maximum
+  # Verified: Get maximum
+  #   Verified on a Matrix created from Ltas and from PowerCepstrum.
+  # Provenance: A2 batch analyzer v2.3+ development, 25 Feb 2026
+  #
+# NOTE: These no-argument forms differ from the parameterized forms
+  # in COMMANDS_Sound.txt (Get minimum: from time, to time, interpolation$).
+  # The parameterized forms allow time-range and interpolation control;
+  # the no-argument forms return the raw global extremum.
+  # Both forms work on Sound objects. Matrix objects support only the
+  # no-argument forms.
+  #
+  # AVOID UNNECESSARY MATRIX CONVERSION:
+  # Many object types (Sound, Pitch, Intensity, Ltas, Spectrum) support
+  # their own Get minimum / Get maximum queries — either parameterized
+  # or no-argument. Converting to Matrix just to call Get minimum /
+  # Get maximum is unnecessary overhead when the source object already
+  # supports the query. Check the relevant COMMANDS_*.txt file first.
+  # Reserve Matrix conversion for object types that genuinely lack
+  # min/max queries (e.g., PowerCepstrum before Get peak: was available).
+
+  # Studentized range distribution (no selection needed)
+  Get TukeyQ: critical value, number of means, degrees of freedom, number of rows
+  # Verified: Get TukeyQ: 3.5, 3, 20, 1
+  # Returns the upper-tail probability P(Q > critical value).
+  Get invTukeyQ: probability, number of means, degrees of freedom, number of rows
+  # Verified: Get invTukeyQ: 0.05, 3, 20, 1
+  # Returns the critical value for an upper-tail probability (3.578 here).
+  # Number of rows: 1 for ordinary Tukey tests; above 1, the maximum over that many ranges.
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026: count from Praat's "requires only 4 arguments" error; names match the dialog fields in Praat's source; every argument's meaning matches SciPy 1.17 studentized_range to 8 digits.
+
+  # Text encoding of written files (no selection needed)
+  Text writing preferences: output encoding$
+  # Verified: Text writing preferences: "UTF-8"
+  # "UTF-8" makes writeFileLine:, appendFileLine:, Save as comma-separated
+  # file and Save as tab-separated file write UTF-8 with no BOM. "UTF-16" and
+  # "try ASCII, then UTF-16" write UTF-16 with a BOM. Praat keeps the setting
+  # between runs. Rule 27, File text encoding; APPENDIX_E Section 8.
+  # Provenance: Sandbox-verified 6.6.30, 27 Nov 2026: count from Praat's "requires only 1 arguments" error; the three values were accepted and the written files' bytes read; any other value stops with "Option argument "Output encoding" cannot have the value ...".
+
+---
+
+## Syntax Notes and Errata
+
+  # ERRATA: Praat for-loop syntax constraint
+  # Praat's for loop supports ONLY: for var from start to end
+  # There is NO "by" / "step" clause. Increment is always 1.
+  # To step by N, use a multiplier inside a standard for loop:
+  #   for x to 10
+  #       value = x * step
+  #       ... use value ...
+  #   endfor
+  # Example — iterate 3, 6, 9, ... 30:
+  #   for x to 10
+  #       appendInfoLine: x * 3
+  #   endfor
+  # Provenance: Script error confirmed 22 Feb 2026
+
+  # ERRATA: Query commands cannot be used inline in expressions
+  # Praat query commands (Get start time, Get end time, Get maximum, etc.)
+  # are COMMANDS, not functions. They return values only when used as
+  # standalone assignment statements:
+  #
+  #   WRONG:  .mid = (Get start time + Get end time) / 2
+  #   RIGHT:  .s = Get start time
+  #           .e = Get end time
+  #           .mid = (.s + .e) / 2
+  #
+  # The error message is: "Unknown symbol «Get» in formula"
+  # This applies to ALL query commands across all object types.
+  # Provenance: DFT Demo v3.1, confirmed 28 Feb 2026
+
+  # ERRATA: Indexed variables do not resolve inside Formula context
+  # Inside Extract rows where: ~self$["col"] = array$[i], the
+  # array$[i] is NOT resolved — it fails silently. Assign to a
+  # plain variable first:
+  #   temp$ = array$[i]
+  #   Extract rows where: ~self$["col"] = temp$
+  # Provenance: Ping pooling script, 10 Mar 2026
+
+  # ERRATA: nocheck can corrupt interpreter variable state
+  # After nocheck on a failing command, subsequent commands may fail
+  # silently even if they should succeed. Variables may remain undefined.
+  # variableExists() checks don't reliably distinguish "command failed"
+  # from "variable never declared" in this state.
+  # Implication: Never use nocheck for diagnostic branching. Use separate
+  # scripts or file-output diagnostics instead.
+  # Provenance: FormantPath diagnostic series, 21 Mar 2026.
+  # Confirmed: diagnostic v2 (all nocheck) showed all queries failing;
+  # diagnostic v5 (no nocheck, one command) showed same queries passing.
+
+  # PROCEDURE SEMANTICS (verified Praat 6.4.67, 3 Jun 2026)
+  #
+  # Parameter types: a procedure parameter accepts numeric, string ($),
+  # numeric vector (#), string vector ($#), and matrix (##) types. Each may
+  # be passed as a literal OR as a variable already holding that data:
+  #   procedure demo: .count, .name$, .samples#, .labels$#, .grid##
+  #   @demo: 3, "trial1", {1.2,3.4}, {"a","b"}, {{1,2},{3,4}}
+  # Matrix and string-vector parameters work — parameters are not limited
+  # to numeric/string.
+  #
+  # Positional binding: call values bind to parameters by position, in
+  # order. Praat has NO named arguments; the Nth value fills the Nth
+  # parameter. A value in the wrong position fills the wrong parameter.
+  #
+  # Call before definition: a procedure definition resolves regardless of
+  # its position in the file, so a call written above the definition still
+  # runs. Procedures may be placed anywhere; group at top or bottom rather
+  # than inline at the call site.
+  #
+  # Undotted variables are global inside procedures (read AND write): a
+  # procedure — even one with no parameters — can read an undotted
+  # main-script variable directly AND overwrite it; the change persists
+  # after the procedure returns. Hazard: a procedure can silently mutate a
+  # main-script variable. Prefer passing data in via dotted, procedure-local
+  # parameters. Dotted (.var) variables remain procedure-local.
+  #
+  # Outputs via qualified name: read a procedure's local result from the
+  # caller as procName.var (no leading dot). Outputs persist until the same
+  # procedure is next called, then overwrite — copy out immediately if the
+  # procedure will be called again.
+  #
+  # include is a preprocessor directive: `include path.praat` — no colon,
+  # unquoted path, the path cannot be a variable; resolves relative to the
+  # script's location and pulls the file's procedure definitions into scope.
+  # Provenance: EML Sublime session, sandbox Praat 6.4.67, 3 Jun 2026
+
+---
+
+## Save (common formats)
+# A script passes the file path. Praat 6.6.30 sandbox, 22 Oct 2026: each
+#   entry with ": file path$" wrote a file with one path argument.
+
+  Save as text file: file path$
+  Save as short text file: file path$
+  Save as binary file: file path$
+  Save as WAV file: file path$
+  Save as AIFF file: file path$
+  Save as FLAC file: file path$
+  Save as 24-bit WAV file: file path$
+  Save as 32-bit WAV file: file path$
+  Save as stereo WAV file
+  # Path argument not verified.
+  Save as highest quality MP3 file: file path$
+  Save as headerless spreadsheet file: file path$
+  Save as Xwaves label file
+  # Path argument not verified.
+  Save as text file without Sound
+  # Path argument not verified.
+  Save as binary file without Sound
+  # Path argument not verified.
+
+---
+
+*End of Universal + Save commands.*

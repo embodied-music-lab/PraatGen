@@ -1,0 +1,76 @@
+# ============================================================================
+# EML EGG TOOLS — ELECTROGLOTTOGRAM PROCEDURES LIBRARY
+# ============================================================================
+# Author: Ian Howell, Embodied Music Lab
+#         www.embodiedmusiclab.com
+# Development: Claude (Anthropic)
+# License: GPL-3.0-or-later
+# Version: 1.1
+# Date: 29 July 2026
+# Sandbox-verified: Praat 6.6.30 (Linux x64v3), 29 July 2026
+#
+# Electroglottogram support: the mandatory cycle guard that blocks the
+# To TextGrid (closed glottis) / To AmplitudeTier (levels) segfault.
+#
+# WITHDRAWN AT 1.1: @emlEggSpectralThreshold (spectral-threshold de-noiser).
+# Untested on real material — validated only against synthetic additive white
+# Gaussian noise, which is not what EGG noise looks like. Not distributed. Do
+# not reconstruct it from documentation or from memory; there is no de-noising
+# path in this release. See BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md §4.
+#
+# This file lives at: egg/eml-egg-procedures.praat
+# Include from wrapper scripts via: include ../egg/eml-egg-procedures.praat
+#
+# Dependencies: none (uses only core Praat commands)
+#
+# Method, thresholds, and provenance: see
+#   BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md
+# Command syntax, arity, and failure modes: see
+#   COMMANDS_Electroglottogram.txt
+#
+# Procedure index:
+#   @emlEggCycleGuard — segfault guard; sets .safe (1 = analyzable)
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# @emlEggCycleGuard: .eggId, .floor, .ceiling
+#
+# MANDATORY before To TextGrid (closed glottis) or To AmplitudeTier (levels).
+# Those two commands segfault Praat — no catchable error — when no cycle falls
+# in [.floor, .ceiling] (silent channel, noise-only channel, or floor >=
+# ceiling). Sets .safe = 1 when at least one voiced cycle is present and the
+# mean F0 is defined and >= .floor; .safe = 0 otherwise.
+#
+# The nested ifs are required. Praat's "and"/"or" do not short-circuit, so a
+# single compound condition would evaluate .f0 < .floor even when .f0 is
+# undefined.
+# ----------------------------------------------------------------------------
+procedure emlEggCycleGuard: .eggId, .floor, .ceiling
+    selectObject: .eggId
+    .snd = To Sound
+    selectObject: .snd
+    .p = noprogress To Pitch (raw cross-correlation): 0.0, .floor,
+        ... .ceiling, 15, "no", 0.03, 0.45, 0.01, 0.35, 0.14
+    selectObject: .p
+    .voiced = Count voiced frames
+    .f0 = Get mean: 0, 0, "Hertz"
+    removeObject: .p, .snd
+    .safe = 1
+    if .voiced = 0
+        .safe = 0
+    endif
+    if .safe = 1
+        if .f0 = undefined
+            .safe = 0
+        endif
+    endif
+    if .safe = 1
+        if .f0 < .floor
+            .safe = 0
+        endif
+    endif
+endproc
+
+# ============================================================================
+# END OF EGG PROCEDURES
+# ============================================================================

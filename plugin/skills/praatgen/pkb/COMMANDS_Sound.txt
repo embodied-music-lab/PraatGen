@@ -1,0 +1,414 @@
+# PRAAT COMMANDS: Sound
+# Source: Praat C API (praatlib.h), June 2025
+# Additional commands: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# Cross-type dependencies: Filter and Filter (no scale) also listed here
+# but require Sound + FormantGrid selected. See also COMMANDS_FormantGrid.txt.
+# Sandbox-verified: Praat 6.6.30 (Linux x64v3), 29 July 2026 — `Multiply` arity corrected (0 -> 1)
+# Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
+#   120 documented commands probed against a live Praat install by invoking each
+#   with excess arguments; Praat's "requires only N arguments" error reports the
+#   true arity, compared against what this file documents.
+#   Result: 26 exact arity match, 85 present and accepting the documented
+#   argument count, 9 requiring a co-selection or class-specific selection
+#   this harness could not supply (spot-checked, not exhaustively resolved).
+#   SCOPE — this establishes that each command EXISTS on this object type and
+#   that its documented PARAMETER COUNT is right. It does NOT verify parameter
+#   ORDER, parameter TYPES, default values, or semantic correctness. Those
+#   remain as previously sourced.
+
+---
+
+  # Create / Read
+  Create Sound as pure tone: name$, number of channels, start time, end time, sampling frequency, tone frequency, amplitude, fade in duration, fade out duration
+  # Returns: Sound
+  Create Sound from formula: name$, number of channels, start time, end time, sampling frequency, formula$
+  # Returns: Sound
+  Create Sound as tone complex: name$, start time, end time, sampling frequency, phase$, frequency step, first frequency, ceiling, number of components
+  # Returns: Sound
+  Create Sound as gammatone: name$, start time, end time, sampling frequency, gamma, frequency, bandwidth, initial phase, addition factor, scale amplitudes?
+  # Returns: Sound
+  Create Sound as Shepard tone: name$, start time, end time, sampling frequency, minimum frequency, number of components, frequency change, amplitude range d b, octave shift fraction
+  # Returns: Sound
+  Read separate channels from sound file
+  # Returns: one Sound per channel, named <file>_ch1, <file>_ch2 ...; all selected afterward; capture them with selected# (COMMANDS_Universal.txt), not x = ...
+
+  # Query (API)
+  List all sample times
+
+  # Query (session-verified)
+  Get time of maximum: from time, to time, interpolation$
+  # Verified: Get time of maximum: 0, 0, "Sinc70"
+  Get time of minimum: from time, to time, interpolation$
+  # Verified: Get time of minimum: 0, 0, "Sinc70"
+  Get maximum: from time, to time, interpolation$
+  # Verified: Get maximum: 0, 0, "Sinc70"
+  Get minimum: from time, to time, interpolation$
+  # Verified: Get minimum: 0, 0, "Sinc70"
+  Get value at time: channel, time, interpolation$
+  # Verified: Get value at time: 0, 0.5, "sinc70"
+  # Note: channel 0 = average across channels
+  # ⚠️ ARGUMENT ORDER IS (channel, sample) — SWAPPING IT FAILS SILENTLY (hard)
+  #   An out-of-range channel does NOT error. Praat clamps to channel 1 and
+  #   returns the requested sample, so a swapped call is syntactically fine
+  #   and numerically wrong. Verified 6.6.30 on a 1-channel Sound:
+  #
+  #     for i from 1 to 5
+  #         v = Get value at sample number: 1, i    # CORRECT
+  #     -> .0000125  .0000352  .0000578  .0000805  .0001032
+  #
+  #     for i from 1 to 5
+  #         v = Get value at sample number: i, 1    # SWAPPED
+  #     -> .0000125  .0000125  .0000125  .0000125  .0000125
+  #
+  #   The loop index lands in the channel slot, gets clamped, and every read
+  #   returns sample 1 forever — plausible magnitudes, constant value, no
+  #   error. Any per-sample loop should be checked for this before it is
+  #   trusted; and per the vectorization rule, prefer Formula: or a vector
+  #   read over the loop entirely.
+  Get value at sample number: channel, sample number
+  # Verified: Get value at sample number: 0, 100
+  # Note: channel 0 = average across channels
+  # Query (session-verified — additional)
+  Get power in air
+  # Verified: Get power in air
+  Get sampling frequency
+  # Verified: Get sampling frequency
+  Get sampling period
+  # Verified: Get sampling period
+  Get nearest zero crossing: channel, time
+  # Verified: Get nearest zero crossing: 1, 0.5
+  Get number of channels
+  # Verified: Get number of channels
+  # Provenance: Phonanium AVQI v02.06 script; Paste Commands 24 Feb 2026
+  Get number of samples
+  Get sample number from time: time
+  # Verified: Get sample number from time: 0.25
+  # At 1000 Hz it returns 250.5: the number is fractional.
+  Get time from sample number: sample number
+  # Verified: Get time from sample number: 250
+  # At 1000 Hz it returns 0.2495, the sample's center.
+  Get mean: channel, from time, to time
+  # Verified: Get mean: 1, 0, 0
+  # Channel 0 averages all channels; a channel above the count falls back to
+  #   channel 1. The two-argument form fails. The mean is time-weighted, with
+  #   partial samples at the edges: 255.8 over 0.2503-0.2603 s on a 1000 Hz
+  #   ramp whose samples there average 255.5.
+  # Provenance: Praat 6.6.30 sandbox, 22 Oct 2026 (these four entries).
+
+  # Modify
+  Formula: formula$
+  Formula (part): from time, to time, from channel, to channel, formula$
+  Add: number
+  Set value at sample number: channel, sample number, new value
+  Set part to zero: from time, to time, cut$
+
+  # Convert / Analyze
+  # To Sound: longest period
+  #   Not a command on any object type: Praat 6.6.30 and 6.4.39 have no To Sound
+  #   with a longest period argument. Plain To Sound takes no arguments on
+  #   Electroglottogram, Matrix and Spectrum. SpeechSynthesizer's To Sound is in
+  #   COMMANDS_SpeechSynthesizer.txt. KlattTable's takes 7 arguments:
+  #   To Sound: 16000, "Cascade", 5, 0.005, 0, "Impulsive", "Sound"
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  To Sound (derivative): low-pass frequency, smoothing, new absolute peak
+  # Returns: Sound
+  # CORRECTED 30 Jul 2026 (sandbox, 6.6.30). The file previously read
+  #   "smoothing, low pass, high pass" — wrong on all three names and on the
+  #   order. Praat's own field names, read back by type probe:
+  #     arg 1 "Low-pass frequency"   arg 2 "Smoothing"   arg 3 "New absolute peak"
+  #   Arity is exactly 3. Anyone following the old names would have swapped
+  #   the low-pass and smoothing values.
+  # DOMAIN NOTE — the smoothing argument is a transition-band width, and the
+  #   canonical audio value of 100 Hz is badly wrong at respiratory rates.
+  #   Measured on a 0.25 Hz sine with an analytically known derivative peak:
+  #
+  #     low-pass  smoothing   measured / true
+  #        5 Hz      1 Hz        1.000
+  #        3 Hz    0.5 Hz        1.000
+  #        2 Hz    0.5 Hz        1.000
+  #        5 Hz    100 Hz        0.537   <- 46% magnitude error
+  #
+  #   Match the smoothing width to the signal's band, not to habit.
+  #   The THIRD argument rescales: any non-zero value destroys unit
+  #   calibration (verified: third arg 0.99 -> peak 0.990031). Pass 0 unless
+  #   you intend to normalise.
+  # Verified: To Sound (derivative): 5000, 100, 0
+  To PointProcess (cc)
+  # Returns: PointProcess
+  To PointProcess (peaks): include maxima?, include minima?
+  # Returns: PointProcess
+  To Manipulation
+  # Returns: Manipulation
+  To Sound ensemble: from time, to time
+  # Returns: Sound
+  To TextGrid: all tier names$, which of these are point tiers$
+  # Returns: TextGrid
+  To TextGrid (speech activity): time step, longterm window, shortterm window, fmin, fmax, flatness threshold, nonspeech threshold d b, minimum nonspeech duration, minimum speech duration, nonspeech label$, speech label$
+  # Returns: TextGrid
+  To TextGrid (silences): pitch floor, time step, silence threshold, minimum silence duration, minimum sounding duration, silence label$, sounding label$
+  # Returns: TextGrid
+# Verified: To TextGrid (silences): 100, 0.003, -25, 0.3, 0.5, "silence", "sounding"
+  #
+  # CRITICAL NOTE on pitch floor parameter:
+  # Pitch floor controls the internal intensity smoothing window:
+  #   window = 6.4 / pitch_floor seconds
+  #
+  #   pitch_floor = 50 Hz  → 128 ms window (may fill short gaps)
+  #   pitch_floor = 75 Hz  →  85 ms window
+  #   pitch_floor = 100 Hz →  64 ms window (Praat dialog default)
+  #
+  # If silence detection fails to split events with a visible gap,
+  # check the pitch floor FIRST — increasing it shortens the smoothing
+  # window and may resolve the issue without changing threshold or
+  # duration parameters.
+  #
+  # Provenance: Empirical root-cause analysis, A2 v2.6→v2.7, 24 Feb 2026.
+
+
+  To Pitch (filtered autocorrelation): time step, pitch floor, pitch top, maximum number of candidates, very accurate?, attenuation at top, silence threshold, voicing threshold, octave cost, octave jump cost, voiced unvoiced cost
+  # Returns: Pitch
+
+# NOTE: "pitch top" controls an internal low-pass filter that attenuates
+  # energy from pitch_top/2 upward BEFORE autocorrelation. For reliable
+  # tracking, pitch top must be >= 2× the highest F0 you need to track.
+  # Canonical: 50/800 (APPENDIX_D §1A). Raise pitch top above 800 only
+  # when the singer's highest expected F0 exceeds 400 Hz (= 800/2),
+  # e.g., soprano to C6 → pitch top >= 2100 Hz. Do not narrow below
+  # canonical without signal-loss justification (APPENDIX_D §0).
+
+  To Pitch (raw cross-correlation): time step, pitch floor, pitch ceiling, maximum number of candidates, very accurate?, silence threshold, voicing threshold, octave cost, octave jump cost, voiced unvoiced cost
+  # Returns: Pitch
+  To Pitch (raw autocorrelation): time step, pitch floor, pitch ceiling, maximum number of candidates, very accurate?, silence threshold, voicing threshold, octave cost, octave jump cost, voiced unvoiced cost
+  # Returns: Pitch
+  To Pitch (filtered cross-correlation): time step, pitch floor, pitch top, maximum number of candidates, very accurate?, attenuation at top, silence threshold, voicing threshold, octave cost, octave jump cost, voiced unvoiced cost
+  # Returns: Pitch
+  To Pitch (shs): time step, pitch floor, maximum number of candidates, maximum frequency, maximum number of subharmonics, compression factor, pitch ceiling, number of points per octave
+  # Returns: Pitch
+  To Pitch (SPINET): time step, window length, minimum frequency, maximum frequency, number of filters, pitch ceiling, maximum number of candidates
+  # Returns: Pitch
+  To PointProcess (periodic, cc): pitch floor, pitch ceiling
+  # Returns: PointProcess
+  To PointProcess (periodic, peaks): pitch floor, pitch ceiling, include maxima?, include minima?
+  # Returns: PointProcess
+  # EGG/DEGG usage: On the DEGG (derivative) signal, use:
+#   #   "yes", "no" → detect positive peaks (glottal closure instants)
+#   #   "no", "yes" → detect negative peaks (glottal opening instants)
+#   # See COMMANDS_Electroglottogram.txt §4B for the full pipeline.
+  To PointProcess (extrema): channel, include maxima?, include minima?, peak interpolation type$
+  # Returns: PointProcess
+  To PointProcess (zeroes): channel, include raisers?, include fallers?
+  # Returns: PointProcess
+  To Harmonicity (cc): time step, pitch floor, silence threshold, periods per window
+  # Returns: Harmonicity
+  To Harmonicity (ac): time step, pitch floor, silence threshold, periods per window
+  # Returns: Harmonicity
+  To Harmonicity (gne): minimum frequency, maximum frequency, bandwidth, step
+  # Returns: Matrix
+  To PowerCepstrogram: pitch floor, time step, maximum frequency, pre emphasis frequency
+  # Returns: PowerCepstrogram
+  To Spectrum: fast?
+  # Returns: Spectrum
+  To Spectrum (resampled): precision
+  # Returns: Spectrum
+  To Ltas: bandwidth
+  # Returns: Ltas
+  To Ltas (pitch-corrected): pitch floor, pitch ceiling, maximum frequency, bandwidth, shortest period, longest period, maximum period factor
+  # Returns: Ltas
+  To Spectrogram: window length, maximum frequency, time step, frequency step, window shape$
+  # Returns: Spectrogram
+  To Spectrogram (pitch-dependent): window length, time step, first frequency, delta frequency, maximum frequency, relative bandwidth, pitch floor, pitch ceiling
+  # Returns: Spectrogram
+  To Formant (burg): time step, maximum number of formants, formant ceiling, window length, pre emphasis from
+  # Returns: Formant
+  To Formant (keep all): time step, maximum number of formants, formant ceiling, window length, pre emphasis from
+  # Returns: Formant
+  To Formant (sl): time step, number of formants, formant ceiling, window length, pre emphasis from
+  # Returns: Formant
+  To Formant (robust): time step, maximum number of formants, formant ceiling, window length, pre emphasis frequency, number of standard deviations, maximum number of iterations, tolerance
+  # Returns: Formant
+  To FormantPath: time step, maximum number of formants, middle formant ceiling, window length, pre emphasis frequency, lpc model$, ceiling step size, number of steps up down, marple tol1, marple tol2, huber number of std dev, huber maximum number of iterations, huber tolerance, sources as multichannel?
+  # Returns: FormantPath
+  To LPC (autocorrelation): prediction order, window length, time step, pre emphasis frequency
+  # Returns: LPC
+  To LPC (covariance): prediction order, window length, time step, pre emphasis frequency
+  # Returns: LPC
+  To LPC (burg): prediction order, window length, time step, pre emphasis frequency
+  # Returns: LPC
+  To LPC (marple): prediction order, window length, time step, pre emphasis frequency, tolerance1, tolerance2
+  # Returns: LPC
+  To LPC (robust): prediction order, window length, time step, pre emphasis frequency, number of standard deviations, maximum number of iterations, tolerance
+  # Returns: LPC
+  To MFCC: number of coefficients, window length, time step, first filter frequency, distance between filters, maximum frequency
+  # Returns: MFCC
+  To FormantPath (burg): time step, maximum number of formants, middle formant ceiling, window length, pre emphasis frequency, ceiling step size, number of steps up down
+  # Returns: FormantPath
+  To Intensity: pitch floor, time step, subtract mean?
+  # Returns: Intensity
+  To Manipulation: time step, pitch floor, pitch ceiling
+  # Returns: Manipulation
+  Down to Matrix
+  # Returns: Matrix
+
+  # Extract / Combine
+  Extract one channel: channel
+  # Returns: Sound
+  Extract channels: channel numbers#
+  # Returns: Sound
+  # Verified: Extract channels: {1, 3}
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+  Extract part: from time, to time, window shape$, relative width, preserve times?
+  # Returns: Sound
+  Extract part for overlap: from time, to time, overlap
+  # Returns: Sound
+  # Combine (multiple objects selected)
+  Concatenate
+  # Returns: Sound
+  # Verified: Concatenate
+  #   Requires 2+ Sound objects selected.
+  # Provenance: Phonanium AVQI v02.06 script; Paste Commands 24 Feb 2026
+
+  # Draw
+  Draw: from time, to time, from amplitude, to amplitude, garnish?, drawing method$
+  # Verified: Draw: 0, 0, 0, 0, "yes", "Curve"
+  Draw where: from time, to time, ymin, ymax, garnish?, drawing method$, formula$
+  # Verified: Draw where: 0, 0, 0, 0, "yes", "Curve", "x > 0"
+  # `formula$` is a Praat expression evaluated against the Sound's
+  # time axis. The catalogue's default for this field contains a
+  # parenthetical that the autocomplete renderer truncates incorrectly;
+  # this `x > 0` default is safe across all renderers and trivially
+  # editable to the user's actual condition.
+  # Provenance: Empirical verification, Praat 6.4.65, 17 May 2026.
+
+  # Save (session-verified with explicit path)
+  Save as WAV file: file path$
+  # Verified: Save as WAV file: "/path/to/file.wav"
+
+  # Other
+  Record Sound (fixed time): input source$, gain, balance, sampling frequency$, duration
+  # Returns: Sound. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
+  Multiply: multiplication factor
+  # Verified: Multiply: 0.5
+  # CORRECTION (29 Jul 2026): previously documented with no arguments. The bare
+  # form fails with "Command Multiply not available for current selection".
+  Filter
+  # Returns: Sound
+  Filter (no scale)
+  # Returns: Sound
+  View & Edit
+  Play
+  Voice report: from time, to time, from pitch, to pitch, maximum period factor, maximum amplitude factor, silence threshold, voicing threshold
+  Save as Kay sound file: file name$
+  Save as raw 8-bit signed file: file name$
+  Save as raw 8-bit unsigned file: file name$
+  Save as raw 16-bit big-endian file: file name$
+  Save as raw 16-bit little-endian file: file name$
+  Save as raw 24-bit big-endian file: file name$
+  Save as raw 24-bit little-endian file: file name$
+  Save as raw 32-bit big-endian file: file name$
+  Save as raw 32-bit little-endian file: file name$
+  Shift times to between zero and physical duration
+  Reverse
+  Subtract mean
+  Multiply by window: window shape$
+  Scale peak: new absolute peak
+  Scale intensity: new average intensity
+  Override sampling frequency: new sampling frequency
+  Filter with one formant (in-place): frequency, bandwidth
+  Pre-emphasize (in-place): from frequency
+  De-emphasize (in-place): from frequency
+  Autocorrelate: amplitude scaling$, signal outside time domain is$
+  # Returns: Sound
+  Convert to mono
+  # Returns: Sound
+  Convert to stereo
+  # Returns: Sound
+  Resample: new sampling frequency, precision
+  # Returns: Sound
+  Lengthen (overlap-add): pitch floor, pitch ceiling, factor
+  # Returns: Sound
+  Deepen band modulation: enhancement, from frequency, to frequency, slow modulation, fast modulation, band smoothing
+  # Returns: Sound
+  Change gender: pitch floor, pitch ceiling, formant shift ratio, pitch median, pitch range multiplication factor, duration multiplication factor
+  # Returns: Sound
+  Filter (pass Hann band): from frequency, to frequency, smoothing
+  # Returns: Sound
+  Filter (stop Hann band): from frequency, to frequency, smoothing
+  # Returns: Sound
+  Filter (formula): formula$
+  # Returns: Sound
+  Reduce noise: from time, to time, window length, from frequency, to frequency, smoothing bandwidth, noise reduction d b, noise reduction method$
+  # Returns: Sound
+  Filter (one formant): frequency, bandwidth
+  # Returns: Sound
+  Filter (pre-emphasis): from frequency
+  # Returns: Sound
+  Filter (de-emphasis): from frequency
+  # Returns: Sound
+  Filter (gammatone): centre frequency, bandwidth
+  # Returns: Sound
+
+
+# --- NEW: Silero neural VAD ---
+
+  To TextGrid (speech activity, Silero): speech_probability_threshold, minimum_nonspeech_interval, minimum_speech_interval, padding, nonspeech_label$, speech_label$
+  # Returns: TextGrid
+  # From catalogue (v6.4.62 source):
+  #   speech probability threshold (0-1) = 0.5
+  #   min. non-speech interval (s) = 0.1
+  #   min. speech interval (s) = 0.25
+  #   padding around speech segments (s) = 0.03
+  #   non-speech interval label = "non-speech"
+  #   speech interval label = "speech"
+  #
+  # STATUS: Present in 6.4.62 C++ source code. May NOT be in all compiled
+  # builds — Silero model integration may require specific build flags.
+  # Scripts should check availability with nocheck or try/catch pattern
+  # and fall back to LTSF if unavailable.
+  #
+  # The padding parameter (default 0.03 s) adds a buffer around each
+  # detected speech segment. Keep small for recordings with short
+  # inter-sentence pauses to avoid merging adjacent sentences.
+  #
+  # Provenance: PRAAT_DEFINITIVE_CATALOGUE.txt, confirmed in source.
+  # Session note: auto-segmenter v2.0 includes this as an option but
+  # empirically confirmed it was NOT in the compiled macOS binary as of
+  # March 2026. Check your build.
+
+# --- CLARIFICATION: LTSF VAD alias ---
+
+  # "To TextGrid (speech activity):" is an ALIAS for
+  # "To TextGrid (speech activity, LTSF):". Both resolve to the
+  # spectral flatness VAD. This means the old command name now
+  # specifically denotes the LTSF variant, distinct from Silero.
+  #
+  # The LTSF variant has 11 parameters (already in COMMANDS_Sound.txt
+  # as "To TextGrid (speech activity):").
+
+# --- NEW: Voice report (cross-type) ---
+
+  # Sound + Pitch + PointProcess → Voice report
+  # Used by AVQI to extract HNR (see APPENDIX_D Section 10G)
+
+  Voice report: from_time, to_time, pitch_floor, pitch_ceiling, maximum_period_factor, maximum_amplitude_factor, silence_threshold, voicing_threshold
+  # Verified from AVQI v02.06 script:
+  #   Voice report: 0, 0, 75, 600, 1.3, 1.6, 0.03, 0.45
+  # Returns: multi-line string capturable via voiceReport$ = Voice report: ...
+  # Parse with: extractNumber (voiceReport$, "Mean harmonics-to-noise ratio: ")
+  # Requires: Sound + Pitch + PointProcess all selected
+  # Provenance: AVQI v02.06 (Phonanium), 5 April 2026.
+
+
+---
+
+*End of Sound commands.*

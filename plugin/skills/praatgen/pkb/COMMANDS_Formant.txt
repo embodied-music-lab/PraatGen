@@ -1,0 +1,525 @@
+# PRAAT COMMANDS: Formant, FormantPath, FormantModeler
+# Source: Praat C API (praatlib.h), Praat manual, PRAAT_DEFINITIVE_CATALOGUE.txt
+# Session-verified commands: Paste Commands (Feb–Mar 2026)
+# Manual-verified commands: fon.hum.uva.nl/praat/manual (Apr 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Version: 2.1
+# Date: 21 April 2026
+# Revised: 23 September 2026 (PraatGen 1.1.0) — FormantPath routing reads the
+#     selected ceiling with `Get optimal ceiling`; `Extract Formant` marked do
+#     not emit
+# Revised: 29 September 2026 (PraatGen 1.1.1) — `Down to Table (optimal
+#     interval)` verified at 14 arguments
+# Replaces: COMMANDS_Formant.txt v1.0 (Feb 2026)
+# Absorbs: FormantPath and FormantModeler entries from WHITELIST_CURRENT.txt
+
+# ============================================================================
+# ALGORITHM ROUTING DECISION
+# ============================================================================
+#
+# Before writing formant analysis code, choose the creation algorithm:
+#
+#   QUESTION                              ALGORITHM
+#   ------------------------------------  ----------------------------------
+#   Vocal tract size / gender unknown?    To FormantPath (burg)     [DEFAULT]
+#   No protocol-specified ceiling?        To FormantPath (burg)     [DEFAULT]
+#   Specific ceiling required             To Formant (burg)
+#     (replication, protocol)?
+#   User explicitly requests fixed        To Formant (burg)
+#
+# CONVENTION — "# Verified:" lines are executable (hard).
+#   A "# Verified:" line must contain the command call and NOTHING else: no
+#   trailing prose, no line continuation. Those lines are executed against a
+#   live Praat as a regression test, and anything that breaks parsing removes
+#   that command from the test. Put explanation on the following comment line.
+#     ceiling?
+#
+# DEFAULT: Use FormantPath. It searches across a range of ceilings
+# automatically and selects the optimal one per frame. No user decision
+# about vocal tract size or gender is needed.
+#
+# OVERRIDE: Use Formant (burg) with explicit ceiling only when:
+#   1. Replicating a study that used a specific ceiling
+#   2. Protocol requires identical ceiling across all participants
+#   3. User explicitly requests a fixed ceiling
+#
+# See APPENDIX_D_CLINICAL_DEFAULTS.txt §4 for the full clinical rationale.
+#
+# WORKFLOW (FormantPath, default):
+#   soundId = Read from file: filePath$
+#   selectObject: soundId
+#   fpId = noprogress To FormantPath (burg): 0.005, 5.0, 5500, 0.025,
+#       ... 50, 0.05, 4
+#   selectObject: fpId
+#   optCeiling = Get optimal ceiling: 0.0, 0.0, "3 3 3", 1.25
+#   removeObject: fpId
+#   selectObject: soundId
+#   formantId = noprogress To Formant (burg): 0.005, 5, optCeiling,
+#       ... 0.025, 50
+#   # Query the Formant object using standard Formant queries below
+#   selectObject: formantId
+#   meanF1 = Get mean: 1, 0, 0, "Hertz"
+#
+#   Do not call Extract Formant on the FormantPath. It returns the
+#   middle-ceiling candidate rather than the selected one; see the
+#   Extract Formant entry below. Check meanF1 against the
+#   plausibility bands in APPENDIX_D_CLINICAL_DEFAULTS.txt §7.
+#
+# WORKFLOW (Formant (burg), override):
+#   soundId = Read from file: filePath$
+#   selectObject: soundId
+#   formantId = noprogress To Formant (burg): 0.0, 5, formantCeiling,
+#       ... 0.025, 50
+#   selectObject: formantId
+#   meanF1 = Get mean: 1, 0, 0, "Hertz"
+
+# ============================================================================
+# CREATION COMMANDS (on Sound objects — see COMMANDS_Sound.txt)
+# ============================================================================
+#
+# These commands are listed here for reference but are executed on Sound
+# objects. They also appear in COMMANDS_Sound.txt.
+#
+## Object type: Sound
+# To FormantPath (burg): time step, maximum number of formants, middle
+#     formant ceiling, window length, pre emphasis frequency, ceiling
+#     step size, number of steps up down
+# Verified: To FormantPath (burg): 0.005, 5.0, 5500, 0.025, 50, 0.05, 4
+# Provenance: Session-verified 21 Mar 2026
+#
+#   Parameters:
+#     time step = 0.005 s
+#     max number of formants = 5.0
+#     middle formant ceiling = 5500 Hz (Praat default, "= adult female")
+#     window length = 0.025 s
+#     pre-emphasis from = 50 Hz
+#     ceiling step size = 0.05
+#     number of steps up/down = 4
+#
+#   The ceiling search range is:
+#     min ceiling = middle * exp(-step * nSteps) = 5500 * exp(-0.20) = 4503.0 Hz
+#     max ceiling = middle * exp(+step * nSteps) = 5500 * exp(+0.20) = 6717.7 Hz
+#   Total candidates = 2 * nSteps + 1 = 9
+#
+#   This range covers the typical adult male (5000 Hz) through adult
+#   female (5500 Hz) and higher. For children, increase middle ceiling
+#   or nSteps.
+#
+# To Formant (burg): time step, maximum number of formants, formant
+#     ceiling, window length, pre emphasis from
+# Verified: To Formant (burg): 0.0, 5, 5500, 0.025, 50
+# Provenance: Session-verified Feb 2026
+
+
+# ============================================================================
+# FORMANTPATH COMMANDS (on FormantPath objects)
+# ============================================================================
+## Object type: FormantPath
+# Object type: FormantPath
+# Created by: Sound: To FormantPath (burg):
+# Provenance: Empirical testing + diagnostic scripts, 21 Mar 2026
+
+  # Query
+  Get number of candidates
+  # Verified: Get number of candidates
+  # Returns: integer (e.g. 9 for default 4 steps up/down)
+
+  Get optimal ceiling: from time, to time, coefficients$, power
+  # Verified: Get optimal ceiling: 0.0, 0.0, "3 3 3", 1.25
+  # Returns: real (Hz). NATURALVECTOR arg passed as string.
+  # coefficients$ = polynomial order per formant track (space-separated)
+  # power = stress metric weighting (1.25 = default)
+
+  Get stress of candidate: from time, to time, candidate number, coefficients$, power
+  # Verified: Get stress of candidate: 0.0, 0.0, 1, "3 3 3", 1.25
+  # Returns: real (stress value, lower = better fit)
+
+  # Extract
+  Extract Formant
+  # Verified: Extract Formant
+  #   Runs without error on a fresh FormantPath and segfaults after a
+  #   Set command. It returns the wrong candidate either way — see the
+  #   DO NOT EMIT note below.
+  # Returns: Formant object ID
+  #
+  # ⚠️ DO NOT EMIT. Extract Formant on a FormantPath reads the
+  # MIDDLE-ceiling candidate, not the optimal one, even on a fresh
+  # FormantPath with no Set command yet applied. It takes no
+  # arguments, so the stored path is the only thing it can read, and
+  # that path is an interval tier whose interval text holds a
+  # candidate index that reads "5" — the middle of the nine
+  # candidates — on creation.
+  #
+  # Measured on a synthesized /a/ (Create KlattGrid from vowel:
+  # "v", 0.5, 125, 800, 60, 1200, 100, 2800, 120, 3500, 0.1, 1000,
+  # then To Sound), FormantPath at the defaults above. Reported
+  # optimal ceiling 4733.9 Hz. Mean F1 / F2 in Hz:
+  #     Extract Formant            794.2 / 1203.9
+  #     To Formant (burg) @ 5500   794.3 / 1204.0   <- middle
+  #     To Formant (burg) @ 4733.9 791.2 / 1201.1   <- optimal
+  # Extract Formant tracks the middle ceiling. The table above is
+  # 6.6.30 and 7.0.02, which agree exactly. On 6.4.30 Extract Formant
+  # reads 794.3 / 1204.0, which matches the middle row to 0.0002 Hz.
+  # The conclusion is the same on every build; only the size of the
+  # residual against the middle row changes.
+  #
+  # Use the QUERY WORKFLOW in APPENDIX_D_CLINICAL_DEFAULTS.txt §4A
+  # instead: Get optimal ceiling, then To Formant (burg) at that
+  # ceiling.
+  #
+  # ⚠️ BUG (every version testable: 6.4.30, 6.6.30 and 7.0.02; no
+  # upper bound established):
+  # Segfaults (null pointer dereference at 0x48) if called AFTER
+  # Set path: or Set optimal path: on the same FormantPath object.
+  # The previously documented range of 6.4.60–6.4.62 was wrong at
+  # both ends.
+  #
+  # ROOT CAUSE: both Set commands write the candidate's CEILING
+  # FREQUENCY into the field that holds the candidate INDEX. After
+  # Set optimal path: the interval text reads
+  # "4733.893870337818"; after Set path: 0.2, 3, 1 it reads
+  # "4503.0191419289". The bad value persists to disk — a path saved
+  # afterward and reloaded in a fresh Praat still crashes on
+  # Extract Formant.
+  #
+  # For per-candidate analysis, use To Formant (burg): directly at
+  # each computed ceiling, or use Down to Table (optimal interval)
+  # below, which survives both Set commands.
+  # Provenance: Diagnostic script series v1-v7, 21 Mar 2026. The
+  # middle-ceiling behavior was reported by Eric Armstrong
+  # (https://voiceguy.ca/about), 22 Sep 2026; the root cause and the
+  # corrected version range were established in the sandbox on
+  # 6.4.30, 6.6.30 and 7.0.02, 23 Sep 2026.
+
+  # Modify
+  Set path: from time, to time, candidate number
+  # Verified: Set path: 0.0, 0.0, 1
+  # ⚠️ BUG: Extract Formant segfaults after this command — see the
+  # root cause above.
+
+  Set optimal path: from time, to time, coefficients$, power
+  # Verified: Set optimal path: 0.0, 0.0, "3 3 3", 1.25
+  # ⚠️ BUG: Extract Formant segfaults after this command — see the
+  # root cause above.
+
+  # Convert
+  Down to Table (optimal interval): from time, to time, coefficients$, power, include frame number?, include time?, number of time decimals, include intensity?, number of intensity decimals, include number of formants?, number of frequency decimals, include bandwidths?, include optimal ceiling?, include minimum stress?
+  # Returns: Table
+  # Survives Set path: and Set optimal path: — it recomputes the
+  # optimum rather than reading the stored path, so it is unaffected
+  # by the index/ceiling-frequency corruption described under Extract
+  # Formant above. Returns optimal-ceiling values: on the /a/ fixture
+  # above, on 6.6.30 and 7.0.02, it gives 90 rows, mean F1 791.1 /
+  # F2 1201.1 at ceiling 4733.9 Hz. On 6.4.30 the same table means
+  # 791.2.
+  #
+  # The table and a fresh To Formant (burg) at the same ceiling differ
+  # by under 1 Hz; report one source per results table.
+  #
+  # Verified: Down to Table (optimal interval): 0, 0, "3 3 3", 1.25, 1, 1, 3, 1, 1, 1, 1, 1, 1, 1
+  # Takes 14 arguments. A 15-argument call returns "Command requires
+  #   only 14 arguments, not the 15 given."; a 13-argument call
+  #   returns "Command requires more than the given 13 arguments:
+  #   argument "Include minimum stress" not given."
+  # Columns (16): frame, time(s), intensity, nformants, F1(Hz),
+  #   B1(Hz) ... F5(Hz), B5(Hz), Ceiling(Hz), Stress
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt (14 parameters), matching
+  #   the field list above.
+
+  # Draw
+  Draw as grid: from time, to time, max frequency, left formant, right formant, show bandwidths$, colour f1 f3 f5$, colour f2 f4$, n rows, n cols, x space fraction, y space fraction, h line every, x cursor, y cursor, coefficients$, mark candidates$, mark colour$, show stress$, power, show estimated$, garnish$
+  # Verified: Draw as grid: 0, 0.5, 6200, 1, 5, "yes", "Red", "Purple", 0, 0, 0.1, 0.2, 1000, -0.1, -100, "3 3 3 3 3", "yes", "{0.984, 0.984, 0.7}", "yes", 1.25, "yes", "yes"
+  # 22 parameters total.
+  # Provenance: Session-verified 21 Mar 2026
+
+
+# ============================================================================
+# FORMANT COMMANDS (on Formant objects)
+# ============================================================================
+## Object type: Formant
+# Object type: Formant
+# Created by: Sound: To Formant (burg):, FormantPath: Extract Formant,
+#             or Sound: To Formant (keep all/sl/robust):
+
+  # Query — time-point queries (session-verified)
+  Get value at time: formant number, time, unit$, interpolation$
+  # Verified: Get value at time: 1, 0.5, "hertz", "linear"
+  Get bandwidth at time: formant number, time, unit$, interpolation$
+  # Verified: Get bandwidth at time: 1, 0.5, "hertz", "linear"
+
+  # Query — aggregate queries (manual-verified, Apr 2026)
+  # Source: Praat manual pages at fon.hum.uva.nl/praat/manual/
+  # All aggregate queries take: formant number, from time, to time
+  # Use 0, 0 for full time domain.
+  Get mean: formant number, from time, to time, unit$
+  # Manual example: Get mean: 2, 0, 0, "Hertz"
+  # Source: fon.hum.uva.nl/praat/manual/Formant__Get_mean___.html
+  Get standard deviation: formant number, from time, to time, unit$
+  # Source: fon.hum.uva.nl/praat/manual/Formant__Get_standard_deviation.html
+  Get minimum: formant number, from time, to time, unit$, interpolation$
+  # Source: fon.hum.uva.nl/praat/manual/Formant__Get_minimum___.html
+  Get maximum: formant number, from time, to time, unit$, interpolation$
+  # Pattern matches Get minimum (formant number, time range, unit, interpolation)
+  Get quantile: formant number, from time, to time, unit$, quantile
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt — quantile is 0–1 (0.5 = median)
+  Get quantile of bandwidth: formant number, from time, to time, unit$, quantile
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+  Get time of minimum: formant number, from time, to time, unit$, interpolation$
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+  Get time of maximum: formant number, from time, to time, unit$, interpolation$
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+
+  # Query — frame-level queries
+  Get number of formants: frame number
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+  Get maximum number of formants
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+  Get minimum number of formants
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+
+  # Query — slope
+  List formant slope: formant number, from time, to time, slope curve$
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+
+  # Query (API)
+  List: include frame number?, include time?, number of time decimals, include intensity?, number of intensity decimals, include number of formants?, number of frequency decimals, include bandwidths?
+
+  # Modify
+  Formula (frequencies): formula$
+  Formula (bandwidths): formula$
+  Formula: from time, to time, left formant range, right formant range, formula$
+  # Verified: Formula: 0, 0, 1, 5, "self"
+  # NOTE (sandbox, 29 Jul 2026): the leading TIME RANGE pair is easy to lose.
+  #   The 3-argument form fails with "Argument left Formant range should be a
+  #   number, not a string". PRAAT_DEFINITIVE_CATALOGUE.txt (6.4.62) lists only
+  #   3 — an extraction artefact, NOT a version change: the 5-parameter form is
+  #   identical in 6.4.62 and 6.6.30, both verified by execution. Paired range
+  #   fields are the catalogue's known blind spot; see its header banner.
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt — operates on Matrix representation
+  # where odd rows = frequencies, even rows = bandwidths
+
+  # Convert / Analyze
+  Down to Table: include frame number?, include time?, number of time decimals, include intensity?, number of intensity decimals, include number of formants?, number of frequency decimals, include bandwidths?
+  # Returns: Table
+  Down to FormantGrid
+  # Returns: FormantGrid
+  Down to FormantTier
+  # Returns: FormantTier. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
+  To Matrix: formant number
+  # Returns: Matrix
+  To LPC: sampling frequency
+  # Returns: LPC
+  To FormantModeler: start time, end time, number of formants, order of polynomials
+  # Returns: FormantModeler. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
+  # Verified: To FormantModeler: 0, 0.5, 3, 3
+  # Provenance: Session-verified 21 Mar 2026
+  Extract smoothest part: from time, to time, number of formant tracks, order of polynomials, weigh formants$, number of sigmas, parameter variance power
+  # Returns: Formant. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+  Extract smoothest part (constrained): from time, to time, number of formant tracks, order of polynomials, weigh formants$, number of sigmas, parameter variance power, minimum f1, maximum f1, minimum f2, maximum f2, minimum f3
+  # Returns: Formant. Hidden command: no menu entry or manual page, so Paste Commands can't record it.
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+
+  # Draw
+  Speckle: from time, to time, maximum frequency, dynamic range, garnish?
+  # Verified: Speckle: 0, 0, 5500, 30, "no"
+  Draw tracks: from time, to time, maximum frequency, garnish?
+  # Verified: Draw tracks: 0, 0, 5500, "no"
+  #
+  # BEHAVIORAL NOTE — Draw tracks vs. Speckle:
+  #   Draw tracks applies an internal connectivity filter and may suppress
+  #   low-confidence formants (commonly F4/F5). Speckle draws every value
+  #   unconditionally. For the full comparison, the recommended Speckle+
+  #   Draw tracks layering pattern, and provenance, see the standalone
+  #   section "BEHAVIORAL NOTES: Draw tracks vs. Speckle" near the end of
+  #   this file.
+
+  # Other
+  Scatter plot: from time, to time, horizontal formant number, left, right, vertical formant number, bottom, top, mark size, garnish?, mark string$
+  Sort
+  Track: number of tracks, reference f1, reference f2, reference f3, reference f4, reference f5, frequency cost, bandwidth cost, transition cost
+  # Returns: Formant
+
+
+# ============================================================================
+# FORMANTMODELER COMMANDS (on FormantModeler objects)
+# ============================================================================
+## Object type: FormantModeler
+# Object type: FormantModeler
+# Created by: Formant: To FormantModeler:
+# Provenance: Session-verified 21 Mar 2026
+# These provide polynomial-smoothed formant tracks and goodness-of-fit
+# metrics. Useful for formant tracking quality assessment.
+#
+# SCOPE LIMITATION (hard):
+#
+# FormantModeler fits polynomial curves to formant tracks over a time
+# range. This model assumes formant frequencies are SMOOTHLY VARYING
+# within that range. It works well on:
+#   - Sustained vowels (formants roughly steady)
+#   - Single vowel tokens extracted from running speech
+#   - Sustained singing tones
+#
+# It FAILS on:
+#   - Connected speech spanning multiple vowels (transitions across
+#     vowel categories produce large formant movements that the
+#     polynomial either cannot follow or smooths away)
+#   - Vowel sequences (e.g., /u i u/ — F2 moves from ~800 Hz to
+#     ~2500 Hz and back; a 3rd-order polynomial averages this out
+#     and flags the real F2 values as outliers)
+#   - Any signal where formants are expected to change rapidly
+#
+# When applied to connected speech, the R-squared will be low and
+# outlier counts will be high — not because tracking failed, but
+# because the polynomial model is wrong for the data. The "outliers"
+# are real formant values at vowel targets that the polynomial
+# cannot reach.
+#
+# CORRECT USAGE PATTERNS:
+#
+#   1. Sustained vowel: Apply directly to the full Formant object.
+#      R-squared and outlier counts are meaningful quality indicators.
+#
+#        selectObject: formantId
+#        fmId = To FormantModeler: startTime, endTime, 3, 3
+#
+#   2. Connected speech: Segment first (by vowel label, by voiced
+#      interval, or by stable F0 region), then apply per segment.
+#      Report quality per segment, not globally.
+#
+#        selectObject: formantId
+#        fmId = To FormantModeler: vowelStart, vowelEnd, 3, 3
+#
+#   3. Singing phrase: If sustained tones, treat as case 1. If
+#      melismatic or with vowel changes, treat as case 2.
+#
+# Provenance: Empirical demonstration on /u i u/ sequence,
+# 21 April 2026. 3rd-order polynomial completely failed to track
+# F2 transition; all transition frames flagged as outliers.
+
+  # Query
+  Get coefficient of determination: left formant, right formant
+  # Verified: Get coefficient of determination: 0, 0
+  # 0, 0 = all formants. Returns: real (R-squared).
+
+  Get number of data points
+  # Verified: Get number of data points
+
+  Get number of tracks
+  # Verified: Get number of tracks
+
+  Get number of parameters: formant number
+  # Verified: Get number of parameters: 1
+
+  Get degrees of freedom: formant number
+  # Verified: Get degrees of freedom: 1
+
+  Get residual sum of squares: formant number
+  # Verified: Get residual sum of squares: 1
+
+  Get formant standard deviation: formant number
+  # Verified: Get formant standard deviation: 1
+
+  Get number of invalid data points: formant number
+  # Verified: Get number of invalid data points: 1
+
+  Get model value at time: formant number, time
+  # Verified: Get model value at time: 1, 0.25
+
+  Get average distance between tracks: track1, track2, type of data$
+  # Verified: Get average distance between tracks: 1, 2, "data points"
+  # Verified: Get average distance between tracks: 1, 2, "modelled"
+  # type of data$ options: "data points", "modelled"
+
+  Get formants constraints factor: minimum f1, maximum f1, minimum f2, maximum f2, minimum f3
+  # Verified: Get formants constraints factor: 100, 1200, 0, 5000, 1500
+
+  # Convert
+  To Table (z-scores)
+  # Verified: To Table (z-scores)
+  # Returns: Table with per-frame z-scores for each formant.
+
+  To FormantModeler (process outliers): number of sigmas
+  # Returns: FormantModeler
+  # Source: PRAAT_DEFINITIVE_CATALOGUE.txt
+
+  # Draw
+  Draw estimated tracks: from time, to time, maximum frequency, left formant, right formant, order of polynomials, garnish?
+  # Verified: Draw estimated tracks: 0, 0.5, 5500, 1, 3, 3, "no"
+
+  Draw outliers marked: from time, to time, maximum frequency, left formant, right formant, number of sigmas, mark$, mark font size, garnish?
+  # Verified: Draw outliers marked: 0, 0.5, 5500, 1, 3, 3.0, "o", 14, "no"
+
+  Draw cumulative chisq scores: from time, to time, left chisq, right chisq, garnish?
+  # Verified: Draw cumulative chisq scores: 0, 0.5, 0, 0, "yes"
+
+  Draw variances of shifted tracks: from time, to time, left variance range, right variance range, shift tracks$, left formant range, right formant range, garnish?
+  # Verified: Draw variances of shifted tracks: 0, 0.5, 0, 0, "No", 1, 3, "yes"
+  # NOTE: 8 parameters. PRAAT_DEFINITIVE_CATALOGUE.txt shows only 7 —
+  # missing OPTIONMENU "Shift tracks" with options "No", "Up", "Down".
+  # Provenance: sandbox-verified 6.6.30 and 6.4.39, 17 Nov 2026
+
+# ============================================================================
+# BEHAVIORAL NOTES: Draw tracks vs. Speckle
+# ============================================================================
+#
+# Draw tracks: applies an internal connectivity filter that evaluates
+# formant candidate continuity across frames. Lower-confidence formants
+# (commonly F4 and F5, but any formant with weak candidates or
+# discontinuous tracks) may be partially or fully suppressed. The filter
+# favors smooth, well-connected formant trajectories — this is a feature
+# for F1–F3 visualization but a liability when all formant data matters.
+#
+# Speckle: draws every formant value for every frame unconditionally,
+# without connectivity filtering. All formants appear regardless of
+# confidence. The result is a scatter of dots rather than connected tracks.
+#
+# RECOMMENDED LAYERING PATTERN:
+# When both connectivity and completeness matter (e.g., confidence
+# figures, quality assurance, formant overlay on spectrograms), use
+# both commands in sequence:
+#
+#   1. Speckle first — shows ALL formant data including weak candidates
+#   2. Draw tracks on top — highlights the stronger, continuous signal
+#
+# Example (with spectrogram underlay):
+#
+#   selectObject: spectrogramId
+#   Paint: 0, 0, 0, 5500, 100, "yes", 50, 6, 0, "no"
+#
+#   selectObject: formantId
+#   # Layer 1: all formant values (lighter color or smaller markers)
+#   Colour: "{0.75, 0.75, 0.75}"
+#   Speckle: 0, 0, 5500, 30, "no"
+#   # Layer 2: connected tracks (stronger color)
+#   Colour: "{0.90, 0.60, 0.0}"
+#   Draw tracks: 0, 0, 5500, "no"
+#
+# This gives visual prominence to the reliable formant contours while
+# preserving visibility of all tracked formant values.
+#
+# If only one command is used:
+#   - Use Speckle when completeness matters (all data visible)
+#   - Use Draw tracks when readability matters (clean contours, but
+#     may lose F4/F5 or weak formant regions)
+#
+# The dynamic range parameter in Speckle (default 30 dB) controls which
+# formant candidates are drawn based on their amplitude relative to the
+# frame maximum. Lower values = fewer candidates shown per frame.
+#
+# Provenance: Empirical testing, 22 April 2026. F4–F5 suppression
+# observed with Draw tracks on voice recordings; Speckle showed all
+# five formants. Confirmed: Draw tracks connectivity filter is internal
+# to Praat, not configurable via parameters.
+# ============================================================================
+ 
+
+---
+
+*End of Formant / FormantPath / FormantModeler commands.*

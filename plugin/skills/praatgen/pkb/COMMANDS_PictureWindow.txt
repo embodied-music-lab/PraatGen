@@ -1,0 +1,296 @@
+# PRAAT COMMANDS: Picture Window
+# Source: Session-verified via Paste Commands (Feb 2026)
+# Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+# Returns lines: the object type a command creates, from the Praat 6.6.30 source
+#   (action registrations and their handlers), with a sample run in Praat 6.6.30,
+#   12 Oct 2026. An entry with no Returns line creates no object or was not
+#   matched in the source. With several objects of the type selected, most
+#   commands that create an object create one per selected object, all selected.
+#
+# Format: CommandName: param1, param2 (if arguments)
+#         CommandName (no colon, if no arguments)
+# Parameter notation: $ = string, ? = boolean, others = numeric
+#
+# These are environment commands (not object-specific).
+# They operate on the Picture window coordinate system and drawing surface.
+# Sandbox arity check: Praat 6.6.30 (Linux x64v3), 29 July 2026.
+#   47 documented commands probed against a live Praat install by invoking each
+#   with excess arguments; Praat's "requires only N arguments" error reports the
+#   true arity, compared against what this file documents.
+#   Result: 18 exact arity match, 27 present and accepting the documented
+#   argument count, 2 requiring a co-selection or class-specific selection
+#   this harness could not supply (spot-checked, not exhaustively resolved).
+#   SCOPE — this establishes that each command EXISTS on this object type and
+#   that its documented PARAMETER COUNT is right. It does NOT verify parameter
+#   ORDER, parameter TYPES, default values, or semantic correctness. Those
+#   remain as previously sourced.
+#
+# CONVENTION — "# Verified:" lines are executable (hard).
+#   A "# Verified:" line must contain the command call and NOTHING else: no
+#   trailing prose, no line continuation. Those lines are executed against a
+#   live Praat as a regression test, and anything that breaks parsing removes
+#   that command from the test. Put explanation on the following comment line.
+
+---
+
+  # PRAAT BEHAVIOR: Font size affects viewport margin computation
+  # Draw inner box, One mark, Text bottom/left/top, Marks, and
+  # Select inner/outer viewport all use the CURRENT font size to
+  # compute margins. ALL font changes must happen BEFORE these
+  # commands. This applies to BOTH Select inner viewport AND
+  # Select outer viewport. See BEST_PRACTICES_DRAWING.txt.
+  # Praat manual: "The widths of the margins depend on the current
+  # font size, so if you want to change the font size, do so before
+  # making your drawing."
+  # Provenance: 26 Mar 2026 (grouped violin tick displacement bug)
+  # Source: Praat manual Font menu page + Margins page
+
+  # PRAAT BEHAVIOR: Text special is self-contained
+  # Text special: takes its own font size parameter but does NOT
+  # change the global Font size state. Safe for mixed-size text.
+  # Provenance: Empirically verified, 26 Mar 2026
+
+  # Viewport
+  Select outer viewport: left, right, top, bottom
+  # Verified: Select outer viewport: 0, 6, 0, 4
+  Select inner viewport: left, right, top, bottom
+  # Verified: Select inner viewport: 0, 6, 0, 4
+  Mouse selects outer viewport
+  # Verified: Mouse selects outer viewport
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)
+
+  # Edit
+  Erase all
+  # Verified: Erase all
+
+  # Font
+  Font size: size
+  # Verified: Font size: 12
+  Helvetica
+  # Verified: Helvetica
+  # Positioned text
+  Text special: x, horizontalAlignment$, y, verticalAlignment$,
+      ... font$, size, rotation$, text$
+  # Verified: Text special: 3, "Right", 0, "Half", "Helvetica", 10, "45", "Group A"
+  # NOTE: rotation is a STRING ("0", "45", "90"), not numeric.
+  # NOTE: Does NOT change global Font size state — self-contained.
+  # Provenance: Praat manual, 25 Mar 2026
+
+  # Pen
+  Black
+  # Verified: Black
+  Solid line
+  # Verified: Solid line
+  Dashed line
+  # Verified: Dashed line
+  Dotted line
+  # Verified: Dotted line
+  Grey
+  # Verified: Grey
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (runs with no arguments; Praat refuses the colon form)
+  Line width: width
+  # Verified: Line width: 1
+  Colour: colour$
+  # Verified: Colour: "{0.30, 0.50, 0.75}"
+
+  # Margins
+  Draw inner box
+  # Verified: Draw inner box
+  Marks left: number of marks, draw numbers?, draw ticks?, draw dotted lines?
+  # Verified: Marks left: 5, "yes", "yes", "no"
+  Marks bottom: number of marks, draw numbers?, draw ticks?, draw dotted lines?
+  # Verified: Marks bottom: 5, "yes", "yes", "no"
+  #   DO NOT EMIT THESE in generated scripts. The "# Verified:" lines above are
+  #   arity-regression fixtures, not usage examples — leave them in place.
+  #   EML house style prohibits these commands for tick placement: they divide
+  #   the data range into N-1 equal intervals, so the labels are whatever the
+  #   range divides into. Use the nice-number procedures instead —
+  #   @emlDrawAlignedMarksLeft / @emlDrawAlignedMarksBottom, or
+  #   One mark left: / One mark bottom: driven by @emlComputeNiceStep.
+  #   See BEST_PRACTICES_DRAWING.txt.
+  One mark left: position, draw number?, draw tick?, draw dotted line?, text$
+  # Verified: One mark left: 0, "yes", "yes", "no", ""
+  #   NOTE: the position must lie inside the current Axes range — this example
+  #   assumes an axis that includes 0. "Position must be between X and Y" means
+  #   the mark value is outside the axes you set.
+  One mark bottom: position, draw number?, draw tick?, draw dotted line?, text$
+  # Verified: One mark bottom: 1, "no", "yes", "no", "Condition A"
+  One mark right: position, draw number?, draw tick?, draw dotted line?, text$
+  # Verified: One mark right: 215.3, "no", "no", "yes", "mean=215.3"
+  One mark top: position, draw number?, draw tick?, draw dotted line?, text$
+  # (Not yet verified — included for completeness; same parameter pattern)
+  Text left: far?, text$
+  # Verified: Text left: "yes", "Amplitude"
+  Text bottom: far?, text$
+  # Verified: Text bottom: "yes", "Time (s)"
+  Text top: far?, text$
+  # Verified: Text top: "no", "Title"
+  Text right: far?, text$
+  # Verified: Text right: "yes", "Intensity (dB)"
+  # Provenance: Sandbox-verified 6.6.30, 8 Oct 2026 (argument count from Praat's "requires only 2 arguments" error)
+
+  # File (save)
+  Save as 300-dpi PNG file: file path$
+  # Verified: Save as 300-dpi PNG file: "/path/to/file.png"
+  Save as 600-dpi PNG file: file path$
+  # Verified: Save as 600-dpi PNG file: "/path/to/file.png"
+  Save as praat picture file: file path$
+  # Verified: Save as praat picture file: outputPath$
+  # Note: Saves Picture window contents as .prapic file. Can be reopened
+  #   and edited in Praat later. Not an image format — use PNG/PDF for
+  #   publication.
+  # Provenance: Tier 2 (Praat manual), 10 Mar 2026
+
+  # World
+  Axes: x minimum, x maximum, y minimum, y maximum
+  # Verified: Axes: 0.5, 4.5, 0, 200
+  Paint rectangle: colour$, x1, x2, y1, y2
+  # Verified: Paint rectangle: "{0.85, 0.90, 0.95}", 0.7, 1.3, 0, 142.5
+  Draw rectangle: x1, x2, y1, y2
+  # Verified: Draw rectangle: 0.7, 1.3, 0, 142.5
+  Draw line: x1, y1, x2, y2
+  # Verified: Draw line: 1, 130.2, 1, 154.8
+  Text: x, horizontal alignment$, y, vertical alignment$, text$
+  # Verified: Text: 1, "centre", 0, "top", "Condition A"
+  # Note: horizontal alignment = "left", "centre", "right"; vertical = "top", "half", "bottom"
+  Paint circle: colour$, centreX, centreY, radius
+  # Verified: Paint circle: "Blue", 1.5, 200, 0.03
+  # Note: the fourth argument is a RADIUS in world x-coordinates. Visual size
+  # varies with axis range.
+  # Requires a left-to-right x-axis. On an x-axis running high-to-low nothing
+  # is drawn and no error is raised, with the positive radius you passed. A
+  # reversed y-axis does not affect it, because the radius is measured along x.
+  # A radius of 0 or less is a separate case and a hard error on either axis
+  # direction: Argument "Radius" must be greater than 0.0.
+  # Use Paint circle (mm): on a reversed x-axis — note that its fourth
+  # argument is a DIAMETER IN MILLIMETERS, not a radius in world units.
+  # Provenance: Paste Commands equivalent (dialog screenshot), 4 Mar 2026;
+  # axis behavior verified 6.6.30 and 7.0.02, 23 Sep 2026
+  Draw circle: centreX, centreY, radius
+  # Verified: Draw circle: 0.5, 0.5, 1.0
+  # Note: takes 3 arguments and NO color; set the color with a preceding
+  # Colour: command. The THIRD argument is a RADIUS in world x-coordinates,
+  # the same quantity Paint circle: takes as its fourth.
+  # Requires a left-to-right x-axis, on the same terms as Paint circle:
+  # above. Use Draw circle (mm): on a reversed x-axis — its third argument
+  # is a DIAMETER IN MILLIMETERS.
+  # Provenance: Praat manual (sendpraat example), 4 Mar 2026; axis behavior
+  # verified 6.6.30 and 7.0.02, 23 Sep 2026
+
+  Paint circle (mm): colour$, centreX, centreY, diameter
+  # Verified: Paint circle (mm): "Blue", 1.5, 200, 3
+  # Note: the center is in world coordinates; the fourth argument is a
+  # DIAMETER IN MILLIMETERS. Size is independent of axis range and of axis
+  # direction, so this form draws correctly on a reversed x-axis.
+  # Takes exactly 4 arguments: a 5th returns "Command requires only 4
+  # arguments, not the 5 given."
+  # Diameter is POSITIVE — a value of 0 or less is a hard error, not a
+  # silent no-draw.
+  # To match a circle specified as a world radius:
+  #     diameter_mm = 2 * radius_world * innerViewportWidth_mm / xRange
+  #     innerViewportWidth_mm = (right - left, in inches) * 25.4
+  # Prefer choosing the size in millimeters outright; this is what
+  # @emlDrawSpaghettiPlot does.
+  # Provenance: Sandbox-verified 6.6.30 and 7.0.02, 23 Sep 2026
+  Draw circle (mm): centreX, centreY, diameter
+  # Verified: Draw circle (mm): 0.5, 0.5, 3
+  # Note: outline form of Paint circle (mm):. Takes exactly 3 arguments and
+  # NO color — passing one returns "Argument 'Centre x' should be a number,
+  # not a string." Set the color with a preceding Colour: command. The size
+  # is the THIRD argument here and the fourth in the Paint form.
+  # Diameter is POSITIVE, on the same terms as Paint circle (mm):.
+  # Provenance: Sandbox-verified 6.6.30 and 7.0.02, 23 Sep 2026
+  Insert picture from file: filePath$, fromX, toX, fromY, toY
+  # Verified: Insert picture from file: "dot_blue_a50_40.png", 100, 120, 300, 500
+  # NOTE: Supports PNG alpha channel compositing.
+  # Performance: 0.15–0.18ms per call for 40×40 PNG.
+  # Stretches PNG to fill the specified world-coordinate rectangle.
+  # Provenance: Alpha compositing benchmark, 19 Mar 2026
+
+  # Rounded rectangles
+  Paint rounded rectangle: colour$, fromX, toX, fromY, toY, radius
+  # Verified: Paint rounded rectangle: "pink", 30, 70, 16, 24, 3
+  # NOTE: 6 parameters. radius is in mm.
+  # Provenance: Error diagnostic + PRAAT_DEFINITIVE_CATALOGUE.txt, 22 Apr 2026
+  Draw rounded rectangle: fromX, toX, fromY, toY, radius
+  # 5 parameters (no colour). radius is in mm.
+  # Provenance: PRAAT_DEFINITIVE_CATALOGUE.txt
+
+  # Measure (World → Measure submenu)
+  Text width (world coordinates): text$
+  # Verified: Text width (world coordinates): "Hello world"
+  # Returns exact rendered width of text$ in world coordinates for
+  # the current font, font size, and Axes coordinate system.
+  # NOTE: Measures screen font metrics. PNG rasterizer uses slightly
+  # different metrics; add 5% safety margin for box sizing.
+  # Provenance: Ian screenshot of World → Measure menu, 19 Mar 2026
+  Text width (mm): text$
+  # Catalogue-verified. Returns text width in mm.
+  Text width (wc): text$
+  # Alias for Text width (world coordinates):
+  PostScript text width (world coordinates): phoneticFont, text$
+  # Catalogue-verified. Takes a phonetic font choice + text.
+  PostScript text width (mm): phoneticFont, text$
+  # Catalogue-verified. Takes a phonetic font choice + text.
+  Horizontal mm to world coordinates: distance
+  # Catalogue-verified. Converts mm to world coordinates (horizontal).
+  Horizontal world coordinates to mm: distance
+  # Catalogue-verified. Converts world coordinates to mm (horizontal).
+  Vertical mm to world coordinates: distance
+  # Catalogue-verified. Converts mm to world coordinates (vertical).
+  Vertical world coordinates to mm: distance
+  # Catalogue-verified. Converts world coordinates to mm (vertical).
+
+---
+
+## Photo Object (alpha compositing for Picture window)
+
+  # Photo objects provide pixel-level RGBA control for the Picture window.
+  # They are the only way to get true alpha transparency in Praat output.
+  # For per-point alpha dots, prefer Insert picture from file: with
+  # pre-rendered sprites — Photo has per-object lifecycle overhead.
+  # See BEST_PRACTICES_DRAWING.txt for the sprite approach.
+
+  Create simple Photo: name$, nRows, nCols, redFormula$, greenFormula$, blueFormula$
+  # Returns: Photo
+  # Verified: Create simple Photo: "test", 4, 4, ~0, ~0, ~1
+  # NOTE: 6 parameters (not 7). Transparency defaults to 0 (opaque).
+  # Set separately via Formula (transparency):.
+  # Provenance: Empirical test, 21 Mar 2026
+
+  Create Photo: name$, xmin, xmax, nCols, dx, x1, ymin, ymax, nRows, dy, y1, redFormula$, greenFormula$, blueFormula$
+  # Returns: Photo
+  # Verified: Create Photo: "blue", 5, 8, 4, 0.75, 5.375, 2, 5, 4, 0.75, 2.375, ~0, ~0, ~1
+  # NOTE: 14 parameters. Domain coordinates (xmin/xmax/ymin/ymax)
+  # determine where Paint image: places the image.
+  # Provenance: Empirical test, 21 Mar 2026
+
+  Formula (transparency): ~expression
+  # Verified: Formula (transparency): ~0.5
+  # 0 = opaque, 1 = invisible. Operates on selected Photo.
+  # Provenance: Empirical test, 21 Mar 2026
+
+  Paint image: fromX, toX, fromY, toY
+  # Verified: Paint image: 0, 0, 0, 0
+  # Alpha-composites Photo against existing Picture window content.
+  # 0,0,0,0 = entire Photo at its internal domain coordinates.
+  # Provenance: Empirical test, 21 Mar 2026
+
+  # ERRATA: Paint image resets Picture window Axes
+  # After Paint image:, the Picture window Axes are set to the Photo's
+  # internal coordinate domain. Subsequent drawing commands use the
+  # Photo's coordinates until Axes: is explicitly restored.
+  # Provenance: Scatter plot crash debug, 21 Mar 2026
+
+  # ERRATA: Photo not viable for per-point rendering
+  # Per-object lifecycle overhead (Create → Formula → Paint → Remove)
+  # makes Photo-based dots ~2× slower than Insert picture from file:
+  # with pre-rendered sprites. Paint image: always paints at the Photo's
+  # internal domain coords — no domain modification commands exist.
+  # Timing: 1500 dots — Paint circle 0.177s, sprites 0.173s, Photo 0.374s.
+  # Architecture decision: sprites for per-point alpha, Photo rejected.
+  # Provenance: Timing benchmark + visual comparison, 21 Mar 2026
+
+---
+
+*End of Picture Window commands.*
