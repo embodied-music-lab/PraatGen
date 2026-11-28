@@ -9,14 +9,29 @@ the live plugin.
 Each entry gives the procedure, the defect, the verified fix, and the evidence.
 Each entry states whether it has been applied to the PKB copies.
 
+The PKB copies were replaced on 28 November 2026 (PraatGen 3.0.0) with the
+current `plugin_EML_StatsGraphs/` sources: 20 files, each copied verbatim apart
+from a 5-line PKB block after the header comment. Every fix still needed was
+re-applied to the new bodies and marked `# Provenance: PraatGen-only edit`.
+"Current source" lines below are lines in the plugin source files
+(`graphs/eml-graph-procedures.praat`, `graphs/eml-draw-procedures.praat`,
+`scripts/eml-batch-process.praat`, `stats/eml-output.praat`,
+`stats/eml-extract.praat`); "PKB" lines are lines in the PKB copy after the
+sync. The edits are scripted in `release3/pkb_sync_probes/apply_pkb_fixes.py`
+and probed in a real Praat 6.6.30 (`release3/pkb_sync_probes/`).
+
 ---
 
 ## 1. Reversed-axis tick placement draws no scale
 
 **Procedures:** `@emlDrawAlignedMarksBottom`, `@emlDrawAlignedMarksLeft`,
 `@emlDrawAlignedMarksRight`
-**Source:** `eml-graph-procedures.txt` lines 1171, 1026 and 1098 (as of 1.1.1)
-**Status: APPLIED to the PKB copies, 23 September 2026.**
+**Current source:** `eml-graph-procedures.praat` 3.32. Bottom: procedure 3200,
+step computed at 3219, loop start 3231. Left: 2983, 3010, 3027. Right: 3084,
+3109, 3124. No bound normalization at entry. `@emlComputeNiceStep` (2051) keeps
+its `if .range <= 0` guard (2060).
+**Status: APPLIED to the PKB copies, 23 September 2026. Re-applied in the
+28 November 2026 sync** (PKB `eml-graph-procedures.txt` 3019, 3129, 3254).
 **Found:** 23 September 2026, PraatGen 1.1.1 work
 
 A caller that passes a descending range gets no tick marks and no axis value
@@ -74,9 +89,34 @@ need normalizing.
 ## 2. Scatter marker radius goes negative on a descending x range
 
 **Procedure:** `@emlDrawScatterPlot`
-**Source:** `eml-draw-procedures.txt` lines 1955–1957, drawn at 2003 and 2207
+**Current source:** `eml-draw-procedures.praat` 1.26, `@emlDrawScatterPlot` at
+4655: `.markerRadius`, `.xRange`, `.radiusWorld` at 4822-4824 and `.markerHalfIn`
+at 4829-4831. `eml-graph-procedures.praat`: `@emlDrawMarker` at 4397 (skips
+`.halfIn <= 0` at 4427; its `Paint circle (mm):` fallback passes
+`.halfIn * 25.4` at 4455); `@emlSetAlphaDotGeometry` at 6830;
+`@emlDrawAlphaDot` at 6899 with `Paint circle:` fallbacks at 6914 and 6932.
 **Found:** 23 September 2026, PraatGen 1.1.1 work
-**Status: APPLIED to the PKB copies, 28 September 2026.**
+**Status: APPLIED to the PKB copies, 28 September 2026. Re-applied in the
+28 November 2026 sync, adapted to the current structure:**
+- `@emlDrawScatterPlot` computes `.markerHalfIn = abs (.radiusWorld /
+  emlPatWorldPerInchX)` when `emlPatWorldPerInchX <> 0` (PKB
+  `eml-draw-procedures.txt` 4858-4862), which is `.markerRadius` times the inner
+  viewport width on either axis direction.
+- `@emlDrawMarker`'s mm fallback passes `2 * .halfIn * 25.4`, a diameter (PKB
+  `eml-graph-procedures.txt` 4529-4530).
+- `@emlSetAlphaDotGeometry` publishes `.dotDiamMM = 2 * abs (.dotHalf /
+  .wuPerInchX) * 25.4` (PKB 6926, 6964), and both fallbacks in
+  `@emlDrawAlphaDot` draw with `Paint circle (mm):` at that diameter (PKB 7003,
+  7023).
+
+Probe, Praat 6.6.30 Linux, `@emlDrawScatterPlot` on a 12-point table (EPS
+output). Ungrouped, every reversal gives 12 markers of one size (radius
+38.88 EPS units, as ascending). Upstream source: 0 markers for x reversed and
+both reversed, 12 markers at half the radius (19.44) for y reversed. Direct
+`@emlDrawMarker` with y reversed: radius 30.0 fixed, 15.0 upstream. Direct
+`@emlDrawAlphaDot` fallback with x reversed: draws at 38.88 fixed; upstream
+stops with `Argument "Radius" must be greater than 0.0.` Ascending output is
+byte-identical to upstream. Sprites cannot be probed on Linux.
 
     .markerRadius = emlSetAdaptiveTheme.markerSize * .sizeScale
     .xRange = .axisXMax - .axisXMin
@@ -186,7 +226,10 @@ has moved on from the PKB copy, and the defect has changed shape there:
 
 **Procedures:** `@emlDrawGridlines`, `@emlDrawHorizontalGridlines`,
 `@emlDrawVerticalGridlines`
-**Status: APPLIED to the PKB copies, 28 September 2026.**
+**Current source:** `eml-graph-procedures.praat` 2416, 2501 and 2550; no swap at
+entry; loop starts at 2444, 2514, 2453 and 2559.
+**Status: APPLIED to the PKB copies, 28 September 2026. Re-applied in the
+28 November 2026 sync** (PKB `eml-graph-procedures.txt` 2424, 2521, 2577).
 
 Same loop shape as entry 1, same fix: normalize the bounds at entry. Before the
 patch a y-descending scatter lost its horizontal gridlines with no error. After
@@ -195,75 +238,94 @@ it, gridlines draw on every axis direction. Unpatched upstream.
 ## 2c. Sprites on Linux
 
 **Procedure:** `@emlInitAlphaSprites`
-**Status: APPLIED to the PKB copies, 28 September 2026.**
+**Current source:** `eml-graph-procedures.praat` 6645-6648: `if not (macintosh or
+windows)` / `emlAlphaSpritesInitialized = 1` / `goto SPRITES_INIT_DONE`.
+**Status: PARTLY fixed upstream; PKB edit re-applied 28 November 2026.**
+Upstream `@eml_csvQuote` (2130-2139) folds each cell to ASCII, then quotes and
+doubles it only when it holds a comma, a double quote or a newline, so most
+text cells are written bare:
 
-The PKB copy predated the plugin's platform gate. The gate is ported unchanged:
-on Linux, sprites stay unavailable and dots use the native fallback.
+    procedure eml_csvQuote: .s$
+        @emlAsciiFold: .s$
+        .folded$ = emlAsciiFold.result$
+        if index (.folded$, ",") > 0 or index (.folded$, """") > 0
+        ... or index (.folded$, newline$) > 0
+            .result$ = """" + replace$ (.folded$, """", """""", 0) + """"
+        else
+            .result$ = .folded$
+        endif
+    endproc
 
-## 3. LTAS drawing is blank on reversed axes
+**PKB edit (`pkb/eml-output.txt`, `@eml_csvQuote`):** every cell that doesn't
+read as a number is quoted, with inner quotes doubled; a cell that reads as a
+number (`number (.folded$) <> undefined`) stays bare. The ASCII fold is kept.
+No other procedure changes. Evidence: Praat 6.6.30 barren, 28 Nov 2026,
+`@emlCSVInit`, `@emlCSVAdd`, `@emlCSVAddStr` and `@emlExportStatsCSV` wrote
+`"voice data","descriptives","Soprano","","mean",523.25` and
+`"voice data","t-test","A vs B","","method","Welch, two-sided"`; Praat's
+`Read Table from comma-separated file` read 3 rows back with the values intact.
 
-**Procedure:** `@emlDrawLTAS`
-**Source:** `eml-draw-procedures.txt` 413 (as of 1.2.0)
-**Status: APPLIED to the PKB copies, 8 October 2026 (release 1.2.1).**
+The PKB edit of 27 November 2026 applied to a procedure that no longer exists.
 
-With the frequency axis reversed, the curve, poles and speckles drew nothing;
-with the level axis reversed, the poles and speckles drew nothing. Bars drew
-on every direction. No error in any case. The pole and speckle range tests
-and clamps take `.freqMin`/`.freqMax` and `.powerMin`/`.powerMax` in the order
-given: a reversed pair excludes every bin, or clamps every pole to zero length.
-`Draw: ... "Curve"` on the Ltas draws nothing when its frequency bounds descend.
+The original defect: the row writer joined its eight text fields (table, data column, group
+column, both group names, test, effect type, effect label) with bare commas.
+A column or group name holding a comma shifted every later column, and a
+name holding a double quote broke the quoting of the row. This breaks the
+PraatGen rule for CSV text fields (Rule 27).
 
-**Fix:**
-- Range tests and clamps use ordered bounds `.fLo`, `.fHi`, `.pLo`, `.pHi`.
-- Speckles use `Paint circle (mm):` at a diameter of
-  `2 * 0.006 * inner viewport width * 25.4`, the size the old world radius
-  gave on an ascending axis.
-- On a descending frequency axis only, the curve is drawn by hand: bin
-  centers in range, values clamped to the level axis, joined in bin order.
-  On an ascending axis it matches the native curve to within anti-aliasing.
+**Fix:** each text field is written in double quotes, with every quote
+inside it doubled: `.q$ + replace$ (.text$, .q$, .qq$, 0) + .q$`, where
+`.q$` is `""""` and `.qq$` is `""""""`. The numeric fields are unchanged.
 
-**Evidence:** every method on ascending, reversed-frequency, reversed-level and
-both-reversed axes, plus a sub-range with clipping, Praat 6.6.30 and 7.0.02,
-8 Oct 2026. Ascending renders are byte-identical before and after. Reversed
-renders carry the same ink as ascending (speckles 15012 vs 15014 px; curve
-15339 vs 15356 px).
+**Evidence:** Praat 6.6.30 barren, 27 Nov 2026. Two rows through
+`@emlCSVInit`, `@emlCSVAddRow` and `@emlExportStatsCSV`, with the names
+`F0, Hz`, `Smith, Jo`, `say "hi"`, `chantée`, `a—b` and `歌`. Fixed: Python's
+csv module reads 20 columns in every row and every name exactly; Praat's
+`Read Table from comma-separated file` reads 2 rows of 20 columns, with the
+commas kept and the double quotes deleted, as Praat's CSV reader does with
+any quote. Unfixed: Python reads 22 columns in the first row, and Praat
+stops with "Row 2 incomplete."
 
-## 3b. Related, lower priority
+**Related, now moot.** Every cell is
+ASCII-folded by `@emlAsciiFold` before it is written (`eml-output.praat` has no
+`Text writing preferences` line), so a non-ASCII group name no longer reaches
+the file.
 
-**`@emlDrawBox`** (`eml-graph-procedures.txt` 1784) computes
-`.outlierRadius = .width * 0.2`. Both library callers build an ascending
-categorical axis (`.axisXMin = 0.5`, `.axisXMax = nGroups + 0.5`), so no library
-path reaches it with a reversed x. Exposed only to a direct caller.
+---
 
-## 4. Stereo channel choice picked by option number
+## 6. `eml_isMissingToken` copied into the PKB
 
-**Procedures:** `@emlApplyChannelChoice`, `@emlHandleStereo`; the channel
-handling block in `eml-batch-process.txt`
-**Source:** `eml-graph-procedures.txt` lines 1876 to 1945, and
-`eml-batch-process.txt` lines 95 and 322 (as of 2.1.0)
-**Status: APPLIED to the PKB copies, 14 October 2026.** Reconcile with the
-plugin source.
-**Found:** 14 October 2026
+**Procedure:** `@eml_isMissingToken`
+**Current source:** `eml-extract.praat` 2.0, defined at 4148:
 
-The worker took the dialog's option number as its action code (1 Mix, 2 Left,
-3 Right), and the dialogs listed Mix first as the default. PraatGen's own
-stereo pattern lists Left, Right, Mix, so a script that built its dialog in
-that order and called the worker extracted the wrong channel with no error:
-Left mixed the channels and Right extracted the left channel. An unknown
-number also mixed silently.
+    procedure eml_isMissingToken: .s$
+        .isMissing = 0
+        .low$ = replace_regex$ (.s$, "([A-Z])", "\l\1", 0)
+        if .low$ = "na" or .low$ = "n/a" or .low$ = "n.a." or .low$ = "nan"
+        ... or .low$ = "null" or .low$ = "nil" or .low$ = "-" or .low$ = "--"
+        ... or .low$ = "." or .low$ = "?" or .low$ = "missing"
+        ... or .low$ = "--undefined--" or .low$ = "undefined"
+            .isMissing = 1
+        endif
+    endproc
 
-**Fix (author ruling, 14 October 2026):** every dialog lists Left channel
-only, Right channel only, Mix to mono, with Left as the default. The worker
-takes the option text (`.channelHandling$`) and stops with an error on any
-other text. `@emlHandleStereo` passes `channel_handling$`. The batch template
-matches the text the same way.
+**Status: FIXED upstream. No PKB edit after the 28 November 2026 sync.** The
+22 October 2026 PKB addition copied this procedure from the plugin into a
+v1.4 copy of `eml-extract.txt` that lacked it. The synced copy carries the
+plugin's own definition and the addition is gone.
 
-**Evidence:** Praat 6.6.30, a stereo sound with different signals in each
-channel. Old worker: value 2 returned the left channel, value 1 the mix. New
-worker: each option text returns its channel or the mix, and "Left" stops
-with "Unknown channel handling: Left". The `@emlHandleStereo` dialog was
-driven in the GUI: the default (Left channel only) and Right channel only
-each returned the matching channel.
+---
+
+## 7. `emlDrawLMMForest` removed from the PKB copy
+
+**Procedure:** `@emlDrawLMMForest`
+**Current source:** `eml-draw-procedures.praat` 1.26, 7655 to the end of the file.
+**Status: PraatGen-only removal, 28 November 2026.** The procedure reads
+`emlLMM.*`, `emlWaldCI.*` and `emlModelMatrix.*` globals from `eml-lmm`,
+`eml-linalg` and `eml-optimizer`, which the author excluded from the PKB. The
+PKB copy of `eml-draw-procedures.txt` carries a `# Provenance: PraatGen-only
+edit` line at the spot (7669). The file's header comment (lines 42-45, 62-63)
+and the comment at 433 still name the procedure, as in the source.
 
 ---
 

@@ -107,6 +107,10 @@ catalogue, and check that it is current before a release:
     python3 tools/build_lint.py
     python3 tools/build_lint.py --check
 
+After a change to the linter, run its tests:
+
+    python3 tools/test_lint_csv_text.py
+
 The check compares the text inside the zip with a fresh build. It ignores the
 zip's own bytes, because GitHub's web upload compresses the file differently
 from Python, and both copies hold the same text.
@@ -180,3 +184,23 @@ plugin maintainer and the checklist for reconciling the two trees.
 
 Keep Praat-level behavior out of it. A constraint that holds with no library
 code involved belongs in the PraatGen reference files.
+
+## 6. The procedure registry
+
+`pkb/EML_PROCEDURE_REGISTRY.md` is generated. After any change to a
+`pkb/eml-*.txt` file, regenerate it and check that it is current:
+
+    python3 tools/build_procedure_registry.py
+    python3 tools/build_procedure_registry.py --check
+
+To build it from a plugin checkout instead of the PKB copies, pass the folder
+that holds `stats/`, `graphs/` and `scripts/`:
+
+    python3 tools/build_procedure_registry.py --src PATH/plugin_EML_StatsGraphs
+
+The script reads each procedure's name, parameters and header comment from the
+source and takes the version from the file's `Version:` line. Its `SECTIONS`
+table fixes the order, title and plugin-tree path of each file; add a row there
+when a library file joins the PKB. Procedures named in `EXCLUDE_NAMES` and
+`EXCLUDE_PREFIXES` stay out of the registry. `EML_PROCEDURE_GUIDE.md` keeps its
+own version table and file notes, which are edited by hand.

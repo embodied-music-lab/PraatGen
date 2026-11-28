@@ -5,51 +5,66 @@
 
 # EML PraatGen
 
-**Generate powerful Praat scripts through conversation.**
+**Expert help with study design, measurement selection, and signal analysis for voice research and clinical measures in Praat.**
 
-PraatGen is a Claude AI project that writes syntactically correct Praat scripts from plain-language descriptions. You describe what you want to accomplish — extract F0 contours, batch-process a folder of recordings, build a publication figure, or generate a complex plugin — and PraatGen generates a complete, runnable script with validated commands, proper object handling, and clinical-grade parameter defaults. It can help you ideate your studies, debug its own or your existing code, and collaborate on your research and analysis projects.
-
-**Which version you need.** Release 2.2.7 is for projects in the older Claude project format, whose addresses start `claude.ai/project/`. A version for the new project format, with a project chat and threads, is in development.
+**Which version you need.** This page is PraatGen 3.0.0, a plugin for the Claude app. For PraatGen in a Claude project in the older format, use [release 2.2.7](https://github.com/embodied-music-lab/PraatGen/releases/tag/v2.2.7).
 
 Please send feedback to [office@embodiedmusiclab.com](mailto:office@embodiedmusiclab.com).
+
+**Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)  
+**Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)  
+**Version:** 3.0.0  
+**Release:** 28 November 2026  
+**License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+
+PraatGen is not affiliated with Praat.
+
+---
+
+## What PraatGen is
+
+PraatGen is a Claude plugin that closes the distance between a question about voice and a working tool that answers it. It guides you through a process that will challenge you, teach you about voice research and measurements, help you to explore Praat and maximize its capabilities, and generate durable scripts, plugins, and complex workflows that ensure you can create repeatable analyses tailored to each project.
 
 While it is helpful to have domain knowledge about the signals you will bring into Praat, no Praat scripting experience is required. In fact, do not try to *think* like Praat. Praat has an object-oriented hierarchy; commands are connected to specific object types rather than organized by tasks or outcomes. Some of the most advanced and useful built-in functions are hidden in the menus by default, so it is likely that you do not even know what Praat is capable of.
 
 Ask PraatGen questions. Push it to do what you want, not what you currently know how to do. In fact, you can ask it to do what you *wish* you knew how to do. Want to validate by generating confidence images of every nth measurement? Great. Ask it to wireframe the layout of any Picture window output. Create animations in the Demo window. Ask it to make art, or to imagine beautiful and elegant presentations of your data. PraatGen rewards divergent thinkers.
 
-**Author:** Ian Howell, Embodied Music Lab — [www.embodiedmusiclab.com](http://www.embodiedmusiclab.com)
-**Development:** Prompt engineering and code generation in collaboration with Claude (Anthropic)
-**Version:** 2.2.7
-**Release:** 27 November 2026
-**License:** Part of EML PraatGen GPL-3.0-or-later — Ian Howell, Embodied Music Lab
+## What problem PraatGen addresses
 
----
+Although PraatGen will maximize the capacity of any level of researcher to write accurate analysis code customized to their workflows, voice practitioners (Vocologists, singers and voice teachers, SLPs) are especially well served by it. They tend to have great questions and a firsthand knowledge of what the field needs to explore. However, the knowledge needed to get a research study started stops most practitioners before they begin. The field's standing answer is access to a collaborating scientist. I think that access largely does not exist. Those scientists are already mentoring their own students, and they collaborate with people who already understand enough that no mentoring is needed. Researchers who do get started often spend more time extracting data manually from software that was not designed for batch processing than they do on their questions. Everything that can be measured with pointing and clicking can be significantly accelerated with computational approaches. Simply using computers to assist in measurement and analysis can mean a shift from case study to pilot or pilot to large-n samples.
 
-## What PraatGen Does
+With PraatGen, the questions you ask in the studio and the clinic become questions you can investigate. Analysis workflows come together in less time. The scripts you deliver are ones other people can run and share. Work that would have left Praat stays in Praat, because PraatGen shows what Praat is actually capable of.
 
-PraatGen is not a plugin or a standalone application. It is a **Claude Project** — a structured prompt and a set of verified reference files that give Claude deep, accurate knowledge of Praat's scripting language. When you open a conversation in this project, Claude operates as a Praat scripting specialist that:
+PraatGen helps with any step of the research process, including:
 
-- **Validates every command** against source-verified reference files covering 136 object types and 3,300+ registered commands — not from memory, which is unreliable for Praat syntax
-- **Uses clinically validated defaults** for voice analysis parameters (pitch tracking, jitter, shimmer, HNR, CPPS, formants), sourced from published norms
-- **Handles Praat's idiosyncrasies** — selection discipline, object identity, time-domain queries, string typing, variable derivation from dialog labels, and dozens of other gotchas that trip up even experienced scripters
-- **Follows a structured workflow** with pre-flight verification, command planning, and self-audit — catching errors before they reach Praat
-- **Generates complete scripts** with headers, attribution, input validation, plausibility checks, and proper file I/O
-- **Can verify itself empirically** by installing Praat in its own sandbox to test commands and run scripts before delivery (see Sandbox Mode)
+**Study design.** PraatGen works out with you whether your question is answerable as posed, what you need to record, and what the design has to control for.
 
-### What It Does Not Do
+**Measurement selection.** PraatGen tells you which measures address your question and which parameters the published conventions require. It applies canonical settings without asking you first. It warns you when a stated range crosses a convention. The output records any deviation you ask for.
 
-- PraatGen does not run your scripts on your machine — you copy the generated script into Praat's script editor and run it there. Claude can install and run Praat in *its own* workspace in any session to check commands, and in Sandbox Mode it tests every script there before delivery. It never touches your Praat installation, and it writes to your computer only into a folder you have connected to the session.
-- PraatGen does not have access to your audio files or your local Praat installation. It generates code based on your description.
-- PraatGen is not infallible. It follows a rigorous verification protocol, but novel edge cases can still produce errors. Always test generated scripts on your data before using them in research.
+**Reading the results.** PraatGen helps you read the signals themselves. It also helps with the measurements extracted from them, which is a separate problem.
+
+**Figures and statistics.** The scripts PraatGen writes produce publication-ready figures and run the statistics your design calls for. All of it happens inside Praat. PraatGen doesn't leave the Praat work environment unless Praat is actually incapable of the task.
+
+**The tool you keep.** PraatGen writes a Praat script or a full plugin, reviews it independently, tests it in a running Praat, and delivers something that runs on your own machine without the AI.
+
+PraatGen does all of this while prioritizing fast, elegant, accurate code, aesthetically-pleasing and accessible figures, and the quality of the end user's experience.
+
+## Who built it
+
+Ian Howell (hi) built PraatGen. He is an associate professor of vocal pedagogy and a vocology researcher. The measurement conventions PraatGen holds to, the sequence it works in, and the command knowledge it verifies against were built by him. Each one carries a judgment about what matters in voice measurement and how a project should be organized. When PraatGen tells you which measure addresses your question, you are drawing on those judgments.
+
+## How it runs
+
+A master prompt governs PraatGen's behavior through pre-verification gates, so an AI model that might bungle its way through a poorly documented language like Praat's will be forced to slow down and methodically verify everything it tells you. PraatGen checks every command against its own reference files before writing code, stops for your approval at the command plan, and runs an independent review of the finished script by default. You need no API key, no local installation, no command line, and no Praat scripting experience.
 
 ---
 
 ## Requirements
 
-- **Claude Pro, Team, Max, or Enterprise account** (Projects require a paid plan). PraatGen can burn tokens quickly on complex projects; for serious code production, the Max plan is recommended.
-- **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees. PraatGen is structured to work within the Claude project framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected.
+- **Claude Pro or higher account.** PraatGen can burn tokens quickly on complex projects; for serious code production, a Max or Ultra plan is recommended. On a Team or Enterprise plan, the organization owner's "User-created skills" setting can hide the option to add a plugin.
+- **Other AI options:** As of mid-2026, no other frontier model accommodates the modular design of PraatGen. Use with ChatGPT, Gemini, etc. is untested and unsupported — no guarantees. PraatGen is structured to work within Claude's plugin and skill framework. All LLMs are not equal in training or their harnesses. PraatGen's structure will NOT work if ported directly over to another LLM, if the PKB is flattened, or if the master prompt instructions are fed in once. If you would like to work on a port reach out and I'll be happy to answer structural questions. Any errors arising from off-label use are to be expected.
 - **Claude model:** Claude Opus 5 is the current recommendation. Opus 5.5 works; watch for over-agentic behavior. Opus 4.8 down to 4.6 (with Extended Thinking) works if you want to conserve tokens. Sonnet and Haiku are not supported. See "Choosing a model" below.
-- **Claude modality:** PraatGen presumes most users will use the Claude.ai web or desktop environment. It can be adapted for Claude Code by pointing `PROJECT_INSTRUCTIONS.txt` and the file references in `PRAATGEN_RULES_FULL.md` at a local directory; you may also want to keep PraatGen's instructions separate from your `CLAUDE.md` file.
+- **Claude modality:** PraatGen runs as a plugin in the Claude app, in conversations and Cowork tasks. To work with your own folders, it needs a conversation linked to your computer through the Claude desktop app. It can't start in an incognito chat, which has no file tools. PraatGen isn't recommended in Claude Code or in the new Code-based Projects. It reaches a good result there but uses far more tokens.
 - **Praat:** Version 6.4.39 or later. **Prefer 6.6.30** when installing Praat for writing and testing scripts; Sandbox Mode installs 6.6.30 (pinned) in Claude's own workspace. No PraatGen feature requires 7.0.02 or later. Praat 7.0.02 and later add a security feature that slows development: a script that writes a file or runs a system command stops to ask your permission, each run. Anything that runs on 6.6.30 also runs on the current version. Direct downloads for 6.6.30: [Mac](https://www.fon.hum.uva.nl/praat/praat6630_mac.dmg), [Windows](https://www.fon.hum.uva.nl/praat/praat6630_win-x64v3.zip) ([ARM](https://www.fon.hum.uva.nl/praat/praat6630_win-arm64.zip)), [Linux](https://www.fon.hum.uva.nl/praat/praat6630_linux-x64v3.tar.gz).
 
 ### Choosing a model
@@ -57,7 +72,7 @@ PraatGen is not a plugin or a standalone application. It is a **Claude Project**
 The model is a variable — keep the one you're using in mind.
 
 - **Opus 5** is the current recommendation and the ceiling.
-- **Opus 5.5** works. Watch for over-agentic behavior: it can settle decisions itself that PraatGen's workflow puts to you.
+- **Opus 5.5** works. Watch for over-agentic behavior: it can tend to make decisions that PraatGen should put to you. Evaluation of this model is ongoing.
 - **Opus 4.8** also performs well.
 - **Opus 4.7** is fine but more agentic by default; it wants to take initiative. That suits large-scale refactors in AUTO SANDBOX mode, but in close collaborative work watch that it doesn't run ahead of your decisions. Superseded by Opus 5.
 - **Opus 4.6 + Extended Thinking** is the original development-and-validation baseline for PraatGen and remains solid, particularly if you are token-conscious.
@@ -75,32 +90,27 @@ Please experiment with this setting and find what works best for your own workfl
 
 ## Setup
 
-### 1. Create a Claude Project
+### 1. Install PraatGen
 
-In Claude (claude.ai or the Claude app):
-1. Open the sidebar and click **Projects**
-2. Click **Create project**
-3. Name it (e.g., "EML PraatGen")
+In Claude, go to **Customize > Plugins > Add > Add marketplace** and enter `embodied-music-lab/PraatGen`. Install PraatGen, and turn on **Sync automatically** so you get each fix.
 
-### 2. Set the System Prompt
+**Alternative install.** Download [`praatgen.plugin`](https://github.com/embodied-music-lab/PraatGen/releases/latest/download/praatgen.plugin) from [the release](https://github.com/embodied-music-lab/PraatGen/releases/latest) and use **Customize > Plugins > Add > Upload plugin**. An uploaded copy doesn't update itself.
 
-1. In your new project, click **instructions**
-2. Paste the entire contents of `PROJECT_INSTRUCTIONS.txt` into the instructions field. It tells PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns.
-3. Save
+### 2. Choose the model
 
-The Claude app doesn't re-send project instructions on every turn, so the whole prompt lives in `PRAATGEN_RULES_FULL.md`, which PraatGen reads again at the start of every turn. Every reply opens with `Rules read this turn: marsh-7316`. That line shows PraatGen read the file to its last line. The turn should also show the read of `PRAATGEN_RULES_FULL.md` before anything else, because a model can repeat the marker from an earlier turn.
+Choose Opus 5 in the conversation's model menu.
 
-### 3. Upload the Knowledge Base
+### 3. Start PraatGen
 
-1. In your project, click **add files**
-2. Upload all 66 files from the `pkb/` folder. They include `PRAATGEN_RULES_FULL.md`, which holds the whole prompt, the zipped linter `TOOL_PRAATGEN_LINT.zip` (upload the zip as it is; don't unzip it), and the verified reference files PraatGen uses to validate commands and functions
-3. Do not rename the files; the prompt references them by their exact filenames
+Type / and choose praatgen, or ask for PraatGen by name. If Claude suggests PraatGen, say yes to start it.
 
-If your project won't accept `TOOL_PRAATGEN_LINT.zip` (accounts on the older uploader reject zip files as "not a supported file format"), leave it out. Don't unzip it or upload it as a text file. Upload the other 65 files. PraatGen works without the linter and says "lint not run" before each delivery.
+### 4. Link your computer
 
-### 4. Start a Conversation
+> Linking this conversation to your computer lets me work with your folders directly. To link it, open the + menu in the message box, choose Devices, and pick your computer. The Claude desktop app has to be open on that computer.
 
-Open a new conversation within the project. PraatGen will respond with its readiness message and ask you to describe your task.
+### 5. Turn PraatGen off
+
+> To turn PraatGen off, type PRAATGEN OFF in any message. I'll stop reading and applying my rules for the rest of this session, so ordinary conversation costs nothing extra. To turn me back on, type / and choose praatgen.
 
 ---
 
@@ -115,6 +125,8 @@ Open a new conversation within the project. PraatGen will respond with its readi
    - What objects are open when the script runs?
    - What information does the script need from the user?
    - What should remain when the script finishes?
+
+   If you name a task in your first message, PraatGen restates it and offers to go straight to the PRE-FLIGHT. If you open with a question, it asks whether to build a script or talk it over in scaffold.
 
 2. **Review the pre-flight.** PraatGen verifies it has the right references loaded and flags any ambiguities. It notes a model tier and, where relevant, thinking or effort settings. You approve this step or raise concerns.
 
@@ -132,46 +144,31 @@ PraatGen runs in **SPARSE mode by default** — compressed pre-flights, command 
 
 ### Modes
 
-Reply with any of these in place of (or alongside) your task. Modes compose freely except where noted.
+Reply with any of these in place of (or alongside) your task. Modes compose freely except where noted. Each mode is also in the / menu, and modes combine however you give them. In the / menu they're scaffold, sandbox, auto, debugging, noreview, verbose, sparse, nointro, off and verify, which runs VERIFY YOUR STATE.
 
-- **SCAFFOLD** — collaborative design review *before* any code. PraatGen walks through the proposed workflow, GUI design, object lifecycle, and edge cases for your approval. While scaffold is on, PraatGen doesn't reread its rules on discussion turns, so the conversation stays with the idea; tell it when to leave scaffold, and it reads the rules and checks the design against them. Best for batch pipelines, multi-panel figures, and clinical analysis chains.
+- **SCAFFOLD** — collaborative design review *before* any code. PraatGen walks through the proposed workflow, GUI design, object lifecycle, and edge cases for your approval. While scaffold is on, PraatGen doesn't reread its rules on discussion turns; tell it when to leave scaffold, and it reads the rules and checks the design against them. Best for batch pipelines, multi-panel figures, and clinical analysis chains.
 - **DEBUGGING** — strict targeted-fix mode. Requires your approval for any change, declares the scope of each fix as a binding contract, and avoids elective refactoring. Use this for errors and refactors.
 - **SANDBOX** — makes PraatGen test every script in its own copy of Praat before delivering it, including running the script through its real dialogs. PraatGen can install Praat in any session when it needs to check something; SANDBOX makes testing required. It downloads the pinned Praat 6.6.30 from Praat's GitHub releases, since the Praat website hosts only current builds. It never asks you to change network or environment settings. If GitHub is refused too, PraatGen offers a manual-upload fallback.
 - **NOREVIEW** — skips the independent check before delivery. By default a fresh Opus reviewer reads the code rules and the clinical defaults and checks the script's clinical parameters, pitch limits, file output, dialogs, drawing and task coverage. NOREVIEW is faster. You can add it in any message up to the GO for code.
 - **AUTO** (Autonomous) — suppresses the approval gates and intermediate status reports for batch work: task lists, multi-file refactors, or known sequences of changes. PraatGen executes the whole list and delivers once at the end, with a handoff document. Reply STANDARD or GATES ON to restore normal gating.
 - **NOINTRO** — put this in your *first* message to skip the opening menu. PraatGen goes straight to PRE-FLIGHT if you have supplied the four items (task, starting state, inputs, outputs), and otherwise asks only for what is missing. It suppresses the greeting and nothing else — every rule still applies.
+- **PRAATGEN OFF** — To turn PraatGen off, type PRAATGEN OFF in any message. I'll stop reading and applying my rules for the rest of this session, so ordinary conversation costs nothing extra. To turn me back on, type / and choose praatgen.
 
 **Composition examples:** `SANDBOX AUTO` (install Praat, work through a task list autonomously, test as it goes, deliver once), `SANDBOX DEBUGGING` (strict debugging with empirical verification on hand), `SCAFFOLD SANDBOX` (collaborative design with empirical checks), `AUTO NOREVIEW` (autonomous work without the independent check). AUTO and DEBUGGING are mutually exclusive; if a bug surfaces mid-AUTO, PraatGen applies debugging discipline to that one item, then resumes.
 
 ### Work survives a long session: the output folder
 
-**PraatGen writes as it goes.** Each step leaves a file: the plan (`<name>_plan.md`, with an unedited copy as sent, `<name>_plan_sent.md`), the script, the linter output (`<name>_lint.txt`) and the audit (`<name>_audit.md`). The current script, test results, and open items are
-kept in its output folder and updated in the same turn as the work that changed them
-— not held in the conversation to be restated later. The folder survives both a
-context compaction and a page reload, so there is always a current copy to come back
-to that does not depend on anything being remembered.
+**PraatGen writes as it goes.** Each step leaves a file: the plan (`<name>_plan.md`, with an unedited copy as sent, `<name>_plan_sent.md`), the script, the linter output (`<name>_lint.txt`) and one audit per script version (`<name>_audit_v<version>.md`). The current script, test results, and open items are kept in its output folder and updated in the same turn as the work that changed them — not held in the conversation to be restated later. The folder survives both a context compaction and a page reload, so there is always a current copy to come back to that does not depend on anything being remembered.
 
-You get the finished script as a downloadable `.praat` file (step 5 above). That
-delivery is for you; the folder is what PraatGen reads back from. You can ask for
-anything in it at any point.
+You get the finished script as a downloadable `.praat` file. That delivery is for you; the folder is what PraatGen reads back from. You can ask for anything in it at any point.
 
 ### When you see "compacting", or after a reload or error: VERIFY YOUR STATE
 
-Long conversations get **compacted** — Claude replaces the earlier part of the
-conversation with a summary, and you see the word "compacting" while it happens.
-Sessions also get interrupted: an error telling you to reload the page, a response
-that fails partway and regenerates, a long gap before you come back. In any of
-these, work rebuilt from memory can quietly lose corrections you already made.
+Long conversations get **compacted** — Claude replaces the earlier part of the conversation with a summary, and you see the word "compacting" while it happens. Sessions also get interrupted: an error telling you to reload the page, a response that fails partway and regenerates, a long gap before you come back. In any of these, work rebuilt from memory can quietly lose corrections you already made.
 
-**Say `VERIFY YOUR STATE`.** PraatGen re-reads what is actually saved in its output
-folder — the current script, notes, open items — and reports where that disagrees
-with its own recollection, before touching anything. The saved file wins: it
-reconciles by reading, and never regenerates delivered work from memory. In Sandbox
-Mode it also checks whether its Praat environment is still alive, since a reload can
-coincide with the container being recycled.
+**Say `VERIFY YOUR STATE`.** PraatGen re-reads what is actually saved in its output folder — the current script, notes, open items — and reports where that disagrees with its own recollection, before touching anything. The saved file wins: it reconciles by reading, and never regenerates delivered work from memory. In Sandbox Mode it also checks whether its Praat environment is still alive, since a reload can coincide with the container being recycled.
 
-Use it whenever you are unsure what landed. The command is yours to give, because
-PraatGen cannot reliably tell from the inside that anything happened.
+Use it whenever you are unsure what landed. After a compaction, PraatGen runs the same check by itself as soon as it sees the summary, before anything else.
 
 ### Tips for Best Results
 
@@ -190,10 +187,20 @@ PraatGen cannot reliably tell from the inside that anything happened.
 
 | File | Purpose |
 |------|---------|
-| `PROJECT_INSTRUCTIONS.txt` | The project instructions: they tell PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns. |
-| `src/` | The sources of `PRAATGEN_RULES_FULL.md`: the core (`MASTER_PROMPT_CORE_v17_0_0.md`) and the six `RULES_*.md` files. Edit these, then rebuild with `tools/build_rules_full.py`. Don't upload them to a project. Master Prompt content version: 17.0.0. |
+| `.claude-plugin/marketplace.json` | The marketplace file the Claude app reads when you add `embodied-music-lab/PraatGen`. |
+| `plugin/` | The built plugin the app installs: `.claude-plugin/plugin.json`, `README.md`, `skills/praatgen/` (`SKILL.md`, `PRAATGEN_RULES_FULL.md`, `TOOL_PRAATGEN_LINT.py` and `pkb/`), and one folder per mode command in `skills/`. |
+| `src/` | The sources of `PRAATGEN_RULES_FULL.md`: the core (`MASTER_PROMPT_CORE_v17_0_0.md`) and the six `RULES_*.md` files. Edit these, then rebuild with `tools/build_rules_full.py` and `build/build_plugin.py`. Master Prompt content version: 18.0.0. |
+| `pkb/` | The reference files, the built rules file `PRAATGEN_RULES_FULL.md` and the linter zip `TOOL_PRAATGEN_LINT.zip`: the sources the plugin copies. |
+| `tools/` | The rules-file, linter and registry builders, the linter source, and the maintenance checks. |
+| `build/` | `build_plugin.py` builds `plugin/`, `praatgen.plugin` and the marketplace file. `phrases.py` holds every user-facing phrase. |
+| `tests/` | Tests for the built plugin and the usage log. |
+| `usage_log/` | A token-usage logger for the maintainer. It isn't in the released plugin. |
+| `PROJECT_INSTRUCTIONS.txt` | The start of the skill's `SKILL.md`, to which `build/build_plugin.py` adds how PraatGen starts, its commands and the off rule. It tells PraatGen to read `PRAATGEN_RULES_FULL.md` in full at the start of every turn, except on scaffold discussion turns. |
+| `brand/` | The PraatGen wordmark files this page shows. |
 | `README.md` | This file. |
-| `RELEASE_NOTES_2.2.7.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v2.2.7 GitHub Release. |
+| `RELEASE_NOTES_3.0.0.md` | What changed in this release and the upgrade notes. Read the upgrade notes before replacing an existing installation. Also published as the body of the v3.0.0 GitHub Release. |
+| `MAINTENANCE.md` | Checks for the maintainer, not for a generating session. |
+| `UPSTREAM_CORRECTIONS.md` | EML library corrections found from PraatGen, for reconciliation against the live plugin. Maintainer-only. |
 | `LICENSE` | GPL-3.0-or-later. |
 
 ### Project Knowledge Base (PKB)
@@ -240,7 +247,7 @@ The `pkb/` folder contains the verified reference files. These are PraatGen's so
 | `APPENDIX_B_FUNCTIONS.txt` | All Praat scripting functions — rebuilt from the official Praat Functions manual page + `Formula.cpp` source verification |
 | `APPENDIX_C_GUI.txt` | Form and dialog syntax (`form`/`endform`, `beginPause`/`endPause`) |
 | `APPENDIX_D_CLINICAL_DEFAULTS.txt` | Clinically validated parameter sets for voice analysis |
-| `APPENDIX_E_SPECIAL_CHARACTERS.txt` | Special-character encoding for Picture/Demo window text |
+| `APPENDIX_E_SPECIAL_CHARACTERS.txt` | Special-character encoding for Picture/Demo window text, and how Praat writes and reads text in CSV files, encoding included |
 | `APPENDIX_F_UX_STANDARDS.txt` | UX standards for script dialogs, file output, and batch processing |
 
 **Verification and capability references:**
@@ -270,7 +277,7 @@ The `pkb/` folder contains the verified reference files. These are PraatGen's so
 |------|----------|
 | `eml-graph-procedures.txt` | Drawing core: adaptive theming, color palette, axes, gridlines, violin/box primitives, stereo handling |
 | `eml-draw-procedures.txt` | Draw orchestrators: F0 contour, waveform, spectrum, LTAS, time series, bar, violin, box, scatter, histogram |
-| `eml-annotation-procedures.txt` | Stats-to-graph bridge, brackets, comparison matrix, shared reporters (incl. regression and normality reports) |
+| `eml-annotation-procedures.txt` | Stats-to-graph bridge, brackets, comparison matrix |
 | `eml-core-utilities.txt` | Vector operations: ranking, sorting, subsetting, z-scores, binning |
 | `eml-core-descriptive.txt` | Descriptive statistics: mean, median, SD, quartiles, skewness, kurtosis, CI, Shapiro-Wilk |
 | `eml-extract.txt` | Table and acoustic-object data extraction; column-role inference |
@@ -282,11 +289,18 @@ The `pkb/` folder contains the verified reference files. These are PraatGen's so
 | `eml-vibrato-procedures.txt` | Vibrato detection, cycle analysis, summary statistics, 8-panel publication figure |
 | `eml-batch-process.txt` | Batch infrastructure: file stamps, stop sentinel, unique-path generation |
 | `eml-egg-procedures.txt` | EGG support: mandatory cycle guard (segfault protection) |
-| `eml-test-helpers.txt` | Test harness for procedure verification |
+| `eml-record.txt` | Record workflow: buffer, phrases, renderer |
+| `eml-result-writer.txt` | broom-style result writer |
+| `eml-report.txt` | Info-window report writers |
+| `eml-studentized-range.txt` | studentized range distribution |
+| `eml-wilcoxon-interval.txt` | Wilcoxon (Hodges-Lehmann) confidence-interval approximation branch |
+| `eml-anova-kernel.txt` | two-way ANOVA kernel |
+| `eml-categorical.txt` | categorical data |
+| `eml-psychometrics.txt` | Cronbach's alpha (`@emlCronbachAlpha`) and alpha-if-item-deleted (`@emlAlphaInfluence`) |
 
 These are flattened `.txt` copies of the plugin tree's `.praat` sources; the
 `include ../graphs/….praat` lines and the registry's `**File:**` paths refer to
-the plugin layout, not to the flat PKB. For the full procedure catalogue and signatures, see `EML_PROCEDURE_REGISTRY.md` (264 procedures across 15 files).
+the plugin layout, not to the flat PKB. For the full procedure catalogue and signatures, see `EML_PROCEDURE_REGISTRY.md` (632 procedures across 22 files).
 
 Each PKB source carries the **plugin's** version number verbatim. If a PKB file's version differs from the plugin file it was copied from, the PKB has drifted and should be re-synced.
 
@@ -295,7 +309,7 @@ Each PKB source carries the **plugin's** version number verbatim. If a PKB file'
 | File | Purpose |
 |------|---------|
 | `PRAATGEN_RULES_FULL.md` | The whole prompt, read in full at the start of every turn: the core (the workflow, its checkpoints, the pre-flight, the model rules and the rule index), then six sections holding the rest of the 37 rules. `RULES_RETRIEVAL` says which reference file to load for which task; `RULES_PLANNING` covers planning, command verification and the complexity gate; `RULES_CODE` is the Praat correctness contract; `RULES_AUDIT` holds output compression and the SELF-AUDIT templates; `RULES_MODES` covers SCAFFOLD, AUTO, DEBUGGING and modification requests; `RULES_SANDBOX` covers SANDBOX mode and sandbox verification |
-| `TOOL_PRAATGEN_LINT.zip` | A zipped Python 3 linter PraatGen runs on every script before delivery: commands against the reference files, functions against `APPENDIX_B_FUNCTIONS.txt`, copied library procedures against their source, the script against its plan, and the mechanical audit checks. It also supplies the EML library procedures a script copies |
+| `TOOL_PRAATGEN_LINT.zip` | A zipped Python 3 linter PraatGen runs on every script before delivery: commands against the reference files, functions against `APPENDIX_B_FUNCTIONS.txt`, copied library procedures against their source, the script against its plan, and the mechanical audit checks. It also supplies the EML library procedures a script copies. The plugin carries it unzipped as `TOOL_PRAATGEN_LINT.py`. |
 | `HANDOFF_TEMPLATE.md` | Template for session handoff documents during long sessions and debugging |
 | `DEVELOPER_MODE_ADDON.md` | Developer-mode extensions for EML Tools contributors |
 | `praatgen_references_complete.md` | Full bibliographic reference list for all works cited across the prompt, appendices, and procedure libraries |
@@ -309,14 +323,15 @@ PraatGen tracks three version numbers:
 
 | Component | Current | What it tracks |
 |-----------|---------|----------------|
-| **Release** | 2.2.7 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
-| **Master Prompt** | 17.1.7 | The system instructions. Bumped when rules, workflow, or protocols change. Shipped in release 2.2.7. |
-| **PKB Snapshot** | 2026-11-27 | The reference file set. Date-stamped when files are added or revised. |
+| **Release** | 3.0.0 | The combined package (prompt + PKB). This is the version that matters to users. Tracked separately from the Master Prompt version. |
+| **Master Prompt** | 18.0.0 | The system instructions. Bumped when rules, workflow, or protocols change. Shipped in release 3.0.0. |
+| **PKB Snapshot** | 2026-11-28 | The reference file set. Date-stamped when files are added or revised. |
 
 **Release versioning** follows semver conventions:
 - **x.y.z** — Major.Minor.Patch. Major = breaking workflow changes. Minor = new capabilities or reference files. Patch = corrections.
 - The **Release** number and the **Master Prompt** number are independent tracks. The release covers the whole package; the Master Prompt number covers the instruction set inside it. Both are stated on every release so a bug report is unambiguous.
-- **2.2.7 (27 November 2026)** is the current stable release, for projects in the older Claude project format. It ships Master Prompt 17.1.7. Scripts write the Info window in one house style, with a bordered header, titled sections, aligned label and value lines, progress bars for batches, and marks for passes, failures and warnings. To find the EGG channel in a stereo file, PraatGen compares the HNR of each channel's derivative, names the test that way, and adds no calibration step.
+- **3.0.0 (28 November 2026)** is the current stable release. It ships Master Prompt 18.0.0. PraatGen is a plugin for the Claude app, and each mode is a command in the / menu. The EML library files are synced with the EML Stats & Graphs plugin and hold 632 procedures across 22 files.
+- **2.2.7 (27 November 2026)** is the final 2.x release, for projects in the older Claude project format. It ships Master Prompt 17.1.7. Scripts write the Info window in one house style, with a bordered header, titled sections, aligned label and value lines, progress bars for batches, and marks for passes, failures and warnings. To find the EGG channel in a stereo file, PraatGen compares the HNR of each channel's derivative, names the test that way, and adds no calibration step.
 - **2.2.6 (26 November 2026)** kept Master Prompt 17.1.6. The lint blocks functions Praat lists but refuses when run, such as `inner##`, and names the working alternative.
 - **2.2.5 (26 November 2026)** ships Master Prompt 17.1.6. When a question about your data has no command that answers it, PraatGen offers to find an answer from the signals, and when a file's channels carry different kinds of signal it offers to identify them from the signals. The sandbox installs the pinned Praat from GitHub and never asks you to change network settings. A requested jitter or shimmer measure is never left out because another measure determines it. Opus 5.5 is supported.
 - **2.2.4 (17 November 2026)** kept Master Prompt 17.1.4 and corrected the command reference: argument lists, object types for commands that need several objects selected, and editor command names, each run in Praat 6.6.30 and 6.4.39.
@@ -341,17 +356,19 @@ PraatGen tracks three version numbers:
 
 **Reference coverage gaps.** The `COMMANDS_*.txt` files cover the most commonly used object types thoroughly but are not exhaustive for every parameter variant. The Definitive Catalogue (`PRAAT_DEFINITIVE_CATALOGUE_PART1.txt` and `_PART2.txt`) provides fallback coverage for all object types but with less contextual annotation. Gaps are filled as they're discovered — report them.
 
-**EML Tools integration.** PraatGen generates **self-contained** scripts. Where it uses an EML library procedure, the procedure body is copied into the delivered script (or into a folder shipped alongside it) — generated code never `include`s the plugin, and you are never assumed to have it installed. The EML Tools plugin itself is distributed separately.
-
-**Thinking / effort management.** Complex scripts benefit from deliberation, and the prompt includes gates that assess it — but the setting is yours to manage manually, and on 4.8+ the guidance is provisional (see "Choosing a model").
+**EML Tools integration.** PraatGen generates **self-contained** scripts. Where it uses an EML library procedure, the procedure body is copied into the delivered script (or into a folder shipped alongside it) — generated code never `include`s the plugin, and you are never assumed to have it installed. The EML Stats & Graphs plugin itself is distributed separately. A validation paper for EML Stats & Graphs is in process.
 
 **Model dependency.** PraatGen runs on Opus; on Sonnet or Haiku it stops and asks you to switch. Opus 5 is the current recommendation, and Opus 5.5 works if you watch for over-agentic behavior; Opus 4.8 down to 4.6 with Extended Thinking works if you want to conserve tokens. Note that 4.7 is more agentic by default — strong for large-scale refactors in AUTO SANDBOX mode, but worth watching in close collaborative work. The model is a variable; keep the one you're using in mind.
 
 **Sandbox prerequisites.** Sandbox Mode downloads the pinned Praat 6.6.30 from Praat's GitHub releases (`github.com/praat/praat/releases`). On Team and Enterprise plans the organization owner controls which domains are allowed. PraatGen never asks you to change network or environment settings. If the download is refused, it offers a manual-upload fallback.
 
+**Where it runs.** PraatGen can't start without file tools, such as in an incognito chat. Working with your own folders needs the Claude desktop app and a linked conversation.
+
 **Context use.** PraatGen reads its whole prompt, about 256 KB, at the start of every turn. That keeps every rule in front of the model, but each turn uses more of your usage and the context fills sooner, so long sessions compact earlier than in 2.0. SCAFFOLD discussion turns skip the reread; use SCAFFOLD for long conversations.
 
 **Context window limits.** Very long debugging sessions can exhaust the context window. PraatGen monitors this and offers handoff documents at the 3rd and 5th debugging iterations, but prevention (careful testing, exact error messages) is better than cure.
+
+**Edge cases.** PraatGen is not infallible. It follows a rigorous verification protocol, but novel edge cases can still produce errors.
 
 **No access to your Praat installation.** PraatGen runs Praat only in its own workspace, never in your installation. It writes to your computer only into a folder you have connected to the session. All scripts should be tested on representative data before use in research.
 
