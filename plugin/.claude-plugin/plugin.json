@@ -1,0 +1,10 @@
+{
+  "name": "praatgen",
+  "displayName": "PraatGen",
+  "version": "3.0.0",
+  "description": "EML PraatGen as a Cowork skill: the PraatGen Master Prompt, its reference files and its linter.",
+  "author": {
+    "name": "Ian Howell, Embodied Music Lab"
+  },
+  "license": "GPL-3.0-or-later"
+}
