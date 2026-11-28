@@ -1,6 +1,6 @@
 # PRAATGEN RULES — SANDBOX
 
-Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** Before installing or running Praat, in any mode. The core prompt's rule index governs when this file is read.
@@ -22,6 +22,16 @@ available in every session under Rule 24C; SANDBOX adds the testing
 requirement. SANDBOX uses the full GUI edition with Xvfb unless the user
 asks for barren or the Rule 24C platform check rules the GUI stack out.
 Composable with any other mode.
+
+**Test list (hard).** Before the first test run, write `<name>_testlist.md`:
+one row per case, with its input and expected result. Together the rows
+cover, at least once each: every option of every menu, both states of every
+boolean, every pause-dialog button, every warning the script can print,
+every skip or threshold path, a file name with non-ASCII characters, and a
+batch of 20 or more files when the script loops over files. Not every
+combination. Record each run against its row in `<name>_test.txt`; testing
+is done when every row has a result. The lint checks that every
+option, boolean and button is named in the list.
 
 **Setup (when SANDBOX work first needs Praat):**
 
@@ -202,8 +212,7 @@ version and root access, then try the install itself:
 The install's result decides, not `apt-get update`'s. Update can print
 warnings about third-party package sources the image ships with (observed:
 the Docker source refused with 403 on 8 October 2026) and still succeed;
-those warnings are harmless. Observed on 8 October 2026: Ubuntu 24.04
-x86_64, root, update and install both succeeded.
+those warnings are harmless.
 
 If a check fails, or the GUI packages fail to install, fall back to
 the barren edition, which needs none of them, and tell the user which
@@ -294,16 +303,11 @@ or Windows, and a pass on macOS says nothing about Linux.
    `appendFileLine:` to write results to disk.
 
 3. **`--utf8` is NOT sufficient (hard) — sandbox-verified, Praat 6.6.30, 29 Jul 2026.**
-   `--utf8` alone does not guarantee UTF-8 output. **A single non-ASCII
-   character anywhere in a written string makes Praat write the ENTIRE file
-   as UTF-16 BE, with `--utf8` set.** Verified triggers include:
+   `--utf8` alone does not guarantee UTF-8 output. **Under Praat's default
+   text-writing setting, a single non-ASCII character anywhere in a written
+   string makes Praat write the ENTIRE file as UTF-16 BE, with `--utf8` set.** Verified triggers include:
    `—` `–` `…` `’` `“` `°` `µ` `±` `Δ` `é` `≥` — every one of them flips the
    file. Once flipped, later `appendFileLine:` calls keep it UTF-16.
-
-   This is the actual cause of the historical UTF-16 `eml-batch-process.txt`
-   incident, and it means the old note "em-dashes in string literals are
-   harmless unless something re-encodes" was wrong: writing one to a file IS
-   the re-encoding.
 
    **Rule: any string literal written to a file with `writeFileLine:`,
    `appendFileLine:`, `writeFile:` or `appendFile:` must be pure ASCII.**
@@ -311,10 +315,11 @@ or Windows, and a pass on macOS says nothing about Linux.
    Non-ASCII is fine in Info-window output and in Picture text (where
    APPENDIX_E's escape conventions govern); it is the FILE path that breaks.
    Downstream tools — R `read.csv`, pandas, Excel import, `grep` — read a
-   UTF-16 CSV as binary or garbage.
+   UTF-16 CSV as binary or garbage. Text from file names, labels or user
+   input can't be kept ASCII: Rule 27, File text encoding, covers it.
 
    **ASCII is stricter than valid UTF-8.** Every ASCII file is valid UTF-8;
-   the reverse is not true, and Praat switches the whole output file to
+   the reverse is not true, and by default Praat switches the whole output file to
    UTF-16 BE the moment a written literal leaves the ASCII range. An em-dash
    is perfectly good UTF-8 and still flips the file. Verified with `--utf8`
    set: a pure-ASCII write produced `ASCII text`, the same line with one
@@ -634,7 +639,7 @@ and the architecture token are read from the newest 64-bit x86 build — never
 pin an architecture token. The version follows the pinned exception below;
 no other version number is hardcoded. The arch name changed from `linux-intel64`
 to `linux-x64v3` in May 2026; a pinned arch string fails silently exactly
-like a pinned version (this is what broke the snippet on 3 Jun 2026). If
+like a pinned version. If
 resolution returns nothing, inspect
 `https://www.fon.hum.uva.nl/praat/download_linux.html` and adjust the
 selection logic before reporting failure. fon.hum hosts only the current

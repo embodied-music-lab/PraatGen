@@ -1,6 +1,6 @@
 # PRAATGEN RULES — MODES
 
-Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** When SCAFFOLD, AUTO or DEBUGGING starts, at every debugging turn, and for a modification request. The core prompt's rule index governs when this file is read.
@@ -16,10 +16,12 @@ together with the six RULES files.
 
 Scaffold is a conversation about the task before anything is built. While it's
 on, the per-turn read pauses on discussion turns, under the exception in the
-project instructions, so the discussion stays conceptual: the research
-question, what is measured, the inputs and outputs, and the stages in plain
-words. Commands, algorithms, parameter values, dialog fields and the object
-plan wait until scaffold ends.
+skill instructions. The rules still apply: scaffold started with a full read.
+The discussion covers the research question, what is measured and with which
+settings, the inputs and outputs, and the stages. A specific question about a
+measure, command, algorithm or setting is answered from the reference file
+that covers it, read that turn under the Reference Retrieval Protocol
+(`RULES_RETRIEVAL.md`), never from memory. Code waits until scaffold ends.
 
 **Starting scaffold.** The turn that turns scaffold on reads the prompt in
 full, as every non-scaffold turn does.
@@ -27,7 +29,7 @@ full, as every non-scaffold turn does.
 **Sandbox work during scaffold (SCAFFOLD SANDBOX).** A scaffold turn that runs
 Praat in the sandbox reads the prompt in full before running it, and opens
 with the read marker. That turn may name the commands and settings it tests.
-Scaffold turns that don't run Praat stay conceptual and skip the read.
+Scaffold turns that don't run Praat skip the read.
 
 **Ending scaffold.** The user ends scaffold in their own words. That turn reads
 the prompt in full, and so does every turn after it. Then:
@@ -92,7 +94,7 @@ Then begin executing the task list immediately.
 
 1. **No approval gates.** The PRE-FLIGHT and the EXECUTE and thinking-gate
    waits don't apply. CHECKPOINTS steps 2 and 3, including the SELF-AUDIT
-   written to `<name>_audit.md`, run for each item. Items are executed
+   written to `<name>_audit_v<version>.md`, run for each item. Items are executed
    sequentially without waiting for approval between them.
 
 2. **No intermediate status reports.** Do not present progress
@@ -160,7 +162,7 @@ AUTO mode's gate suppression makes possible.
 | Statistical procedures | hypothesis tests, p-values, computed thresholds, derived constants, `chiSquareQ`, `studentP`, `fisherQ`, distribution quantiles | Rule 32 |
 | Picture window output | `Draw:`, `Paint:`, `Save as ... PNG file`, `Save as ... PDF file`, `Text top/left/bottom/right`, `One mark`, axis label commands | Rule 28 A–L (L = font-state invariant: exactly one per-panel `Font size:`), Appendix E (special characters), BEST_PRACTICES_DRAWING.txt |
 | Demo window output | `demo Select inner viewport`, `demo Font size`, `demo Text special`, `demo Erase all` | COMMANDS_DemoWindow.txt, BEST_PRACTICES_DEMO_WINDOW.md, House Rules on demo font state |
-| File output, GUI, and batch | `writeFile`/`writeFileLine:`, `appendFile`/`appendFileLine:`, `Save as ...`, `Write to ... file`, `fileReadable`, `deleteFile:`, `createDirectory:`, `form:`, `beginPause:`/`endPause`, `Create Strings as file list`, any per-file loop | Rules 26, 27 (path solicitation + non-destructive output), Rules 18, 19, 20 (GUI syntax and variable derivation; `form:` numeric defaults MUST be quoted — bare is a parse error; `beginPause:` accepts either), Rule 33 + APPENDIX_F_UX_STANDARDS.txt (dialog conventions, auto-generated filenames, config persistence, batch sentinel) |
+| File output, GUI, and batch | `writeFile`/`writeFileLine:`, `appendFile`/`appendFileLine:`, `Save as ...`, `Write to ... file`, `fileReadable`, `deleteFile:`, `createDirectory:`, `form:`, `beginPause:`/`endPause`, `Create Strings as file list`, any per-file loop | Rules 26, 27 (path solicitation + non-destructive output + CSV text fields + file text encoding), Rules 18, 19, 20 (GUI syntax and variable derivation; `form:` numeric defaults MUST be quoted — bare is a parse error; `beginPause:` accepts either), Rule 33 + APPENDIX_F_UX_STANDARDS.txt (dialog conventions, auto-generated filenames, config persistence, batch sentinel) |
 | EGG / contact quotient | `To Electroglottogram`, `To TextGrid (closed glottis)`, `To AmplitudeTier (levels)`, `Get contact quotient`, any EGG-channel extraction | COMMANDS_Electroglottogram.txt (mandatory `@emlEggCycleGuard` before the two segfaulting commands), BEST_PRACTICES_EGG_CONTACT_QUOTIENT.md (method choice, CQ plausibility bound 0.15–0.85) |
 | EML library procedure use | any `@eml`-prefixed call in generated code | Retrieval protocol 12 (self-containment): confirm procedures are pasted in or shipped in a sibling folder, that no `include` of a plugin path was emitted, that every copied procedure carries the `emlPG` prefix at its definition and every call site, and that the transitive `@`-call closure is complete |
 | Tutorial / instructional content | step-by-step GUI instructions, menu paths, editor actions described to the user | Rule 36 |
@@ -178,13 +180,12 @@ Then omit the table for that domain.
    command appears in multiple places with different parameters,
    list each instance separately.
 
-2. **Re-load.** Read the governing PKB files fresh from project
-   knowledge. Do not rely on memory of what those sections say.
+2. **Re-load.** Read the governing PKB files fresh from
+   the skill's `pkb/` folder. Do not rely on memory of what those sections say.
    The re-load is a re-grounding read, which is a full-file read
    of each governing file. A search result only locates the file; it does not count as the
-   re-load. (Current tool names: `Projects` with `project_read` for a
-   full read and `project_search` for a search; older sessions used
-   `project_knowledge_search`.) Observed on 8 October 2026: a search
+   re-load. (Current tool names: `Read`, paged as the skill instructions
+   set out, for a full read and `Grep` for a search.) Observed on 8 October 2026: a search
    for "Formula" returned a chunk of a different file as its top hit. The re-load is
    structural — it creates a fresh comparison surface that is
    independent of the rationalizations made during script
@@ -231,16 +232,9 @@ Then omit the table for that domain.
   compliance table. The "pick a reasonable approach" rule does
   not apply to choices the PKB has already resolved (see Item 4
   exception clause).
-- **DEBUGGING mode runs this check too (hard).** The original
-  scope was AUTO-only, on the reasoning that standard mode's
-  PRE-FLIGHT → COMMAND PLAN → Thinking gate → SELF-AUDIT pipeline
-  covers the same surface. That reasoning does not extend to
-  DEBUGGING, where PRE-FLIGHT and COMMAND PLAN do not run at all —
-  so the mode with the thinnest gate coverage was the one excluded
-  from the strongest check. Both recorded instances of a shipped
-  drawing-methodology violation (4 June 2026, 3 August 2026)
-  occurred in DEBUGGING, each passing a SELF-AUDIT that attested
-  compliance. Gate it on trigger-domain presence: if the fix
+- **DEBUGGING mode runs this check too (hard).** PRE-FLIGHT and
+  COMMAND PLAN don't run in DEBUGGING, so it has the thinnest gate
+  coverage. Gate it on trigger-domain presence: if the fix
   touches no domain in the table, the check is one line saying so.
 - In standard (non-AUTO, non-DEBUGGING) mode the check remains
   redundant with the full gate pipeline and is not required.
@@ -492,7 +486,7 @@ to export, or CONTINUE to keep going (with the understanding that
 context overflow may cause lost work)."
 
 **On HANDOFF:** Generate a handoff document per `HANDOFF_TEMPLATE.md`
-in Project Knowledge.
+in the skill's `pkb/` folder.
 
 ---
 

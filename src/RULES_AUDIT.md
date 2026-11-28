@@ -1,6 +1,6 @@
 # PRAATGEN RULES — AUDIT
 
-Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT; again before every SELF-AUDIT (CHECKPOINTS step 3). The core prompt's rule index governs when this file is read.
@@ -30,7 +30,6 @@ Reply VERBOSE at any point for expanded output. Reply SPARSE at any point return
 | Thinking gate recommendation | One line: `⚙️ [On/Off] for code generation — [reason].` |
 | SELF-AUDIT | Pass/fail per item with source count. Expand only on failures or deviations. See template below. |
 | Testing invitation | One line: `Test in Praat — paste errors verbatim if any.` |
-| Test data offer | One line: `Reply TESTDATA for synthetic input files.` (only if applicable) |
 | Debugging Phase 1 | Full detail (never compressed) |
 | Handoff documents | Full detail (never compressed) |
 | Deviation justifications | Full detail (never compressed) |
@@ -62,7 +61,7 @@ standard of proof.
     ✓ Selection (3,4,11) — Strategy [A/B]
     ✓ Object preservation (4B) — [no pre-existing objects removed / removals listed with user justification]
     ✓ Typing (5,5B,5C,5D,20) — compliant [or: derivation table above]
-    ✓ File output (26,27) — [not used / cite the script line showing the overwrite guard and the derived (non-hardcoded) output path; confirm every written string literal is pure ASCII — one non-ASCII char makes Praat write the whole file UTF-16 BE even under --utf8]
+    ✓ File output (26,27) — [not used / cite the script line showing the overwrite guard and the derived (non-hardcoded) output path; confirm every written string literal is pure ASCII — by default one non-ASCII char makes Praat write the whole file UTF-16 BE even under --utf8; CSV text fields quoted and the UTF-8 text writing setting before the first write (Rule 27)]
     ✓ State ops (10) — [A-only / list B/C with guards]
     ✓ Checkpoints — folder listing with times [above]; RULES read tokens [the lint's "Read tokens verified" line, copied]; web [Praat sources only / user-approved searches, each listed]; recordings of people [not read / read after the notice]; plan file and plans sent before code [y/n / written, not sent (AUTO) / n/a (DEBUGGING, Step 5)]; RULES_CODE.md read before code [y/n]; lint [output below / not run: reason]; audit [Opus result / not run: reason]
     ✓ Sandbox — [platform, Praat version, result / not SANDBOX]
@@ -97,6 +96,21 @@ generation turn onward. Reply SPARSE to return to compressed.
 (GO and EXECUTE are gate-proceed keywords and never change the
 compression mode — a VERBOSE session that replies GO at a gate stays
 VERBOSE.)
+
+### Review prompt (use word for word)
+
+    Review this Praat script before delivery. Read every attached file in
+    full, and open your reply with the last line of each. The lint has
+    already checked every command, function and library copy. Check every
+    clinical parameter set and pitch limit against
+    APPENDIX_D_CLINICAL_DEFAULTS.txt; every file-output line, dialog and
+    drawing call against RULES_CODE.md, and BEST_PRACTICES_DRAWING.txt
+    when attached; and the plan's Requested | Produced by table against the
+    quoted task. Report findings only: each one breaks a rule, disagrees
+    with a reference file, or leaves a requested item unproduced. Give its
+    file and line, what it breaks, and the fix. Don't rank findings, and
+    add no observations, suggestions or praise. If there are none, reply
+    "No findings." Don't search the web.
 
 ### SELF-AUDIT template
 
@@ -174,7 +188,9 @@ attest "compliant."
        the output path is solicited or derived, never hardcoded (26); and
        confirm every string literal written to the file is pure ASCII — a
        single non-ASCII character makes Praat emit the entire file as
-       UTF-16 BE even with --utf8, breaking R/pandas/Excel/grep downstream]
+       UTF-16 BE by default, even with --utf8, breaking R/pandas/Excel/grep
+       downstream; CSV text fields quoted, inner quotes doubled, and the
+       UTF-8 text writing setting before the first write (Rule 27)]
 
     ✓ **UX standards (Rule 33, Appendix F):** [confirm compliance or "no user input / file output / batch processing"]
        - Dialog conventions (S0): all endPause use trailing 0; exit buttons read "Quit"; Standard button present where canonical parameters are editable
@@ -229,7 +245,7 @@ attest "compliant."
 
 If any item violated, revise code until compliant (in DEBUGGING, within the
 declared scope). After any revision, run the lint again and update
-`<name>_audit.md`.
+`<name>_audit_v<version>.md`.
 
 ---
 

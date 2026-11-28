@@ -1,6 +1,6 @@
 # PRAATGEN RULES — CODE
 
-Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** At GO, before the plans; and again before writing or changing any .praat file (CHECKPOINTS steps 1 and 2). The core prompt's rule index governs when this file is read.
@@ -153,8 +153,7 @@ below.
 # This does NOT indicate a missing operator — it means Praat parsed
 # the variable name boundary incorrectly because $ was misplaced.
 #
-# Provenance: EML session 20 March 2026. Bug hit in annotMatrixCell
-# dynamic variables (comparison matrix). 9 occurrences corrected.
+# Provenance: EML session 20 March 2026.
 # ============================================================================
 
 **Matrix (`##`) variables (hard):**
@@ -778,7 +777,7 @@ this prompt and the library source disagree, Retrieval Protocol step 11 (`RULES_
 
 **Pure date stamps are not sufficient for uniqueness.** Sub-minute collisions occur in batch contexts and during rapid iterative testing. Date stamps may be included as part of the filename strategy for human readability, but `@emlGenerateUniquePath` must still wrap the final path.
 
-**No interactive overwrite dialog.** It behaved inconsistently between single-file and batch runs and could not protect automated runs. Overwrite behavior is permitted only when the user has explicitly requested it (e.g., a `boolean` field labeled "Overwrite existing files" set to true).
+**No interactive overwrite dialog.** Overwrite behavior is permitted only when the user has explicitly requested it (e.g., a `boolean` field labeled "Overwrite existing files" set to true).
 
 **For nontrivial output structure**, ask the user during PRE-FLIGHT about filename strategy (e.g., "Outputs in single directory, or per-input-file subdirectories?"). Then apply the agreed strategy and wrap the final paths with `@emlGenerateUniquePath`.
 
@@ -786,6 +785,15 @@ SELF-AUDIT must confirm: every file write passes through `@emlGenerateUniquePath
 
 **Undefined values (hard).** Write an undefined number in the form the file's reader expects, named in the plan. The default is Praat's own, `--undefined--`, which a bare number, `string$ ( )`, `fixed$ ( )` and `Save as comma-separated file` all give. A file for R gets an empty cell (R reads NA), as the EML plugin's result writer does. A file matching another program's format uses its marker, such as `?` for RespGraph Studio. Never write `0`. To read, test non-empty cells with `@eml_isMissingToken`.
 Provenance: sandbox-verified 6.6.30, 9 Oct 2026: a bare undefined, `string$`, `fixed$`, `Get value` on an undefined Table cell and `Save as comma-separated file` all gave `--undefined--`.
+
+**CSV text fields (hard).** Put every text field in a CSV file in double quotes and double each quote inside it: file names, labels, any string from the user or a file. `""""` is the string `"`:
+
+    field$ = """" + replace$ (text$, """", """""", 0) + """"
+
+This case is settled: no caveat, warning or question to the user. Praat's CSV save and read: APPENDIX_E Section 8.
+
+**File text encoding (hard).** A script that writes text from file names, labels or user input to a file sets `Text writing preferences: "UTF-8"` before its first write, every run: Praat keeps the setting between runs, and without it one non-ASCII character makes Praat write the whole file as UTF-16 with a BOM, whatever `--utf8` says. Written string literals stay ASCII (Rule 24C). Details: APPENDIX_E Section 8.
+Provenance: sandbox-verified 6.6.30, 27 Nov 2026.
 
 ---
 
@@ -857,7 +865,7 @@ For multi-panel figures, this is the ONLY way to ensure all panels are captured.
 
 **J) Special character escaping (hard):** The characters `%`, `#`, `^`, and `_` are style toggles in Praat's text renderer (italic, bold, superscript, subscript respectively). Any display text containing these characters must escape them using backslash trigraphs: `\% `, `\# `, `\^ `, `\_ ` (backslash + character + space).
 
-Load APPENDIX_E_SPECIAL_CHARACTERS.txt for the complete reference. The most common violation is `%` in percentage axis labels.
+Load APPENDIX_E_SPECIAL_CHARACTERS.txt for the complete reference. The most common violation is `%` in percentage axis labels. For text in a CSV file, see Rule 27, CSV text fields.
 
 Canonical sanitization pattern:
 
@@ -947,8 +955,6 @@ Also check for `undefined` before any comparison — Praat returns `undefined` f
     else
         appendInfoLine: "WARNING: [measure] returned undefined."
     endif
-
-Use the `@emlCheckPlausibility` procedure from the EML library (see EML_PROCEDURE_REGISTRY.md) for a reusable pattern.
 
 
 SELF-AUDIT must state which plausibility checks are included.
@@ -1312,7 +1318,7 @@ user-facing documentation that includes GUI step-by-step instructions
 - When COMMANDS_*.txt or APPENDIX_B documents a safe syntax pattern, prefer it over workaround approaches; if an alternative is chosen, justify in SELF-AUDIT
 - When drawing Sound+TextGrid together: ALWAYS select both objects and use the combined Draw: command from TextGrid (see BEST_PRACTICES_DRAWING.txt); never draw them separately with viewport manipulation
 - To Pitch (filtered autocorrelation) requires 11 parameters — the 11th is "voiced unvoiced cost" (canonical: 0.14). Omitting it causes a runtime error. See APPENDIX_D §1A.
-- To Pitch (raw cross-correlation) and To Pitch (raw autocorrelation) each require 10 parameters — the 10th is "voiced unvoiced cost" (canonical: 0.14). The previous version of APPENDIX_D §1B was missing "silence threshold" (the 6th parameter, canonical: 0.03), causing all subsequent values to map to wrong fields. See APPENDIX_D §1B/1C.
+- To Pitch (raw cross-correlation) and To Pitch (raw autocorrelation) each require 10 parameters — the 10th is "voiced unvoiced cost" (canonical: 0.14). The 6th is "silence threshold" (canonical: 0.03). See APPENDIX_D §1B/1C.
 - Before saving any Picture window figure: ALWAYS select the full outer viewport first (Rule 28I)
 - Computational verification via Python/scipy sandbox is required per Rule 32 for any derived constants, statistical values, or multi-step calculations that feed into script logic — never use training-derived approximation for values that will be hardcoded. For complex statistics, offer to generate a Rstudio script to confirm.
 - During debugging, track iteration count and offer handoff at 3 iterations, escalate at 5 — do not wait for context exhaustion (Step 4, Context budget awareness)
@@ -1362,10 +1368,9 @@ task just because you can imagine a solution in those languages. If uncertain wh
   issues. Applies to both Demo window animation and batch file processing.
   Syntax: `noprogress To Pitch (filtered autocorrelation): 0, 50, ...`
   (keyword before the command, no colon on `noprogress`).
-  - File output defaults to CSV with comma delimiters. Use tabs only if
-  the user specifically requests tab-separated output. Praat's
-  `writeFileLine:` / `appendFileLine:` with comma-separated values is
-  the standard pattern; do not use `tab$` as a delimiter unless asked.
+  - File output defaults to CSV with comma delimiters, written with
+  `writeFileLine:` / `appendFileLine:` (text fields: Rule 27, CSV text
+  fields). Use `tab$` only if the user asks.
 - When generating Picture window output with multiple colors, ask
   during PRE-FLIGHT: "Do you want an accessible color palette
   (Okabe-Ito)?" If yes, load exact RGB values from

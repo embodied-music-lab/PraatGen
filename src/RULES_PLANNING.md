@@ -1,6 +1,6 @@
 # PRAATGEN RULES — PLANNING
 
-Part of the PraatGen Master Prompt 17.1.7. Part of EML PraatGen
+Part of the PraatGen Master Prompt 18.0.0. Part of EML PraatGen
 GPL-3.0-or-later — Ian Howell, Embodied Music Lab.
 
 **Read this file in full:** In Turn 1, before the PRE-FLIGHT or the SCAFFOLD review; again at GO, before the plans (CHECKPOINTS step 1); at the start of AUTO, DEBUGGING and a modification request. The core prompt's rule index governs when this file is read.
@@ -150,7 +150,7 @@ recommended thinking change, before any code is written.
 
 **Phase 3C — Code, checks and delivery (CHECKPOINTS steps 2 to 4):**
 4. Write the script, then run the checks and the SELF-AUDIT (CHECKPOINTS steps
-   2 and 3). The SELF-AUDIT goes inline in the turn and into `<name>_audit.md`.
+   2 and 3). The SELF-AUDIT goes inline in the turn and into `<name>_audit_v<version>.md`.
 5. **Deliver ONE COMPLETE SCRIPT as a `.praat` file** — not as a code block
    (CHECKPOINTS step 4).
 
@@ -162,7 +162,7 @@ the wrong one after a revision.
 Why this is hard rather than cosmetic: copy-paste out of a rendered code block
 is where character substitution happens — a curly quote for `"`, an en-dash for
 `-`, a non-breaking space for a space. Praat then either fails to parse or, in
-the file-output case, silently writes UTF-16 BE (Rule 24C). A delivered file has
+the file-output case, silently writes UTF-16 BE by default (Rule 24C). A delivered file has
 no such exposure. Delivery shape (b) — script plus sibling `*_lib/` folder —
 cannot be expressed as a code block at all.
 
@@ -178,13 +178,11 @@ Then append (conditional on compression mode):
 
 "Test in Praat — paste errors verbatim if any."
 
-Plus, if input files expected: "Reply TESTDATA for synthetic input files."
-
 **If VERBOSE:**
 
 "---
 
-**TESTING COMPLETE?**
+**TESTING**
 
 If you've tested this script in Praat and encountered errors:
 - Paste the EXACT error message (including line number)
@@ -193,10 +191,9 @@ If you've tested this script in Praat and encountered errors:
 If the script works, you're done. If you need modifications, describe
 what you want changed."
 
-**Test data offer:** If the script expects input files (Sound, TextGrid,
-CSV, Table) that the user may not have immediately available,
-additionally offer: "Would you like me to generate synthetic test files
-so you can verify the script immediately?"
+**Test data offer (both modes):** If the script expects input files (Sound,
+TextGrid, CSV, Table) that the user may not have at hand, add: "Reply
+TESTDATA for synthetic input files."
 
 ---
 
@@ -307,7 +304,7 @@ No code for unverified commands.
 
 ### Rule 16: Whitelist management
 
-**Accumulation file:** `WHITELIST_CURRENT.txt` in Project Knowledge
+**Accumulation file:** `WHITELIST_CURRENT.txt` in the skill's `pkb/` folder
 
 **Format:** Dual-line per command:
 
@@ -325,7 +322,7 @@ No code for unverified commands.
 
 When a script runs successfully OR when the user signals task completion:
 1. If new commands were acquired this session, generate updated WHITELIST_CURRENT.txt entries
-2. State: "New commands acquired this session. Update WHITELIST_CURRENT.txt in Project Knowledge."
+2. State: "New commands acquired this session. Update WHITELIST_CURRENT.txt in the skill's `pkb/` folder."
 
 Do not wait for user to request this.
 
